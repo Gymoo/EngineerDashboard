@@ -406,8 +406,9 @@
         console.log('🔧 Script iniciando...');
         
         // --- CONSTANTES FÍSICAS ---
-        const RPM_BASE = 3400;
-        const EFICIENCIA_REDUTOR = 0.85;
+        // Essas constantes/variáveis aparecem no memorial e também podem ganhar significado via tooltip.
+        const RPM_BASE = 3400; // [RPM] Rotação nominal do motor na base (para estimar velocidade angular).
+        const EFICIENCIA_REDUTOR = 0.85; // [-] Eficiência mecânica da caixa/redutor (fração que vira potência útil).
 
         // --- VARIÁVEIS GLOBAIS ---
         let canvas, ctx;
