@@ -446,6 +446,36 @@
             <hr>
 
             <h2 title="Malha de ar que transporta o sólido do dosador.">🌪️ Sistema Pneumático</h2>
+            <div class="control-group" title="Quantidade de dutos primários de grande diâmetro entre a turbina e a torre de distribuição. No seu arranjo real, são os ramais grossos que preservam pressão antes da divisão final.">
+                <label><span>Quantidade de Dutos Primários</span></label>
+                <div class="sync-inputs">
+                    <input type="range" id="in_dist_qtd_primarios" min="1" max="12" value="3" step="1">
+                    <input type="number" min="1" max="12" value="3" step="1">
+                </div>
+            </div>
+            <div class="control-group" title="Diâmetro interno do duto primário em polegadas. A conversão usada é 1 ft = 0,3048 m exato, logo 1 in = 25,4 mm. Dutos maiores reduzem L/D e velocidade média, diminuindo a perda por atrito até a torre.">
+                <label><span>Diâmetro do Duto Primário (pol)</span></label>
+                <div class="sync-inputs">
+                    <input type="range" id="in_dist_diametro_primario_pol" min="2.0" max="12.0" value="5.25" step="0.25">
+                    <input type="number" min="2.0" max="12.0" value="5.25" step="0.25">
+                </div>
+            </div>
+            <div class="control-group" title="Comprimento de cada duto primário até a torre. Esse trecho concentra grande vazão e, mesmo com diâmetro maior, ainda gera perda distribuída ao longo da parede.">
+                <label><span>Comprimento do Duto Primário (m)</span></label>
+                <div class="sync-inputs">
+                    <input type="range" id="in_dist_comprimento_primario" min="0.5" max="20.0" value="3.0" step="0.1">
+                    <input type="number" min="0.5" max="20.0" value="3.0" step="0.1">
+                </div>
+            </div>
+            <div class="control-group" title="Coeficiente de perda localizada da torre de distribuição. Modela perdas por mudança de direção, divisão de fluxo e transições internas segundo ΔP_local = K·ρ·v²/2. Ajuste por ensaio ou geometria real da torre.">
+                <label><span>Perda Local da Torre (K)</span></label>
+                <div class="sync-inputs">
+                    <input type="range" id="in_dist_k_torre" min="0.0" max="10.0" value="1.0" step="0.1">
+                    <input type="number" min="0.0" max="10.0" value="1.0" step="0.1">
+                </div>
+            </div>
+            <hr>
+            <h3 title="Trecho após a torre, já dividido em linhas menores até o ponto de aplicação." style="color: #fff; margin-top: 0;">Linhas Secundárias</h3>
             <div class="control-group" title="Quantidade de linhas de plantio. A turbina divide seu vento total entre todas elas.">
                 <label><span>Número de Linhas</span></label>
                 <div class="sync-inputs">
@@ -723,6 +753,10 @@
                 distCorrente: document.getElementById('in_dist_corrente'),
                 distEficienciaMotor: document.getElementById('in_dist_eficiencia_motor'),
                 distEnergiaDosador: document.getElementById('in_dist_energia_dosador'),
+                distQtdPrimarios: document.getElementById('in_dist_qtd_primarios'),
+                distDiametroPrimarioPol: document.getElementById('in_dist_diametro_primario_pol'),
+                distComprimentoPrimario: document.getElementById('in_dist_comprimento_primario'),
+                distKTorre: document.getElementById('in_dist_k_torre'),
                 distLinhas: document.getElementById('in_dist_linhas'),
                 distComprimento: document.getElementById('in_dist_comprimento'),
                 distVazaoTurbina: document.getElementById('in_dist_vazaoturbina'),
@@ -955,6 +989,95 @@
                     volumeRoloMm3,
                     volumePorDiscoMm3: espessura * cavidades * area
                 };
+            }
+
+            function calcularPerdaDistribuida(fatorAtrito, comprimento, diametro, densidadeAr, velocidade, slr) {
+                if (diametro <= 0) return 0;
+                return fatorAtrito * (comprimento / diametro) * ((densidadeAr * Math.pow(velocidade, 2)) / 2) * (1 + slr);
+            }
+
+            function calcularPerdaLocal(kLocal, densidadeAr, velocidade, slr) {
+                return kLocal * ((densidadeAr * Math.pow(velocidade, 2)) / 2) * (1 + slr);
+            }
+
+            function simularRedePneumatica(params) {
+                let fatorVazao = 1;
+                let resultado = null;
+
+                for (let iteracao = 0; iteracao < 30; iteracao++) {
+                    const vazaoTotalReal = params.vazaoTotalNominalM3Min * fatorVazao;
+                    const vazaoPrimariaReal = vazaoTotalReal / params.quantidadePrimarios;
+                    const vazaoSecundariaReal = vazaoTotalReal / params.quantidadeLinhas;
+
+                    const velocidadePrimaria = (vazaoPrimariaReal / 60) / params.areaPrimaria;
+                    const velocidadeSecundaria = (vazaoSecundariaReal / 60) / params.areaSecundaria;
+
+                    const massaArPrimariaKgh = vazaoPrimariaReal * 60 * params.densidadeAr;
+                    const massaArSecundariaKgh = vazaoSecundariaReal * 60 * params.densidadeAr;
+
+                    const slrPrimario = params.massaSolidoPrimarioKgh / Math.max(massaArPrimariaKgh, 1e-9);
+                    const slrSecundario = params.massaSolidoSecundarioKgh / Math.max(massaArSecundariaKgh, 1e-9);
+
+                    const deltaPPrimario = calcularPerdaDistribuida(params.fatorAtrito, params.comprimentoPrimarioM, params.diametroPrimarioM, params.densidadeAr, velocidadePrimaria, slrPrimario);
+                    const deltaPTorre = calcularPerdaLocal(params.kTorre, params.densidadeAr, velocidadePrimaria, slrPrimario);
+                    const deltaPSecundario = calcularPerdaDistribuida(params.fatorAtrito, params.comprimentoSecundarioM, params.diametroSecundarioM, params.densidadeAr, velocidadeSecundaria, slrSecundario);
+                    const deltaPTotal = deltaPPrimario + deltaPTorre + deltaPSecundario;
+
+                    const novoFator = Math.max(0.01, 1 - (deltaPTotal / params.pressaoMaxPa));
+                    resultado = {
+                        fatorVazao: novoFator,
+                        vazaoTotalReal,
+                        vazaoPrimariaReal,
+                        vazaoSecundariaReal,
+                        velocidadePrimaria,
+                        velocidadeSecundaria,
+                        massaArPrimariaKgh,
+                        massaArSecundariaKgh,
+                        slrPrimario,
+                        slrSecundario,
+                        deltaPPrimario,
+                        deltaPTorre,
+                        deltaPSecundario,
+                        deltaPTotal,
+                        pressaoNaTorre: Math.max(0, params.pressaoMaxPa - deltaPPrimario),
+                        pressaoNaLinha: Math.max(0, params.pressaoMaxPa - deltaPPrimario - deltaPTorre)
+                    };
+
+                    if (Math.abs(novoFator - fatorVazao) < 1e-4) break;
+                    fatorVazao = novoFator;
+                }
+
+                return resultado;
+            }
+
+            function simularRedeDireta(params) {
+                let fatorVazao = 1;
+                let resultado = null;
+
+                for (let iteracao = 0; iteracao < 30; iteracao++) {
+                    const vazaoTotalReal = params.vazaoTotalNominalM3Min * fatorVazao;
+                    const vazaoLinhaReal = vazaoTotalReal / params.quantidadeLinhas;
+                    const velocidadeLinha = (vazaoLinhaReal / 60) / params.areaSecundaria;
+                    const massaArLinhaKgh = vazaoLinhaReal * 60 * params.densidadeAr;
+                    const slrLinha = params.massaSolidoSecundarioKgh / Math.max(massaArLinhaKgh, 1e-9);
+                    const deltaPLinha = calcularPerdaDistribuida(params.fatorAtrito, params.comprimentoSecundarioM, params.diametroSecundarioM, params.densidadeAr, velocidadeLinha, slrLinha);
+                    const novoFator = Math.max(0.01, 1 - (deltaPLinha / params.pressaoMaxPa));
+
+                    resultado = {
+                        fatorVazao: novoFator,
+                        vazaoTotalReal,
+                        vazaoLinhaReal,
+                        velocidadeLinha,
+                        massaArLinhaKgh,
+                        slrLinha,
+                        deltaPLinha
+                    };
+
+                    if (Math.abs(novoFator - fatorVazao) < 1e-4) break;
+                    fatorVazao = novoFator;
+                }
+
+                return resultado;
             }
 
             // --- SINCRONIZAÇÃO DOS CONTROLES ---
@@ -1422,19 +1545,19 @@
                 let htmlDireito = "";
 
                 if (modoDist === "1") {
-                    // MODO 1: DOSAGEM E ARRASTE PNEUMÁTICO
                     dom.distGrpModo1.classList.remove('hidden');
                     dom.distGrpModo2.classList.add('hidden');
-                    
+
                     canvasDist.style.display = 'none';
                     ativarAnimacaoDist = false;
 
-                    // Captura de Variáveis
                     const n_linhas = parseInt(dom.distLinhas.value);
+                    const n_primarios = parseInt(dom.distQtdPrimarios.value);
                     const L_tubo_m = parseFloat(dom.distComprimento.value);
+                    const L_primario_m = parseFloat(dom.distComprimentoPrimario.value);
                     const taxa_ha = parseFloat(dom.distTaxa.value);
                     const v_trator = parseFloat(dom.distVelTrator.value);
-                    const largura = parseFloat(dom.distLargura.value); // Largura de UMA linha
+                    const largura = parseFloat(dom.distLargura.value);
                     const geometriaRolo = calcularVolumeRolo();
                     const espessura_disco = parseFloat(dom.distEspessura.value);
                     const qtd_discos_uteis = parseFloat(dom.distQtdDiscos.value);
@@ -1447,43 +1570,54 @@
                     const E_dosador = parseFloat(dom.distEnergiaDosador.value);
                     const Q_turbina_m3min = parseFloat(dom.distVazaoTurbina.value);
                     const D_mm = parseFloat(dom.distDiametro.value);
+                    const D_primario_pol = parseFloat(dom.distDiametroPrimarioPol.value);
                     const rho_a = parseFloat(dom.distDensidadeAr.value);
                     const fator_atrito = parseFloat(dom.distFatorAtrito.value);
                     const pressao_turbina_max = parseFloat(dom.distPressaoTurbina.value);
+                    const k_torre = parseFloat(dom.distKTorre.value);
 
                     const V_r_mm3 = geometriaRolo.volumeRoloMm3;
                     const volume_por_disco_mm3 = geometriaRolo.volumePorDiscoMm3;
-
-                    // 1. Agronômica (Por Linha)
                     const m_s_kgh_linha = (taxa_ha * v_trator * largura) / 10;
+                    const m_s_kgh_total = m_s_kgh_linha * n_linhas;
+                    const m_s_kgh_primario = m_s_kgh_total / Math.max(n_primarios, 1);
+                    const m_s_gs = m_s_kgh_linha * (1000 / 3600);
                     const N_r = (m_s_kgh_linha * 1000) / (V_r_mm3 * rho_s * 60);
 
-                    // 2. Elétrica
-                    const P_util_max = V_motor * I_max * eta_motor_dist; 
-                    const m_s_gs = m_s_kgh_linha * (1000 / 3600); 
+                    const P_util_max = V_motor * I_max * eta_motor_dist;
                     const P_mec_req = (m_s_gs * E_dosador) / EFICIENCIA_REDUTOR;
 
-                    // 3. Fluidodinâmica: Divisão de Fluxo, Darcy-Weisbach e Curva da Bomba
                     const D_m = D_mm / 1000;
-                    const Area = (Math.PI * Math.pow(D_m, 2)) / 4;
-                    
-                    // A turbina joga o ar em um manifold (cabeçote) que divide para as mangueiras
-                    const Q_linha_m3min = Q_turbina_m3min / n_linhas; 
-                    const v_a_nom = (Q_linha_m3min / 60) / Area; // Vel. Ideal sem atrito
-                    
-                    const m_a_kgh_teorico = Q_linha_m3min * 60 * rho_a;
-                    const SLR_teorico = m_s_kgh_linha / m_a_kgh_teorico;
+                    const D_primario_m = D_primario_pol * 0.0254;
+                    const D_primario_mm = D_primario_m * 1000;
+                    const areaSecundaria = (Math.PI * Math.pow(D_m, 2)) / 4;
+                    const areaPrimaria = (Math.PI * Math.pow(D_primario_m, 2)) / 4;
+                    const linhas_por_primario_media = n_linhas / Math.max(n_primarios, 1);
+                    const distribuicaoInteira = Number.isInteger(linhas_por_primario_media);
 
-                    // Perda de Carga (ΔP em Pascal) gerada pela mangueira + bloqueio do adubo
-                    const delta_P = fator_atrito * (L_tubo_m / D_m) * ((rho_a * Math.pow(v_a_nom, 2)) / 2) * (1 + SLR_teorico);
+                    const parametrosRede = {
+                        vazaoTotalNominalM3Min: Q_turbina_m3min,
+                        quantidadePrimarios: Math.max(n_primarios, 1),
+                        quantidadeLinhas: Math.max(n_linhas, 1),
+                        comprimentoPrimarioM: L_primario_m,
+                        comprimentoSecundarioM: L_tubo_m,
+                        diametroPrimarioM: D_primario_m,
+                        diametroSecundarioM: D_m,
+                        areaPrimaria,
+                        areaSecundaria,
+                        densidadeAr: rho_a,
+                        fatorAtrito: fator_atrito,
+                        pressaoMaxPa: pressao_turbina_max,
+                        kTorre: k_torre,
+                        massaSolidoPrimarioKgh: m_s_kgh_primario,
+                        massaSolidoSecundarioKgh: m_s_kgh_linha
+                    };
 
-                    // Aproximação linear da curva operacional da turbina usando a pressão estática máxima informada.
-                    // Quanto maior a pressão imposta pela mangueira, menos vento a turbina consegue empurrar.
-                    let fator_perda = 1 - (delta_P / pressao_turbina_max); 
-                    if (fator_perda < 0) fator_perda = 0.01; // Trava matemática para não inverter a direção
-                    
-                    const v_a_real = v_a_nom * fator_perda; // Velocidade final na ponta da mangueira
-                    const SLR_real = m_s_kgh_linha / (m_a_kgh_teorico * fator_perda); // SLR piora se falta ar
+                    const redeDoisEstagios = simularRedePneumatica(parametrosRede);
+                    const redeDireta = simularRedeDireta(parametrosRede);
+                    const ganhoPressaoPa = redeDireta.deltaPLinha - redeDoisEstagios.deltaPTotal;
+                    const ganhoVelocidadeMs = redeDoisEstagios.velocidadeSecundaria - redeDireta.velocidadeLinha;
+                    const aproveitamentoTurbina = (redeDoisEstagios.vazaoTotalReal / Q_turbina_m3min) * 100;
 
                     let statusEletrico = "";
                     if (P_mec_req > P_util_max) {
@@ -1493,107 +1627,147 @@
                     }
 
                     let statusPneumatico = "";
-                    if (delta_P >= pressao_turbina_max) {
-                        statusPneumatico = `<div class='alert alert-error' style="margin-top: 10px;"><strong>❌ ESTOL DA TURBINA (Pressão: ${(delta_P/100).toFixed(0)} mbar)</strong><br>O atrito de <strong>${L_tubo_m} metros</strong> de tubo esmagou o fluxo da turbina. O ar simplesmente parou.</div>`;
-                    } else if (v_a_real < 15) {
-                        statusPneumatico = `<div class='alert alert-error' style="margin-top: 10px;"><strong>❌ RISCO DE ENTUPIMENTO DE LINHA</strong><br>A velocidade real caiu para <strong>${v_a_real.toFixed(1)} m/s</strong> (perda de ${((1-fator_perda)*100).toFixed(0)}% por atrito). A semente vai decantar.</div>`;
-                    } else if (SLR_real > 8) {
-                        statusPneumatico = `<div class='alert alert-error' style="margin-top: 10px;"><strong>❌ AFOGAMENTO DA LINHA (SLR: ${SLR_real.toFixed(2)})</strong><br>A perda de vento deixou o ar muito saturado com sólido. Aumente a turbina ou encurte o tubo.</div>`;
+                    if (redeDoisEstagios.deltaPTotal >= pressao_turbina_max) {
+                        statusPneumatico = `<div class='alert alert-error' style="margin-top: 10px;"><strong>❌ ESTOL DA TURBINA</strong><br>A soma das perdas nos dutos primários, torre e linhas secundárias atingiu <strong>${redeDoisEstagios.deltaPTotal.toFixed(0)} Pa</strong>, acima da pressão estática disponível.</div>`;
+                    } else if (redeDoisEstagios.velocidadeSecundaria < 15) {
+                        statusPneumatico = `<div class='alert alert-error' style="margin-top: 10px;"><strong>❌ RISCO DE ENTUPIMENTO NAS LINHAS FINAIS</strong><br>A velocidade real nas linhas secundárias caiu para <strong>${redeDoisEstagios.velocidadeSecundaria.toFixed(1)} m/s</strong>. O arraste já não é suficiente para manter fase diluída robusta.</div>`;
+                    } else if (redeDoisEstagios.slrSecundario > 8) {
+                        statusPneumatico = `<div class='alert alert-error' style="margin-top: 10px;"><strong>❌ AFOGAMENTO DAS LINHAS SECUNDÁRIAS</strong><br>O SLR secundário subiu para <strong>${redeDoisEstagios.slrSecundario.toFixed(2)}</strong>. A linha final está ar/sólido demais para transporte estável.</div>`;
                     } else {
-                        statusPneumatico = `<div class='alert alert-success' style="margin-top: 10px;"><strong>✅ ARRASTE EFICIENTE (Pressão: ${(delta_P/100).toFixed(0)} mbar)</strong><br>O vento chega na ponta a saudáveis <strong>${v_a_real.toFixed(1)} m/s</strong> (SLR: ${SLR_real.toFixed(2)}).</div>`;
+                        statusPneumatico = `<div class='alert alert-success' style="margin-top: 10px;"><strong>✅ REDE PRIMÁRIA APROVEITANDO MELHOR A TURBINA</strong><br>As linhas secundárias recebem <strong>${redeDoisEstagios.velocidadeSecundaria.toFixed(1)} m/s</strong> com perda total de <strong>${redeDoisEstagios.deltaPTotal.toFixed(0)} Pa</strong>. Frente à divisão direta, o ganho de velocidade é <strong>${ganhoVelocidadeMs.toFixed(1)} m/s</strong>.</div>`;
                     }
+
+                    const avisoDistribuicao = !distribuicaoInteira
+                        ? `<div class='alert alert-warning' style="margin-top: 10px;"><strong>⚠️ DIVISÃO MÉDIA NA TORRE</strong><br>O modelo assume balanceamento médio de <strong>${linhas_por_primario_media.toFixed(2)}</strong> linhas secundárias por duto primário. Se a torre real alimentar grupos diferentes, será preciso modelar cada ramo separadamente.</div>`
+                        : '';
 
                     htmlEsquerdo = `
                         <h3 style="color: #fff; margin-bottom: 15px;">Dinâmica de Dosagem Agronômica</h3>
                         <div class="metrics-row">
                             <div class="metric-card" title="Velocidade exigida pela controladora do trator."><div class="metric-label">Rotação do Rolo</div><div class="metric-value">${N_r.toFixed(1)} RPM</div></div>
-                            <div class="metric-card" title="Massa de material despejado em UMA única linha."><div class="metric-label">Taxa Mássica (Por Linha)</div><div class="metric-value">${m_s_kgh_linha.toFixed(1)} kg/h</div></div>
+                            <div class="metric-card" title="Massa de material despejado em uma única linha final."><div class="metric-label">Taxa Mássica por Linha</div><div class="metric-value">${m_s_kgh_linha.toFixed(1)} kg/h</div></div>
                         </div>
                         <div class="metrics-row">
                             <div class="metric-card" title="Volume integral calculado por revolução a partir da geometria do rolo."><div class="metric-label">Volume Integral do Rolo</div><div class="metric-value">${V_r_mm3.toFixed(0)} mm³/rev</div></div>
-                            <div class="metric-card" title="Volume gerado por cada disco útil em uma revolução."><div class="metric-label">Volume por Disco</div><div class="metric-value">${volume_por_disco_mm3.toFixed(0)} mm³/rev</div></div>
+                            <div class="metric-card" title="Vazão total de sólido entregue ao conjunto das linhas finais."><div class="metric-label">Taxa Mássica Total</div><div class="metric-value">${m_s_kgh_total.toFixed(1)} kg/h</div></div>
                         </div>
-                        <h3 style="color: #fff; margin-bottom: 15px;">Dinâmica dos Fluidos (Turbina e Tubo)</h3>
+                        <h3 style="color: #fff; margin-bottom: 15px;">Rede Pneumática em Dois Estágios</h3>
                         <div class="metrics-row">
-                            <div class="metric-card" title="A velocidade se não houvesse resistência (fricção) no cano."><div class="metric-label">Vento Ideal Teórico</div><div class="metric-value">${v_a_nom.toFixed(1)} m/s</div></div>
-                            <div class="metric-card" title="A velocidade real que chega na ponta da mangueira após sofrer a perda de carga mecânica."><div class="metric-label">Vento Real Restante</div><div class="metric-value">${v_a_real.toFixed(1)} m/s</div></div>
+                            <div class="metric-card" title="Velocidade real do ar nos dutos primários de grande diâmetro."><div class="metric-label">Velocidade no Duto Primário</div><div class="metric-value">${redeDoisEstagios.velocidadePrimaria.toFixed(1)} m/s</div></div>
+                            <div class="metric-card" title="Velocidade real do ar nas linhas secundárias de aplicação."><div class="metric-label">Velocidade na Linha Secundária</div><div class="metric-value">${redeDoisEstagios.velocidadeSecundaria.toFixed(1)} m/s</div></div>
+                        </div>
+                        <div class="metrics-row">
+                            <div class="metric-card" title="Perda total do sistema considerando duto primário, torre e linha secundária."><div class="metric-label">Perda Total</div><div class="metric-value">${redeDoisEstagios.deltaPTotal.toFixed(0)} Pa</div></div>
+                            <div class="metric-card" title="Diferença de pressão entre o arranjo com rede primária e a divisão direta nas linhas pequenas."><div class="metric-label">Ganho vs Divisão Direta</div><div class="metric-value">${ganhoPressaoPa.toFixed(0)} Pa</div></div>
+                        </div>
+                        <div class="metrics-row">
+                            <div class="metric-card" title="Pressão estática remanescente na entrada da torre após o trecho primário."><div class="metric-label">Pressão na Torre</div><div class="metric-value">${redeDoisEstagios.pressaoNaTorre.toFixed(0)} Pa</div></div>
+                            <div class="metric-card" title="Pressão estática disponível na entrada das linhas secundárias após a perda no duto primário e na torre."><div class="metric-label">Pressão nas Linhas</div><div class="metric-value">${redeDoisEstagios.pressaoNaLinha.toFixed(0)} Pa</div></div>
                         </div>
                         <h3 style="color: #fff; margin-bottom: 15px;">Status do Sistema</h3>
                         ${statusEletrico}
                         ${statusPneumatico}
+                        ${avisoDistribuicao}
                     `;
 
                     htmlDireito = `
                         <h3 style="color: #fff; margin-top: 0;">📚 Memorial da Semeadura</h3>
                         <div style="margin-bottom: 15px; font-size: 0.9em; color: var(--text-muted);">
-                            <strong>Física Fluido-Mecânica Aplicada</strong><br>
+                            <strong>Rede Pneumática em Dois Estágios</strong><br>
+                            • Dutos primários: ${n_primarios} unidades de ${D_primario_pol.toFixed(2)} pol (${D_primario_mm.toFixed(1)} mm)<br>
+                            • Linhas secundárias totais: ${n_linhas}<br>
+                            • Média de linhas por torre: ${linhas_por_primario_media.toFixed(2)}<br>
                             • Fator de Atrito Darcy (&lambda;): ${fator_atrito.toFixed(3)}<br>
-                            • Pressão Estática Máxima do Soprador (P<sub>max</sub>): ${pressao_turbina_max.toFixed(0)} Pa<br>
-                            • Densidade do Ar (&rho;<sub>a</sub>): ${rho_a.toFixed(2)} kg/m³
+                            • Perda Local da Torre (K): ${k_torre.toFixed(2)}<br>
+                            • Aproveitamento de vazão da turbina: ${aproveitamentoTurbina.toFixed(0)}%
                         </div>
                         <div class="memorial-item">
                             <strong title="Relação geométrica do volume do rolo com a espessura, discos e cavidades.">
                                 <a href="https://openstax.org/books/college-physics-2e/pages/12-1-flow-rate-and-its-relation-to-velocity" target="_blank" style="color: inherit; text-decoration: underline;">1. Volume Integral do Rolo por Revolução</a>
                             </strong><br>
                             <p style="margin: 10px 0 5px 0; font-size: 0.9em;">Composição geométrica do volume útil por rotação:</p>
-                            $$ \\require{action} \\texttip{V_r}{[mm^3/rev] Volume Integral do Rolo. Definição: Volume total deslocado em uma volta completa. Importância: É o parâmetro que fecha a dosagem e determina a vazão volumétrica do rolo.} = \\texttip{e}{[mm] Espessura do Disco. Definição: Espessura útil de cada disco do rolo. Importância: Aumenta linearmente o volume se o disco for mais espesso.} \\cdot \\texttip{N_d}{[Un] Quantidade Útil de Discos. Definição: Número de discos que realmente participam do volume. Importância: Mais discos úteis ampliam a capacidade do rolo.} \\cdot \\texttip{N_c}{[Un/disco] Cavidades Externas por Disco. Definição: Número de cavidades externas por disco. Importância: Define quantas porções de material cada disco carrega por volta.} \\cdot \\texttip{A_c}{[mm^2] Área Lateral da Cavidade. Definição: Área lateral útil de cada cavidade. Importância: Cavidades maiores empurram mais material por revolução.} $$
-                            $$ V_r = ${espessura_disco.toFixed(0)} \\cdot ${qtd_discos_uteis.toFixed(0)} \\cdot ${cavidades_por_disco.toFixed(0)} \\cdot ${area_lateral_cavidade.toFixed(0)} $$
-                            $$ V_r = ${V_r_mm3.toFixed(0)} \\text{ mm}^3\\text{/rev} $$
+                            $$ V_r = ${espessura_disco.toFixed(0)} \\cdot ${qtd_discos_uteis.toFixed(0)} \\cdot ${cavidades_por_disco.toFixed(0)} \\cdot ${area_lateral_cavidade.toFixed(0)} = ${V_r_mm3.toFixed(0)} \\text{ mm}^3\\text{/rev} $$
                         </div>
                         <div class="memorial-item">
                             <strong title="Conversão agronômica de taxa por área para vazão mássica por linha.">
                                 <a href="https://www.nist.gov/pml/special-publication-811/nist-guide-si-chapter-5-units-outside-si" target="_blank" style="color: inherit; text-decoration: underline;">2. Taxa Mássica por Linha</a>
                             </strong><br>
-                            <p style="margin: 10px 0 5px 0; font-size: 0.9em;">Conversão dimensional de kg/ha para kg/h em uma linha de largura ${largura.toFixed(2)} m:</p>
-                            $$ \\require{action} \\texttip{\\dot{m}_{linha}}{[kg/h] Taxa mássica por linha. Definição: Massa aplicada por hora em uma linha. Importância: Alimenta o cálculo de rotação do rolo e carga do dosador.} = \\frac{\\texttip{T_{ha}}{[kg/ha] Taxa Alvo. Definição: Massa desejada por hectare. Impacto: Aumentar eleva diretamente a vazão requerida.} \\cdot \\texttip{v}{[km/h] Velocidade do Trator. Definição: Velocidade de avanço. Impacto: Maior velocidade exige maior vazão.} \\cdot \\texttip{L}{[m] Largura de Trabalho. Definição: Espaçamento atendido por uma linha. Impacto: Linhas mais largas exigem mais massa por hora.}}{10} $$
+                            <p style="margin: 10px 0 5px 0; font-size: 0.9em;">Conversão dimensional para cada linha final:</p>
                             $$ \\dot{m}_{linha} = \\frac{${taxa_ha.toFixed(1)} \\cdot ${v_trator.toFixed(1)} \\cdot ${largura.toFixed(2)}}{10} = ${m_s_kgh_linha.toFixed(2)} \\text{ kg/h} $$
-                            <hr style="border: 0; border-top: 1px dashed rgba(255,255,255,0.05); margin: 10px 0;">
-                            $$ \\require{action} \\texttip{N_r}{[rev/min] Rotação do Rolo. Definição: rotação necessária para entregar a massa por linha. Impacto: Rolo menor ou material menos denso exige mais RPM.} = \\frac{\\texttip{\\dot{m}_{linha} \\cdot 1000 / 60}{[g/min] Conversão de kg/h para g/min.}}{\\texttip{V_r}{[mm^3/rev] Volume por revolução.} \\cdot \\texttip{\\rho_s}{[g/mm^3] Densidade aparente do sólido.}} $$
+                            $$ \\dot{m}_{total} = ${m_s_kgh_linha.toFixed(2)} \\cdot ${n_linhas} = ${m_s_kgh_total.toFixed(2)} \\text{ kg/h} $$
                             $$ N_r = \\frac{${m_s_kgh_linha.toFixed(2)} \\cdot 1000 / 60}{${V_r_mm3.toFixed(0)} \\cdot ${rho_s}} = ${N_r.toFixed(2)} \\text{ RPM} $$
                         </div>
                         <div class="memorial-item">
                             <strong title="Potência elétrica e potência mecânica com eficiência do motor.">
                                 <a href="https://openstax.org/books/college-physics-2e/pages/20-4-electric-power-and-energy" target="_blank" style="color: inherit; text-decoration: underline;">3. Potência do Motor do Dosador</a>
                             </strong><br>
-                            <p style="margin: 10px 0 5px 0; font-size: 0.9em;">Capacidade mecânica disponível no eixo do motor:</p>
-                            $$ \\require{action} \\texttip{P_{util,max}}{[W] Potência útil máxima. Definição: potência mecânica disponível no eixo. Impacto: se for menor que a demanda, o dosador entra em sobrecarga.} = \\texttip{V}{[V] Tensão do Motor.} \\cdot \\texttip{I_{max}}{[A] Corrente Máxima.} \\cdot \\texttip{\\eta_{mot}}{[-] Eficiência do Motor.} $$
+                            <p style="margin: 10px 0 5px 0; font-size: 0.9em;">Capacidade mecânica do motor e potência requerida no dosador:</p>
                             $$ P_{util,max} = ${V_motor.toFixed(1)} \\cdot ${I_max.toFixed(1)} \\cdot ${eta_motor_dist.toFixed(2)} = ${P_util_max.toFixed(1)} \\text{ W} $$
-                            <hr style="border: 0; border-top: 1px dashed rgba(255,255,255,0.05); margin: 10px 0;">
-                            <p style="margin: 5px 0; font-size: 0.9em;">Demanda mecânica estimada pela energia específica de dosagem informada:</p>
-                            $$ \\require{action} \\texttip{P_{req}}{[W] Potência requerida. Definição: taxa de energia necessária para dosar o material. Impacto: cresce com massa por segundo e energia específica.} = \\frac{\\texttip{\\dot{m}_{g/s}}{[g/s] Vazão mássica.} \\cdot \\texttip{E_d}{[J/g] Energia específica do dosador.}}{\\texttip{\\eta_{red}}{[-] Eficiência mecânica do redutor.}} $$
                             $$ P_{req} = \\frac{${m_s_gs.toFixed(3)} \\cdot ${E_dosador.toFixed(2)}}{${EFICIENCIA_REDUTOR}} = ${P_mec_req.toFixed(2)} \\text{ W} $$
                         </div>
                         <div class="memorial-item green">
-                            <strong title="Divisão do escoamento e Equação da Continuidade. Clique para referência.">
-                                <a href="https://openstax.org/books/college-physics-2e/pages/12-1-flow-rate-and-its-relation-to-velocity" target="_blank" style="color: inherit; text-decoration: underline;">4. Divisão Volumétrica de Fluxo (Continuidade) 🔗</a>
+                            <strong title="Conversão exata do diâmetro primário de polegadas para SI.">
+                                <a href="https://www.nist.gov/pml/us-surveyfoot/revised-unit-conversion-factors" target="_blank" style="color: inherit; text-decoration: underline;">4. Conversão do Duto Primário para SI</a>
                             </strong><br>
-                            <p style="margin: 10px 0 5px 0; font-size: 0.9em;">A turbina injeta ar no coletor, dividindo a vazão pelas ${n_linhas} linhas:</p>
-                            $$ \\require{action} \\texttip{Q_{linha}}{[m³/min] Vazão da Linha. Definição: Volume de ar dividido para uma única mangueira. Importância: Garante que cada linha tenha ar suficiente para o arraste.} = \\frac{\\texttip{Q_{turbina}}{[m³/min] Vazão Total. Definição: Capacidade de sopro da turbina. Importância: Limita o número máximo de linhas que a máquina pode ter.}}{\\texttip{N_{linhas}}{[Un] Número de Linhas. Definição: Quantidade de distribuidores. Importância: Divide o ar disponível; muitas linhas causam entupimento.}} $$
-                            $$ Q_{linha} = \\frac{${Q_turbina_m3min}}{${n_linhas}} $$
-                            $$ Q_{linha} = ${Q_linha_m3min.toFixed(2)} \\text{ m}^3\\text{/min} $$
-                            <hr style="border: 0; border-top: 1px dashed rgba(255,255,255,0.05); margin: 10px 0;">
-                            <p style="margin: 5px 0; font-size: 0.9em;">Velocidade de ar base baseada na seção transversal da mangueira:</p>
-                            $$ \\require{action} \\texttip{v_{nom}}{[m/s] Velocidade Nominal. Definição: Vento teórico na mangueira sem atrito. Importância: Acima de 15 m/s garante o transporte em fase diluída.} = \\frac{\\texttip{Q_{linha} / 60}{Conversão de m³/min para m³/s.}}{\\texttip{A}{[m²] Área Transversal. Definição: Área interna da mangueira. Importância: Tubos menores aceleram o vento (efeito Venturi).}} $$
-                            $$ v_{nom} = \\frac{${Q_linha_m3min.toFixed(2)} / 60}{${Area.toFixed(4)}} $$
-                            $$ v_{nom} = ${v_a_nom.toFixed(1)} \\text{ m/s} $$
+                            <p style="margin: 10px 0 5px 0; font-size: 0.9em;">Usando 1 ft = 0,3048 m exato, então 1 in = 0,0254 m:</p>
+                            $$ D_{prim} = ${D_primario_pol.toFixed(2)} \\cdot 0.0254 = ${D_primario_m.toFixed(4)} \\text{ m} $$
+                            $$ A_{prim} = \\frac{\\pi \\cdot ${D_primario_m.toFixed(4)}^2}{4} = ${areaPrimaria.toFixed(4)} \\text{ m}^2 $$
+                        </div>
+                        <div class="memorial-item green">
+                            <strong title="Continuidade na rede primária até a torre.">
+                                <a href="https://openstax.org/books/college-physics-2e/pages/12-1-flow-rate-and-its-relation-to-velocity" target="_blank" style="color: inherit; text-decoration: underline;">5. Continuidade nos Dutos Primários</a>
+                            </strong><br>
+                            <p style="margin: 10px 0 5px 0; font-size: 0.9em;">A vazão total é dividida primeiro pelos dutos grandes:</p>
+                            $$ Q_{prim} = \\frac{${redeDoisEstagios.vazaoTotalReal.toFixed(2)}}{${n_primarios}} = ${redeDoisEstagios.vazaoPrimariaReal.toFixed(2)} \\text{ m}^3\\text{/min} $$
+                            $$ v_{prim} = \\frac{Q_{prim}/60}{A_{prim}} = ${redeDoisEstagios.velocidadePrimaria.toFixed(2)} \\text{ m/s} $$
+                            $$ SLR_{prim} = \\frac{${m_s_kgh_primario.toFixed(2)}}{${redeDoisEstagios.massaArPrimariaKgh.toFixed(2)}} = ${redeDoisEstagios.slrPrimario.toFixed(2)} $$
                         </div>
                         <div class="memorial-item yellow">
-                            <strong title="Queda de pressão em tubos com atrito. Clique para referência.">
-                                <a href="https://www.engineeringtoolbox.com/darcy-weisbach-equation-d_646.html" target="_blank" style="color: inherit; text-decoration: underline;">5. Perda de Carga (Darcy-Weisbach) 🔗</a>
+                            <strong title="Perda distribuída por atrito ao longo do duto primário.">
+                                <a href="https://www.engineeringtoolbox.com/darcy-weisbach-equation-d_646.html" target="_blank" style="color: inherit; text-decoration: underline;">6. Perda no Duto Primário (Darcy-Weisbach)</a>
                             </strong><br>
-                            <p style="margin: 10px 0 5px 0; font-size: 0.9em;">Resistência mecânica gerada pelos ${L_tubo_m} metros de tubo. O fator (1 + SLR) é uma correção simplificada para arraste de sólidos e deve ser calibrado em bancada:</p>
-                            $$ \\require{action} \\texttip{\\Delta P}{[Pa] Perda de Carga. Definição: Pressão gasta para vencer o atrito. Importância: Se a perda for maior que a capacidade da turbina, a linha entope.} = \\texttip{\\lambda}{[Adim.] Fator de Atrito. Definição: Rugosidade do tubo. Importância: Tubos rugosos "freiam" o ar.} \\cdot \\frac{\\texttip{L}{[m] Comprimento. Definição: Tamanho da mangueira. Importância: Tubos longos geram muita perda.}}{\\texttip{D}{[m] Diâmetro. Definição: Largura interna. Importância: Tubos finos estrangulam a linha.}} \\cdot \\texttip{\\frac{\\rho_a \\cdot v_{nom}^2}{2}}{Pressão Dinâmica do Escoamento.} \\cdot (1 + \\texttip{\\mu}{[kg/kg] SLR simplificado. Definição: Relação entre massa de sólido e ar usada como multiplicador empírico. Importância: Valores altos exigem calibração porque o escoamento deixa de ser monofásico.}) $$
-                            $$ \\Delta P = ${fator_atrito.toFixed(3)} \\cdot \\frac{${L_tubo_m}}{${D_m}} \\cdot \\frac{${rho_a.toFixed(2)} \\cdot ${v_a_nom.toFixed(1)}^2}{2} \\cdot (1 + ${SLR_teorico.toFixed(2)}) $$
-                            $$ \\Delta P = ${delta_P.toFixed(0)} \\text{ Pa} $$
+                            <p style="margin: 10px 0 5px 0; font-size: 0.9em;">Perda distribuída com correção simplificada para sólido em suspensão:</p>
+                            $$ \\Delta P_{prim} = \\lambda \\cdot \\frac{L_{prim}}{D_{prim}} \\cdot \\frac{\\rho_a \\cdot v_{prim}^2}{2} \\cdot (1 + SLR_{prim}) $$
+                            $$ \\Delta P_{prim} = ${redeDoisEstagios.deltaPPrimario.toFixed(0)} \\text{ Pa} $$
+                        </div>
+                        <div class="memorial-item yellow">
+                            <strong title="Perda localizada por divisão e mudança de direção na torre.">
+                                <a href="https://www.engineeringtoolbox.com/minor-loss-air-ducts-fittings-d_208.html" target="_blank" style="color: inherit; text-decoration: underline;">7. Perda Localizada da Torre</a>
+                            </strong><br>
+                            <p style="margin: 10px 0 5px 0; font-size: 0.9em;">Modelo de perda localizada com coeficiente K referido à velocidade no duto primário:</p>
+                            $$ \\Delta P_{torre} = K \\cdot \\frac{\\rho_a \\cdot v_{prim}^2}{2} \\cdot (1 + SLR_{prim}) $$
+                            $$ \\Delta P_{torre} = ${redeDoisEstagios.deltaPTorre.toFixed(0)} \\text{ Pa} $$
+                        </div>
+                        <div class="memorial-item green">
+                            <strong title="Continuidade nas linhas menores após a torre.">
+                                <a href="https://openstax.org/books/college-physics-2e/pages/12-1-flow-rate-and-its-relation-to-velocity" target="_blank" style="color: inherit; text-decoration: underline;">8. Continuidade nas Linhas Secundárias</a>
+                            </strong><br>
+                            <p style="margin: 10px 0 5px 0; font-size: 0.9em;">A vazão real remanescente é dividida entre as linhas finais:</p>
+                            $$ A_{sec} = \\frac{\\pi \\cdot ${D_m.toFixed(4)}^2}{4} = ${areaSecundaria.toFixed(4)} \\text{ m}^2 $$
+                            $$ Q_{sec} = \\frac{${redeDoisEstagios.vazaoTotalReal.toFixed(2)}}{${n_linhas}} = ${redeDoisEstagios.vazaoSecundariaReal.toFixed(2)} \\text{ m}^3\\text{/min} $$
+                            $$ v_{sec} = \\frac{Q_{sec}/60}{A_{sec}} = ${redeDoisEstagios.velocidadeSecundaria.toFixed(2)} \\text{ m/s} $$
+                            $$ SLR_{sec} = \\frac{${m_s_kgh_linha.toFixed(2)}}{${redeDoisEstagios.massaArSecundariaKgh.toFixed(2)}} = ${redeDoisEstagios.slrSecundario.toFixed(2)} $$
+                        </div>
+                        <div class="memorial-item yellow">
+                            <strong title="Perda distribuída nas linhas menores até o ponto de aplicação.">
+                                <a href="https://www.engineeringtoolbox.com/darcy-weisbach-equation-d_646.html" target="_blank" style="color: inherit; text-decoration: underline;">9. Perda nas Linhas Secundárias</a>
+                            </strong><br>
+                            <p style="margin: 10px 0 5px 0; font-size: 0.9em;">Perda distribuída no trecho final, já após a torre:</p>
+                            $$ \\Delta P_{sec} = \\lambda \\cdot \\frac{L_{sec}}{D_{sec}} \\cdot \\frac{\\rho_a \\cdot v_{sec}^2}{2} \\cdot (1 + SLR_{sec}) $$
+                            $$ \\Delta P_{sec} = ${redeDoisEstagios.deltaPSecundario.toFixed(0)} \\text{ Pa} $$
                         </div>
                         <div class="memorial-item red">
-                            <strong title="Curvas de bombas e ventiladores centrífugos. Clique para referência.">
-                                <a href="https://www.engineeringtoolbox.com/fan-performance-characteristics-d_48.html" target="_blank" style="color: inherit; text-decoration: underline;">6. Curva da Turbina e Velocidade Efetiva 🔗</a>
+                            <strong title="Acoplamento iterativo entre a curva da turbina e as perdas do sistema.">
+                                <a href="https://www.engineeringtoolbox.com/fan-performance-characteristics-d_48.html" target="_blank" style="color: inherit; text-decoration: underline;">10. Fechamento da Rede e Comparação com Divisão Direta</a>
                             </strong><br>
-                            <p style="margin: 10px 0 5px 0; font-size: 0.9em;">A turbina perde vazão sob contrapressão; aqui a curva real do ventilador é aproximada por uma reta até a pressão estática máxima informada:</p>
-                            $$ \\require{action} \\texttip{v_{real}}{[m/s] Velocidade Real. Definição: Vento final na ponta do tubo descontando atrito pela aproximação linear. Importância: É a velocidade que efetivamente lança a semente na terra; substitua por curva real do fabricante para projeto final.} = \\texttip{v_{nom}}{Vento Ideal Nominal.} \\cdot \\left( 1 - \\frac{\\texttip{\\Delta P}{Perda de Carga Acumulada.}}{\\texttip{P_{max}}{[Pa] Pressão de Estol. Definição: Pressão estática máxima informada para a turbina. Importância: Limite antes da turbina perder vazão útil.}} \\right) $$
-                            $$ v_{real} = ${v_a_nom.toFixed(1)} \\cdot \\left( 1 - \\frac{${delta_P.toFixed(0)}}{${pressao_turbina_max.toFixed(0)}} \\right) $$
-                            $$ v_{real} = ${v_a_real.toFixed(1)} \\text{ m/s} $$
+                            <p style="margin: 10px 0 5px 0; font-size: 0.9em;">O modelo recalcula a vazão até convergir entre a contrapressão total e a capacidade do soprador:</p>
+                            $$ \\Delta P_{total} = ${redeDoisEstagios.deltaPPrimario.toFixed(0)} + ${redeDoisEstagios.deltaPTorre.toFixed(0)} + ${redeDoisEstagios.deltaPSecundario.toFixed(0)} = ${redeDoisEstagios.deltaPTotal.toFixed(0)} \\text{ Pa} $$
+                            $$ f = 1 - \\frac{${redeDoisEstagios.deltaPTotal.toFixed(0)}}{${pressao_turbina_max.toFixed(0)}} = ${redeDoisEstagios.fatorVazao.toFixed(3)} $$
+                            $$ Q_{total,real} = ${redeDoisEstagios.fatorVazao.toFixed(3)} \\cdot ${Q_turbina_m3min.toFixed(2)} = ${redeDoisEstagios.vazaoTotalReal.toFixed(2)} \\text{ m}^3\\text{/min} $$
+                            <hr style="border: 0; border-top: 1px dashed rgba(255,255,255,0.05); margin: 10px 0;">
+                            <p style="margin: 5px 0; font-size: 0.9em;">Comparação com a divisão direta em ${n_linhas} linhas pequenas:</p>
+                            $$ \\Delta P_{direto} = ${redeDireta.deltaPLinha.toFixed(0)} \\text{ Pa}, \\quad v_{direto} = ${redeDireta.velocidadeLinha.toFixed(2)} \\text{ m/s} $$
+                            $$ \\text{Ganho de pressão} = ${ganhoPressaoPa.toFixed(0)} \\text{ Pa}, \\quad \\text{Ganho de velocidade final} = ${ganhoVelocidadeMs.toFixed(2)} \\text{ m/s} $$
                         </div>
                     `;
 
