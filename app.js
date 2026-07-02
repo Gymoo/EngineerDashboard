@@ -1,4 +1,4 @@
-// Verificar se Matter.js carregou
+﻿// Verificar se Matter.js carregou
         function aguardarMatterJS(callback, tentativas = 0) {
             if (typeof window.Matter !== 'undefined') {
                 console.log('Matter.js carregado com sucesso!');
@@ -11,7 +11,7 @@
             }
         }
 
-console.log('🔧 Script iniciando...');
+console.log('ðŸ”§ Script iniciando...');
         
         // --- CONSTANTES FÍSICAS ---
         // Essas constantes/variáveis aparecem no memorial e também podem ganhar significado via tooltip.
@@ -51,12 +51,12 @@ console.log('🔧 Script iniciando...');
         const LANGUAGE_STORAGE_KEY = 'portal-engenharia-language-v1';
 
         // Aguardar Matter.js e depois inicializar
-        console.log('⏳ Aguardando Matter.js...');
+        console.log('â³ Aguardando Matter.js...');
         aguardarMatterJS(function() {
             console.log('✅ Matter.js carregado!');
             // Aguardar também que o DOM esteja pronto
             if (document.readyState === 'loading') {
-                console.log('⏳ Aguardando DOMContentLoaded...');
+                console.log('â³ Aguardando DOMContentLoaded...');
                 document.addEventListener('DOMContentLoaded', iniciarAplicacao);
             } else {
                 console.log('✅ DOM já está pronto!');
@@ -147,6 +147,11 @@ console.log('🔧 Script iniciando...');
                 btnVoltarDist: document.getElementById('btn-voltar-dist'),
                 stateButtons: document.querySelectorAll('.state-btn'),
                 resetButtons: document.querySelectorAll('[data-dashboard-reset]'),
+                resetModal: document.getElementById('reset-confirmation-modal'),
+                resetModalTitle: document.getElementById('reset-confirmation-title'),
+                resetModalText: document.getElementById('reset-confirmation-text'),
+                resetModalCancel: document.getElementById('reset-confirmation-cancel'),
+                resetModalConfirm: document.getElementById('reset-confirmation-confirm'),
                 sidebarToggleButtons: document.querySelectorAll('[data-sidebar-toggle]'),
                 sidebarPinButtons: document.querySelectorAll('[data-sidebar-pin]'),
                 themeToggleButtons: document.querySelectorAll('[data-theme-toggle]'),
@@ -245,6 +250,65 @@ console.log('🔧 Script iniciando...');
                 'Corrente Aplicada (A)': 'Applied Current (A)',
                 'Corrente Máxima Suportada (A)': 'Maximum Supported Current (A)',
                 'Eficiência do Motor (%)': 'Motor Efficiency (%)',
+                'Densidade (g/mm³)': 'Density (g/mm³)',
+                'Tensão do Motor (Vdc)': 'Motor Voltage (Vdc)',
+                'Corrente Máx (A)': 'Maximum Current (A)',
+                'Energia Específica do Dosador (J/g)': 'Metering Specific Energy (J/g)',
+                'Quantidade de Dutos Primários': 'Number of Primary Ducts',
+                'Diâmetro do Duto Primário (pol)': 'Primary Duct Diameter (in)',
+                'Comprimento do Duto Primário (m)': 'Primary Duct Length (m)',
+                'Perda Local da Torre (K)': 'Tower Local Loss (K)',
+                'Número de Linhas': 'Number of Rows',
+                'Comprimento do Tubo (m)': 'Tube Length (m)',
+                'Vazão da Turbina (m³/min)': 'Turbine Flow Rate (m³/min)',
+                'Diâmetro Tubulação (mm)': 'Tube Diameter (mm)',
+                'Densidade do Ar (kg/m³)': 'Air Density (kg/m³)',
+                'Fator de Atrito Darcy (λ)': 'Darcy Friction Factor (λ)',
+                'Pressão Estática Máx. (Pa)': 'Maximum Static Pressure (Pa)',
+                'Coeficiente Restituição (e)': 'Restitution Coefficient (e)',
+                'Recolher barra lateral': 'Collapse sidebar',
+                'Desafixar barra lateral': 'Unpin sidebar',
+                'Expandir barra lateral': 'Expand sidebar',
+                'Fixar barra lateral': 'Pin sidebar',
+                'Características físicas intrínsecas ao aglomerado mineral que será triturado.': 'Intrinsic physical properties of the mineral agglomerate to be crushed.',
+                "Índice empírico (Bond's Work Index) que define o trabalho mecânico em Joules para cisalhar 1 grama de material. O NPK cristalizado exige entre 15 e 20 J/g.": "Empirical index (Bond's Work Index) defining the mechanical work in joules required to shear 1 gram of material. Crystallized NPK requires between 15 and 20 J/g.",
+                'Alterna o referencial do cálculo: da mecânica empurrando o limite, para a elétrica sofrendo o impacto.': 'Switches the calculation perspective between mechanical demand and its electrical impact.',
+                'Capacidade da fonte de alimentação e conversão eletromecânica do motor CC.': 'Power-supply capacity and electromechanical conversion of the DC motor.',
+                'Diferença de potencial da bateria/fonte. Sistemas veiculares padrão operam em 12V ou 24V.': 'Battery or supply potential difference. Standard vehicle systems operate at 12 V or 24 V.',
+                'Limite de corrente contínua que o enrolamento do motor suporta antes do verniz isolante derreter (Fator limitante térmico).': 'Continuous-current limit supported by the motor winding before the insulating varnish deteriorates (thermal limiting factor).',
+                'Porcentagem de energia elétrica que efetivamente vira giro e torque. Os 25% restantes são dissipados como calor na carcaça.': 'Percentage of electrical energy effectively converted into rotation and torque. The remaining 25% is dissipated as heat through the housing.',
+                'Cinemática da caixa de engrenagens do Destorroador.': 'Kinematics of the lump breaker gearbox.',
+                'Fator multiplicador de força. Uma redução de 50:1 significa que o motor gira 50 vezes para o rolo girar 1 vez, multiplicando o torque por 50 (menos as perdas por atrito).': 'Force multiplication factor. A 50:1 reduction means the motor rotates 50 times for one roller revolution, multiplying torque by 50 minus friction losses.',
+                'Demanda de produção: Quantos gramas de fertilizante a máquina precisa engolir e cuspir por segundo.': 'Production demand: grams of fertilizer the machine must process per second.',
+                'Alterna entre o cálculo da linha de ar e o voo livre da semente.': 'Switches between airflow-line calculation and seed free-flight calculation.',
+                'Características de campo ditadas pelo agricultor.': 'Field requirements defined by the operator.',
+                'Quantidade de material desejado por Hectare.': 'Desired material application rate per hectare.',
+                'Velocidade de operação da máquina na lavoura. Quanto mais rápido, mais o motor sofre para compensar.': 'Machine operating speed in the field. Higher speed requires the motor to compensate with greater output.',
+                'Largura de atuação correspondente a este único dosador (espaçamento da linha).': 'Working width corresponding to this individual meter (row spacing).',
+                'Geometria do dosador e elétrica limitante.': 'Meter geometry and electrical limits.',
+                'Espessura de cada disco útil do rolo.': 'Thickness of each active roller disc.',
+                'Quantidade de discos que realmente participam do volume útil por revolução.': 'Number of discs contributing to the useful volume per revolution.',
+                'Quantidade de cavidades externas por disco.': 'Number of external cavities per disc.',
+                'Área lateral de cada cavidade em contato com o material.': 'Lateral area of each cavity in contact with the material.',
+                'Massa por unidade de volume do material.': 'Material mass per unit volume.',
+                'Tensão elétrica alimentada pela bateria do trator.': 'Electrical voltage supplied by the tractor battery.',
+                'Amperagem limite antes da queima do verniz da bobina.': 'Current limit before thermal damage to the winding insulation.',
+                'Fração da potência elétrica que vira potência mecânica no eixo do motor.': 'Fraction of electrical power converted into mechanical power at the motor shaft.',
+                'Energia específica necessária para movimentar/dosar 1 g de material. Deve ser medida em ensaio para o dosador real.': 'Specific energy required to move or meter 1 g of material. It must be measured in a test of the actual meter.',
+                'Malha de ar que transporta o sólido do dosador.': 'Air network transporting solids from the meter.',
+                'Quantidade de dutos primários de grande diâmetro entre a turbina e a torre de distribuição. No seu arranjo real, são os ramais grossos que preservam pressão antes da divisão final.': 'Number of large-diameter primary ducts between the turbine and distribution tower. These ducts preserve pressure before the final split.',
+                'Diâmetro interno do duto primário em polegadas. A conversão usada é 1 ft = 0,3048 m exato, logo 1 in = 25,4 mm. Dutos maiores reduzem L/D e velocidade média, diminuindo a perda por atrito até a torre.': 'Primary-duct internal diameter in inches. The exact conversion is 1 ft = 0.3048 m, therefore 1 in = 25.4 mm. Larger ducts reduce L/D and average velocity, decreasing friction loss to the tower.',
+                'Comprimento de cada duto primário até a torre. Esse trecho concentra grande vazão e, mesmo com diâmetro maior, ainda gera perda distribuída ao longo da parede.': 'Length of each primary duct to the tower. This section carries high flow and still produces distributed wall-friction loss.',
+                'Coeficiente de perda localizada da torre de distribuição. Modela perdas por mudança de direção, divisão de fluxo e transições internas segundo ΔP_local = K·ρ·v²/2. Ajuste por ensaio ou geometria real da torre.': 'Distribution-tower local-loss coefficient. It models direction changes, flow splitting, and internal transitions using ΔP_local = K·ρ·v²/2. Set it from testing or actual tower geometry.',
+                'Trecho após a torre, já dividido em linhas menores até o ponto de aplicação.': 'Section after the tower, divided into smaller rows leading to the application point.',
+                'Quantidade de linhas de plantio. A turbina divide seu vento total entre todas elas.': 'Number of planting rows. The turbine divides its total airflow among them.',
+                'Comprimento da mangueira de cada linha. Mangueiras longas geram atrito (perda de carga) e reduzem a velocidade real do vento.': 'Hose length for each row. Longer hoses increase friction loss and reduce actual air velocity.',
+                'Capacidade volumétrica do soprador.': 'Volumetric capacity of the blower.',
+                'Diâmetro interno de cada mangueira individual.': 'Internal diameter of each individual hose.',
+                'Densidade do ar usada na pressão dinâmica. 1,2 kg/m³ é aproximação comum para ar próximo de 20 °C ao nível do mar.': 'Air density used for dynamic pressure. 1.2 kg/m³ is a common approximation for air near 20 °C at sea level.',
+                'Fator de atrito de Darcy-Weisbach (λ), grandeza adimensional usada na equação de perda de carga ΔP = λ·(L/D)·(ρ·v²/2). Ele representa quanto o escoamento perde pressão por atrito com a parede do tubo. Seu valor depende principalmente do número de Reynolds, da rugosidade interna da mangueira e do regime de escoamento, sendo normalmente obtido por diagrama de Moody, equação de Colebrook ou ensaio. No sistema, aumentar λ eleva a perda de carga, reduz a velocidade real do ar na linha e aumenta o risco de entupimento; reduzir λ diminui a contrapressão e melhora o transporte pneumático. Exemplo: para a mesma vazão, dobrar λ aproximadamente dobra a parcela de perda por atrito prevista na fórmula. Referências: Darcy-Weisbach e diagramas de escoamento em tubos.': 'Darcy-Weisbach friction factor (λ), a dimensionless quantity used in ΔP = λ·(L/D)·(ρ·v²/2). It represents pressure lost to pipe-wall friction. Its value depends mainly on Reynolds number, internal roughness, and flow regime, and is normally obtained from a Moody chart, the Colebrook equation, or testing. Increasing λ raises pressure loss, reduces actual line velocity, and increases clogging risk; reducing λ lowers backpressure and improves pneumatic transport. Example: at the same flow rate, doubling λ approximately doubles the predicted friction-loss component.',
+                'Pressão estática máxima disponível na curva da turbina. Use dado do fabricante ou ensaio.': 'Maximum static pressure available from the turbine curve. Use manufacturer or test data.',
+                'Coeficiente de Restituição (e): Determina quanta energia a semente perde no choque contra o defletor. Borracha perde muito (~0.4), Aço preserva mais (~0.7).': 'Restitution coefficient (e): determines how much energy the seed loses when striking the deflector. Rubber dissipates more (~0.4), while steel preserves more (~0.7).',
                 '🎛️ Parâmetros do Moinho': '🎛️ Mill Parameters',
                 'Relação de Redução (1:X)': 'Reduction Ratio (1:X)',
                 'Taxa de Moagem Alvo (g/s)': 'Target Grinding Rate (g/s)',
@@ -252,6 +316,33 @@ console.log('🔧 Script iniciando...');
                 'Simulador dinâmico de dimensionamento mecânico e proteção elétrica a 60 FPS.': 'Dynamic mechanical sizing and electrical protection simulator at 60 FPS.',
                 '🚜 1. Dosagem e Arraste Pneumático': '🚜 1. Metering and Pneumatic Conveying',
                 '☄️ 2. Cinemática de Espalhamento (Queda)': '☄️ 2. Spreading Kinematics (Fall)',
+                'Terminal Defletor': 'Terminal Deflector',
+                'Velocidade de Queda (V0 m/s)': 'Fall Velocity (V0 m/s)',
+                'Velocidade de Queda (V₀ m/s)': 'Fall Velocity (V₀ m/s)',
+                'Ângulo Vertical (°)': 'Vertical Angle (°)',
+                'Raio de Curvatura (mm)': 'Curvature Radius (mm)',
+                'Largura da Chapa (L) mm': 'Plate Width (L) mm',
+                'Diâmetro do Tubo (mm)': 'Tube Diameter (mm)',
+                'Altura da Chapa (m)': 'Plate Height (m)',
+                'Coeficiente de Restituição (e)': 'Restitution Coefficient (e)',
+                'Geometria da chapa final de distribuição na linha de plantio.': 'Geometry of the final distribution plate on the planting row.',
+                'Velocidade com que a semente cai verticalmente quando sai da mangueira pneumática e atinge o defletor.': 'Speed at which the seed falls vertically when leaving the pneumatic hose and striking the deflector.',
+                'Ângulo de inclinação do defletor em relação à horizontal. 45° reflete a semente horizontalmente (máximo alcance). Valores menores aumentam a componente descendente.': 'Deflector tilt angle relative to the horizontal. 45° reflects the seed horizontally (maximum range). Smaller values increase the downward component.',
+                'Raio de dobra geométrica da chapa. Raios abertos (1000mm) a deixam quase plana. Raios apertados (60mm) geram alto espalhamento.': 'Geometric bend radius of the plate. Open radii (1000 mm) leave it almost flat. Tight radii (60 mm) generate high spreading.',
+                'Largura física total da chapa (limite estrutural do defletor).': 'Total physical width of the plate (structural limit of the deflector).',
+                'Diâmetro interno da tubulação de descida. Define a dispersão inicial (cortina) das sementes antes de tocarem a chapa. Tubos finos reduzem o espalhamento.': 'Internal diameter of the drop tube. Defines the initial seed curtain before it reaches the plate. Narrow tubes reduce spreading.',
+                'Distância vertical do ponto de impacto na chapa até o solo/sulco onde a semente pousa.': 'Vertical distance from the impact point on the plate to the ground/furrow where the seed lands.',
+                'Coeficiente de Restituição (e): Determina quanta energia a semente perde no choque contra o defletor. Borracha perde muito (~0.4), aço preserva mais (~0.7).': 'Coefficient of Restitution (e): Determines how much energy the seed loses on impact with the deflector. Rubber loses a lot (~0.4), steel preserves more (~0.7).',
+                'Física aplicada: Conservação de Energia (V x A), resistência de materiais e Lei de Joule.': 'Applied physics: Energy conservation (V x A), materials strength, and Joule\'s law.',
+                'Física aplicada: Escoamento de fluidos compressíveis, vazão volumétrica e razão de carregamento bifásico.': 'Applied physics: Compressible fluid flow, volumetric flow rate, and two-phase loading ratio.',
+                'Geometria da chapa final de distribui??o na linha de plantio.': 'Geometry of the final distribution plate on the planting row.',
+                'Velocidade com que a semente cai verticalmente quando sai da mangueira pneum?tica e atinge o defletor.': 'Speed at which the seed falls vertically when leaving the pneumatic hose and striking the deflector.',
+                '?ngulo de inclina??o do defletor em rela??o ? horizontal. 45? reflete a semente horizontalmente (m?ximo alcance). Valores menores aumentam a componente descendente.': 'Deflector tilt angle relative to the horizontal. 45? reflects the seed horizontally (maximum range). Smaller values increase the downward component.',
+                'Raio de dobra geom?trica da chapa. Raios abertos (1000mm) a deixam quase plana. Raios apertados (60mm) geram alto espalhamento.': 'Geometric bend radius of the plate. Open radii (1000 mm) leave it almost flat. Tight radii (60 mm) generate high spreading.',
+                'Largura f?sica total da chapa (limite estrutural do defletor).': 'Total physical width of the plate (structural limit of the deflector).',
+                'Di?metro interno da tubula??o de descida. Define a dispers?o inicial (cortina) das sementes antes de tocarem a chapa. Tubos finos reduzem o espalhamento.': 'Internal diameter of the drop tube. Defines the initial seed curtain before it reaches the plate. Narrow tubes reduce spreading.',
+                'Dist?ncia vertical do ponto de impacto na chapa at? o solo/sulco onde a semente pousa.': 'Vertical distance from the impact point on the plate to the ground/furrow where the seed lands.',
+                'Coeficiente de Restitui??o (e): Determina quanta energia a semente perde no choque contra o defletor. Borracha perde muito (~0.4), A?o preserva mais (~0.7).': 'Coefficient of Restitution (e): Determines how much energy the seed loses on impact with the deflector. Rubber loses a lot (~0.4), steel preserves more (~0.7).',
                 '🚜 Demanda Agronômica': '🚜 Agronomic Demand',
                 'Taxa Alvo (kg/ha)': 'Target Rate (kg/ha)',
                 'Velocidade do Trator (km/h)': 'Tractor Speed (km/h)',
@@ -278,6 +369,16 @@ console.log('🔧 Script iniciando...');
                 '📚 Memorial de Cálculo': '📚 Calculation Report',
                 '📚 Memorial de Cálculo Inverso': '📚 Reverse Calculation Report',
                 'Parâmetros Base Assumidos': 'Assumed Base Parameters',
+                'Energia Específica': 'Specific Energy',
+                'Eficiência Mecânica': 'Mechanical Efficiency',
+                'Motor na rotação base': 'Motor at baseline speed',
+                '1. Demanda Mecânica (Rolos) 🔗': '1. Mechanical Demand (Rollers) 🔗',
+                'Potência mecânica refletida na ponta do eixo do motor:': 'Mechanical power reflected at the motor shaft end:',
+                '2. Reflexo Elétrico (Tomada) 🔗': '2. Electrical Demand (Supply) 🔗',
+                'O que o motor precisará drenar da bateria para não travar:': 'Electrical power the motor must draw from the battery to avoid stalling:',
+                'Corrente resultante dessa demanda forçada:': 'Current resulting from this forced demand:',
+                '3. Risco de Queima (Lei de Joule) 🔗': '3. Overheating Risk (Joule’s Law) 🔗',
+                'Conversão dimensional para cada linha final:': 'Dimensional conversion for each final row:',
                 'Dinâmica de Dosagem Agronômica': 'Agronomic Metering Dynamics',
                 'Rotação do Rolo': 'Roller Speed',
                 'Taxa Mássica por Linha': 'Mass Flow per Row',
@@ -289,17 +390,19 @@ console.log('🔧 Script iniciando...');
                 '📚 Memorial da Semeadura': '📚 Seeding Calculation Report',
                 'Mecânica do Impacto (Defletor)': 'Impact Mechanics (Deflector)',
                 'Velocidade de Queda (V₀)': 'Fall Velocity (V₀)',
-                'Velocidade Refletida (Vᵣ)': 'Reflected Velocity (Vᵣ)',
+                'Velocidade Refletida (Váµ£)': 'Reflected Velocity (Váµ£)',
                 'Análise Vetorial': 'Vector Analysis',
                 'Ângulo Saída Frontal': 'Front Exit Angle',
-                'Ângulo Curva Máx. (γ)': 'Maximum Curve Angle (γ)',
+                'Ângulo Curva Máx. (Î³)': 'Maximum Curve Angle (Î³)',
                 'Projeção Cinemática no Solo': 'Kinematic Projection on the Ground',
                 'Tempo de Queda': 'Fall Time',
                 'Alcance Longitudinal': 'Longitudinal Range',
                 'Largura da Faixa Distribuída (Espalhamento Z)': 'Distributed Swath Width (Z Spreading)',
                 'Perfil de Distribuição': 'Distribution Profile',
                 '📚 Memorial da Cinemática': '📚 Kinematics Calculation Report',
-                'Física de Projéteis Assumida': 'Assumed Projectile Physics'
+                'Física de Projéteis Assumida': 'Assumed Projectile Physics',
+                'Física aplicada: Conservação de Energia (V x A), resistência de materiais e Lei de Joule.': 'Applied physics: Energy conservation (V x A), material strength, and Joule\'s law.',
+                'Física aplicada: Escoamento de fluidos compressíveis, vazão volumétrica e razão de carregamento bifásico.': 'Applied physics: Compressible fluid flow, volumetric flow rate, and two-phase loading ratio.'
             };
 
             function traduzirTexto(texto, idioma) {
@@ -323,11 +426,29 @@ console.log('🔧 Script iniciando...');
                 });
             }
 
+            function traduzirAtributos(raiz, idioma) {
+                if (!raiz || raiz.nodeType !== Node.ELEMENT_NODE) return;
+                if (raiz.matches('script, style, mjx-container') || raiz.closest('mjx-container')) return;
+                const atributos = ['title', 'aria-label', 'placeholder'];
+                const elementos = [raiz, ...raiz.querySelectorAll('*')];
+                elementos.forEach((elemento) => {
+                    if (elemento.matches('script, style, mjx-container') || elemento.closest('mjx-container')) return;
+                    atributos.forEach((attr) => {
+                        if (!elemento.hasAttribute(attr)) return;
+                        const chave = `i18nOriginal${attr.replace(/(^.|-.)/g, (m) => m.replace('-', '').toUpperCase())}`;
+                        if (!elemento.dataset[chave]) elemento.dataset[chave] = elemento.getAttribute(attr);
+                        elemento.setAttribute(attr, traduzirTexto(elemento.dataset[chave], idioma));
+                    });
+                });
+            }
+
+
             function aplicarIdioma(idioma, persistir = true) {
                 const inglesAtivo = idioma === 'en';
                 document.documentElement.lang = inglesAtivo ? 'en' : 'pt-BR';
                 document.body.dataset.language = inglesAtivo ? 'en' : 'pt';
                 traduzirElemento(document.body, inglesAtivo ? 'en' : 'pt');
+                traduzirAtributos(document.body, inglesAtivo ? 'en' : 'pt');
                 dom.languageToggleButtons.forEach((button) => {
                     button.textContent = inglesAtivo ? 'BR' : 'EN';
                     const acao = inglesAtivo ? 'Switch language to Portuguese' : 'Mudar idioma para inglês';
@@ -342,6 +463,12 @@ console.log('🔧 Script iniciando...');
                     button.setAttribute('aria-label', acaoTema);
                     button.title = acaoTema;
                 });
+                if (dom?.mainContent && !dom.mainContent.classList.contains('hidden')) {
+                    atualizarDashboard();
+                }
+                if (dom?.mainDist && !dom.mainDist.classList.contains('hidden')) {
+                    atualizarDistribuidor();
+                }
                 if (persistir) {
                     try {
                         localStorage.setItem(LANGUAGE_STORAGE_KEY, inglesAtivo ? 'en' : 'pt');
@@ -367,7 +494,10 @@ console.log('🔧 Script iniciando...');
                 const observer = new MutationObserver((mutations) => {
                     if (document.body.dataset.language !== 'en') return;
                     mutations.forEach((mutation) => mutation.addedNodes.forEach((node) => {
-                        if (node.nodeType === Node.ELEMENT_NODE) traduzirElemento(node, 'en');
+                        if (node.nodeType === Node.ELEMENT_NODE) {
+                            traduzirElemento(node, 'en');
+                            traduzirAtributos(node, 'en');
+                        }
                     }));
                 });
                 observer.observe(document.body, { childList: true, subtree: true });
@@ -432,12 +562,16 @@ console.log('🔧 Script iniciando...');
                 const pin = document.querySelector(`[data-sidebar-pin="${key}"]`);
                 if (toggle) {
                     toggle.setAttribute('aria-expanded', String(!config.collapsed));
-                    toggle.title = config.collapsed ? 'Expandir barra lateral' : 'Recolher barra lateral';
+                    toggle.title = config.collapsed
+                        ? textoIdioma('Expandir barra lateral', 'Expand sidebar')
+                        : textoIdioma('Recolher barra lateral', 'Collapse sidebar');
                 }
                 if (pin) {
                     pin.classList.toggle('active', config.pinned);
                     pin.setAttribute('aria-pressed', String(config.pinned));
-                    pin.title = config.pinned ? 'Desafixar barra lateral' : 'Fixar barra lateral';
+                    pin.title = config.pinned
+                        ? textoIdioma('Desafixar barra lateral', 'Unpin sidebar')
+                        : textoIdioma('Fixar barra lateral', 'Pin sidebar');
                 }
                 if (persistir) salvarEstadoSidebars();
             }
@@ -681,6 +815,45 @@ console.log('🔧 Script iniciando...');
                 atualizarDashboardPorChave(dashboardKey);
             }
 
+            let resetDashboardPendente = null;
+
+            function getTextoConfirmacaoReset(dashboardKey) {
+                const idiomaAtual = document.body.dataset.language === 'en' ? 'en' : 'pt';
+                const nomeDashboard = dashboardKey === 'destorroador'
+                    ? (idiomaAtual === 'en' ? 'NPK Lump Breaker' : 'Destorroador NPK')
+                    : (idiomaAtual === 'en' ? 'Solid Material Distributor' : 'Distribuidor de Sólidos');
+
+                return idiomaAtual === 'en'
+                    ? {
+                        title: 'Confirm reset',
+                        text: `Reset ${nomeDashboard} to the default values? This will discard the current minimum and maximum profiles.`,
+                        cancel: 'Cancel',
+                        confirm: 'Reset'
+                    }
+                    : {
+                        title: 'Confirmar redefinição',
+                        text: `Redefinir ${nomeDashboard} para os valores padrão? Isso vai descartar os perfis de mínimo e máximo atuais.`,
+                        cancel: 'Cancelar',
+                        confirm: 'Redefinir'
+                    };
+            }
+
+            function fecharConfirmacaoReset() {
+                resetDashboardPendente = null;
+                dom.resetModal?.classList.add('hidden');
+            }
+
+            function abrirConfirmacaoReset(dashboardKey) {
+                const texto = getTextoConfirmacaoReset(dashboardKey);
+                resetDashboardPendente = dashboardKey;
+                dom.resetModalTitle.textContent = texto.title;
+                dom.resetModalText.textContent = texto.text;
+                dom.resetModalCancel.textContent = texto.cancel;
+                dom.resetModalConfirm.textContent = texto.confirm;
+                dom.resetModal.classList.remove('hidden');
+                dom.resetModalCancel.focus();
+            }
+
             function calcularVolumeRolo() {
                 const espessura = parseFloat(dom.distEspessura?.value) || 1;
                 const discos = parseFloat(dom.distQtdDiscos?.value) || 1;
@@ -806,6 +979,210 @@ console.log('🔧 Script iniciando...');
                 return valorTexto.replace(',', '.').trim();
             }
 
+            function textoIdioma(portugues, ingles) {
+                const idioma = document.body.dataset.language === 'en' ? 'en' : 'pt';
+                if (idioma === 'pt') return portugues;
+                const traduzido = traducoesIngles[portugues];
+                if (traduzido) return traduzido;
+                if (ingles) return ingles;
+                if (!textoIdioma.termosFaltantes) textoIdioma.termosFaltantes = new Set();
+                if (!textoIdioma.termosFaltantes.has(portugues)) {
+                    textoIdioma.termosFaltantes.add(portugues);
+                    console.warn(`[i18n] Tradução ausente para: ${portugues}`);
+                }
+                return portugues;
+            }
+
+            function traduzirTextosDeFormula(html) {
+                if (document.body.dataset.language !== 'en') return html;
+                const traducoesFormula = {
+                    '_{linha}': '_{row}',
+                    '_{linhas}': '_{rows}',
+                    '_{trator}': '_{tractor}',
+                    '_{turbina}': '_{blower}',
+                    '_{ar}': '_{air}',
+                    '_{torre}': '_{tower}',
+                    '_{tubo}': '_{tube}',
+                    '_{pol}': '_{in}',
+                    '_{direto}': '_{direct}',
+                    '_{exigida}': '_{required}',
+                    '_{redutor}': '_{gearbox}',
+                    '_{caixa}': '_{gearbox}',
+                    '[Pa] Perda de Carga Total. Definição: Contrapressão macro do sistema resistindo ao fluxo da turbina.': '[Pa] Total Pressure Loss. Definition: overall system backpressure opposing turbine flow.',
+                    'Pressão Friccional Morta no Custo da Transferência de Carga Bruta Frontal Pela Parede de Borracha ou Silicone Grossa Liso': 'Primary-duct friction loss.',
+                    'Soco Impactante Dinâmico Caótico Morto Fracassado no Teto do Chapéu Divisor ou Venturi Salvação': 'Local pressure loss at the distribution tower.',
+                    'Arrasto Espiral Espremido Serpenteante Estiolante das Linhas Longilíneas Sibilantes Mangueiradas': 'Secondary-line friction loss.',
+                    '[Pa] BARREIRA RESISTIVA INTEGRAL DO SISTEMA. Impacto: A força cega invisível e brutal do vento engarrafado dentro da couraça de canos ocos colidindo empedernida batendo de frente contra o olho do furacão centrífugo metálico na boca exaustora da turbina Fprime de ferro trancando e ensurdecendo a mesma violentamente em desespero restritivo aerodinâmico!': '[Pa] Total system resistance. Impact: determines the backpressure imposed on the turbine and the remaining usable airflow.',
+                    '[Adim.] Fator de Acoplamento. Definição: Fator de redução de vazão da turbina devido à contrapressão da rede.': '[Dimensionless] Coupling Factor. Definition: turbine-flow reduction factor caused by network backpressure.',
+                    'Rendimento Livre Máximo Fantasia sem atrito.': 'Maximum free-flow factor without pressure losses.',
+                    'Frenagem e freio resistivo duro de trancar o vento.': 'Total backpressure opposing turbine flow.',
+                    '[Pa] Pressão Fechada Absoluta Trancada (Ponto Morto Estol). Impacto: A turbina uivará em 2900 RPM e nenhuma fagulha de ar escapará das suas beiradas emparedadas!': '[Pa] Shutoff static pressure. Impact: maximum backpressure at zero delivered flow.',
+                    '[Adim.] Ponto Cruzado de Equilíbrio Tênue Resultante de Escoamento Fluidodinâmico da Curva Plena Original Fabril de Desempenho. Impacto: A fatia matemática final gloriosa que escapou de toda a morte e restrição do sistema físico da tubagem!': '[Dimensionless] Operating coupling factor. Impact: fraction of nominal turbine flow remaining after network losses.',
+                    '[m³/min] Vazão Total Real. Definição: Volume de ar real que a turbina consegue empurrar na rede.': '[m³/min] Actual Total Flow. Definition: actual air volume the turbine can deliver through the network.',
+                    'Eficiência Final Acoplada Relativa Resistida': 'Final flow coupling factor.',
+                    'Vazão Virgem Absoluta de Laboratório Ideal sem canos no vento frio limpo e silencioso germânico testado na Punker.': 'Nominal free-flow turbine capacity measured without network losses.',
+                    '[m³/min] VAZÃO MAGISTRAL DE TRABALHO EMPÍRICA REAL E VERDADEIRA! Impacto: É este pulmão matemático inegável retroativo e exato que permitiu trancar o balanço e resolver em frações as velocidades milimétricas que manterão as toneladas de adubo e soja de 60 covas perfeitamente suspensas como mágica flutuante e assopradas contra o abismo do leito arado no solo quente da fazenda!': '[m³/min] Actual operating flow. Impact: determines the air available to suspend and transport material through all rows.'
+                };
+                const traduzido = Object.entries(traducoesFormula).reduce(
+                    (resultado, [portugues, ingles]) => resultado.split(portugues).join(ingles),
+                    html
+                );
+                return substituirTexttipsNaoTraduzidos(traduzido);
+            }
+
+            function substituirTexttipsNaoTraduzidos(html) {
+                const prefixo = '\\texttip{';
+                const portuguesVisivel = /[ãõáéíóúâêôçÁÉÍÓÚÂÊÔÇ]|\b(?:Definição|Impacto|Potência|Vazão|Velocidade|Perda|Pressão|Densidade|Quantidade|Área|Diâmetro|Eficiência|Fator|Massa|Corrente|Tensão|Rotação|Razão|Conversão|Atrito|Tubo|Linha|Torre|Semente|Carga|Tempo|Altura|Largura|Rendimento|Resistência|Desvio|Queda|Fluxo|Trecho|Divisor|Valor|Energia)\b/i;
+
+                function lerGrupoBalanceado(texto, inicio) {
+                    if (texto[inicio] !== '{') return null;
+                    let nivel = 0;
+                    for (let indice = inicio; indice < texto.length; indice += 1) {
+                        if (texto[indice] === '{') nivel += 1;
+                        if (texto[indice] === '}') {
+                            nivel -= 1;
+                            if (nivel === 0) {
+                                return { conteudo: texto.slice(inicio + 1, indice), fim: indice + 1 };
+                            }
+                        }
+                    }
+                    return null;
+                }
+
+                function criarTooltipEspecificoEmIngles(simbolo, descricao) {
+                    const unidadeOriginal = descricao.match(/^\s*(\[[^\]]+\])/u)?.[1] || '';
+                    const unidade = unidadeOriginal
+                        .replace('[Conversão]', '[Conversion factor]')
+                        .replace('[Constante Universal]', '[Exact constant]')
+                        .replace('[Adim.]', '[Dimensionless]')
+                        .replace('[un]', '[count]')
+                        .replace('[pol]', '[in]')
+                        .replace('[Graus]', '[degrees]');
+                    const casos = [
+                        [/pot[eê]ncia mec[aâ]nica(?! requerida)/i, 'Mechanical power transmitted at the motor shaft. Importance: represents the mechanical load imposed by the process. Impact example: increasing material flow or specific energy increases this power demand.'],
+                        [/pot[eê]ncia el[eé]trica/i, 'Electrical input power drawn from the supply. Importance: determines source, cable, and protection sizing. Impact example: increasing required mechanical power or reducing motor efficiency increases electrical input power.'],
+                        [/calor gerado|energia t[eé]rmica dissipada/i, 'Thermal energy generated by Joule heating. Importance: determines winding temperature rise and insulation risk. Impact example: doubling current increases resistive heating by a factor of four for the same resistance and time.'],
+                        [/corrente ao quadrado/i, 'Squared electrical current used by Joule’s law. Importance: makes heating highly sensitive to overload. Impact example: a 10% current increase produces approximately a 21% increase in the I² term.'],
+                        [/resist[eê]ncia interna.*bobinas/i, 'Electrical resistance of the copper windings. Importance: converts current into heat through I²R losses. Impact example: increasing resistance increases generated heat proportionally at fixed current and time.'],
+                        [/tempo de exposi[cç][aã]o/i, 'Duration of the overload condition. Importance: determines accumulated Joule heat. Impact example: doubling exposure time doubles dissipated thermal energy at unchanged current and resistance.'],
+                        [/constante metrol[oó]gica/i, 'Agronomic unit-conversion factor linking kg/ha, km/h, and row width to kg/h. Importance: keeps the dimensional conversion consistent. Impact example: it remains fixed at 10 for this specific combination of units and must not be tuned as a design parameter.'],
+                        [/massa exigida calculada no passo anterior/i, 'Previously calculated mass flow for one planting row. Importance: it is reused to calculate total flow and roller speed. Impact example: increasing row flow raises total flow and required RPM.'],
+                        [/n[uú]mero total de linhas|divis[oõ]es do coletor|fracionamento.*linhas/i, 'Number of parallel rows or branches sharing the total flow. Importance: determines how total material or air flow is divided. Impact example: increasing the row count reduces airflow per row at unchanged turbine flow and increases total material demand at unchanged row dose.'],
+                        [/transforma quilos em gramas/i, 'Exact mass-unit conversion from kilograms to grams. Importance: aligns mass flow with density expressed in g/mm³. Impact example: the fixed factor is 1000 g/kg and must not be adjusted.'],
+                        [/horas em minutos|minutos para segundos|conversor de tempo|desmembramento temporal/i, 'Exact time-unit conversion. Importance: aligns hourly or minute-based flow with RPM or m/s. Impact example: 60 min/h or 60 s/min is fixed and must not be adjusted.'],
+                        [/energia de trabalho mec[aâ]nico do dosador/i, 'Specific mechanical energy required by the metering process per gram of material. Importance: converts mass flow into power demand. Impact example: increasing this measured energy increases required power proportionally.'],
+                        [/convers[aã]o exata de polegadas|converte.*polegadas/i, 'Exact inch-to-meter conversion constant. Importance: converts commercial duct size to SI before area and pressure-loss calculations. Impact example: the fixed value 0.0254 m/in must not be adjusted.'],
+                        [/di[aâ]metro.*quadrado|di[aâ]metro isolado.*quadrado/i, 'Squared internal diameter used in the circular-area equation. Importance: area grows with the square of diameter. Impact example: doubling diameter increases cross-sectional area by a factor of four.'],
+                        [/divisor.*geom[eé]trico|divisor de planifica[cç][aã]o/i, 'Geometric divisor in the circular-area relation A = πD²/4. Importance: converts diameter into circle area. Impact example: the constant 4 is fixed by geometry and must not be adjusted.'],
+                        [/vaz[aã]o real calculada da m[aá]quina/i, 'Actual total airflow delivered after accounting for network backpressure. Importance: supplies all branches. Impact example: increasing this flow increases branch velocity and usually raises friction loss.'],
+                        [/massa individual da tubula[cç][aã]o|peso acumulado das sementes/i, 'Solid mass flow assigned to one pneumatic branch. Importance: forms the numerator of the solids loading ratio. Impact example: increasing solid flow raises SLR and corrected pressure loss.'],
+                        [/massa transportadora gasosa|peso.*ar|respiro massivo/i, 'Air mass flow through the branch. Importance: forms the denominator of the solids loading ratio. Impact example: increasing air mass flow lowers SLR for the same solid flow.'],
+                        [/quadratura.*velocidade|fatora[cç][aã]o.*(?:velocidade|costelas)|impulso quadrado/i, 'Squared air velocity in the dynamic-pressure term. Importance: makes pressure loss highly sensitive to speed. Impact example: doubling velocity increases this term and the associated loss by a factor of four.'],
+                        [/estabilizador.*press[aã]o|restritor cin[eé]tico|constante universal.*energia cin[eé]tica/i, 'Factor 2 in the dynamic-pressure relation ρv²/2. Importance: comes from kinetic-energy formulation and is not an adjustable design parameter.'],
+                        [/somat[oó]ria do arrasto|proje[cç][aã]o de peso|carga s[oó]lida.*embuchamento/i, 'Solids-loading correction applied to gas-only pressure loss. Importance: represents added momentum exchange caused by transported particles. Impact example: increasing SLR increases corrected pressure loss through the factor (1 + SLR).'],
+                        [/di[aâ]metro fino|di[aâ]metro asfixiante/i, 'Internal secondary-hose diameter. Importance: determines hose area, velocity, and friction loss. Impact example: increasing diameter lowers velocity and Darcy-Weisbach loss at the same flow.'],
+                        [/vaz[aã]o t[eê]nue|vaz[aã]o minuciosa/i, 'Actual volumetric airflow assigned to one secondary row. Importance: determines final hose velocity. Impact example: increasing row airflow raises transport velocity and dynamic pressure.'],
+                        [/aperto transversal|canal secund[aá]rio min[uú]sculo/i, 'Secondary-hose cross-sectional area. Importance: converts row airflow into velocity. Impact example: increasing area lowers velocity for unchanged airflow.'],
+                        [/massa micro pulverizada/i, 'Solid mass flow transported by one secondary row. Importance: forms the numerator of secondary SLR. Impact example: increasing this mass flow raises SLR and clogging risk.'],
+                        [/coeficiente pulmonar.*carregamento/i, 'Secondary solids loading ratio. Importance: compares transported solid mass with available air mass. Impact example: increasing this ratio raises corrected pressure loss and the risk of unstable transport.'],
+                        [/extens[aã]o tormentosa secund[aá]ria/i, 'Secondary-hose length. Importance: distributed wall-friction loss accumulates along this distance. Impact example: doubling length doubles the Darcy-Weisbach loss at unchanged conditions.'],
+                        [/energia espec[ií]fica|resist[eê]ncia do npk/i, 'Specific energy required to process one unit of material mass. Importance: represents material resistance and directly scales required mechanical power. Impact example: increasing specific energy increases required power proportionally; decreasing it reduces motor demand.'],
+                        [/taxa.*moagem|taxa instant[aâ]nea|fluxo m[aá]ssico.*linha|massa individual exigida/i, 'Material mass flow processed by one row. Importance: sets row delivery capacity and mechanical loading. Impact example: increasing flow raises required roller speed and power; decreasing it reduces both.'],
+                        [/fluxo m[aá]ssico total|massa total global/i, 'Combined material mass flow across all rows. Importance: defines total machine throughput and pneumatic solids loading. Impact example: adding rows or increasing row flow raises total flow proportionally.'],
+                        [/taxa agron[oô]mica alvo/i, 'Target application rate per hectare. Importance: establishes the prescribed material dose. Impact example: increasing the target rate raises row mass flow and roller speed proportionally.'],
+                        [/velocidade operacional do trator/i, 'Tractor ground speed. Importance: determines the covered area per unit time. Impact example: increasing tractor speed requires proportionally higher material flow to preserve the hectare dose.'],
+                        [/largura de trabalho|espa[cç]amento/i, 'Effective working width assigned to one row. Importance: converts area-based prescription into row mass flow. Impact example: increasing row spacing increases required mass flow per row proportionally.'],
+                        [/espessura do disco/i, 'Active disc thickness. Importance: contributes directly to roller displacement per revolution. Impact example: increasing thickness increases displaced volume and reduces required RPM for the same mass flow.'],
+                        [/quantidade de discos|discos [uú]teis/i, 'Number of active metering discs. Importance: multiplies roller displacement. Impact example: adding discs increases volume per revolution and lowers required RPM for the same target flow.'],
+                        [/cavidades por disco|quantidade de cavidades/i, 'Number of metering cavities on each disc. Importance: multiplies material pockets per revolution. Impact example: more cavities increase displacement and smooth delivery pulses.'],
+                        [/área lateral da cavidade|tamanho da.*colher/i, 'Effective lateral area of one metering cavity. Importance: controls material volume captured per cavity. Impact example: increasing area raises displacement per revolution; decreasing it requires higher RPM.'],
+                        [/densidade do material s[oó]lido/i, 'Bulk material density. Importance: converts roller volume into transported mass. Impact example: increasing density reduces the RPM needed for the same mass flow; decreasing density increases it.'],
+                        [/volume integral|volume.*rolo|cilindrada/i, 'Useful roller volume displaced per revolution. Importance: links roller geometry to delivered mass. Impact example: increasing this volume lowers required RPM for a fixed mass target.'],
+                        [/rota[cç][aã]o.*dosador|rota[cç][aã]o alvo/i, 'Metering roller rotational speed. Importance: controls delivered volume per minute. Impact example: increasing RPM raises material flow approximately proportionally when filling remains constant.'],
+                        [/tens[aã]o cont[ií]nua|tens[aã]o da bateria|tens[aã]o nominal/i, 'DC supply voltage. Importance: combines with current to determine electrical input power. Impact example: increasing voltage increases available power at the same current.'],
+                        [/corrente m[aá]xima|corrente exigida|corrente el[eé]trica/i, 'Electrical current. Importance: determines conductor and winding thermal loading and contributes directly to electrical power. Impact example: increasing current raises power linearly and resistive heating approximately with its square.'],
+                        [/efici[eê]ncia.*motor|efici[eê]ncia eletromec[aâ]nica/i, 'Motor efficiency, expressed as useful mechanical output divided by electrical input. Importance: defines conversion losses. Impact example: increasing efficiency raises shaft power for the same voltage and current.'],
+                        [/efici[eê]ncia.*transmiss[aã]o|efici[eê]ncia.*redutor|perdas da caixa/i, 'Mechanical transmission efficiency. Importance: accounts for gearbox friction losses. Impact example: increasing efficiency reduces input power required for the same output demand.'],
+                        [/pot[eê]ncia [uú]til m[aá]xima|pot[eê]ncia [uú]til teto/i, 'Maximum useful mechanical power available at the shaft. Importance: defines the continuous operating limit. Impact example: a required power above this value indicates overload or stall risk.'],
+                        [/pot[eê]ncia requerida|pot[eê]ncia mec[aâ]nica requerida|pot[eê]ncia exigida/i, 'Mechanical power required by the current operating point. Importance: it is compared with available shaft power. Impact example: increasing mass flow or material specific energy raises this demand.'],
+                        [/di[aâ]metro prim[aá]rio|di[aâ]metro em polegadas|di[aâ]metro base/i, 'Internal primary-duct diameter. Importance: sets cross-sectional area and strongly affects velocity and friction loss. Impact example: increasing diameter reduces velocity and Darcy-Weisbach loss at the same flow.'],
+                        [/área prim[aá]ria|área transversal interna|se[cç][aã]o transversal/i, 'Primary-duct cross-sectional area. Importance: converts volumetric flow into air velocity. Impact example: increasing area lowers velocity for the same flow rate.'],
+                        [/vaz[aã]o.*duto prim[aá]rio|vaz[aã]o prim[aá]ria|vaz[aã]o isolada/i, 'Volumetric airflow through one primary duct. Importance: supplies its distribution tower. Impact example: increasing this flow raises primary velocity and dynamic pressure.'],
+                        [/velocidade prim[aá]ria|velocidade bruta prim[aá]ria/i, 'Mean air velocity in a primary duct. Importance: determines transport capacity and dynamic pressure. Impact example: increasing velocity improves entrainment but raises friction loss approximately with velocity squared.'],
+                        [/raz[aã]o de carregamento.*duto|slr.*trecho 1/i, 'Primary solids loading ratio: solid mass flow divided by air mass flow. Importance: indicates pneumatic transport severity. Impact example: increasing SLR raises corrected pressure loss and clogging risk.'],
+                        [/fator.*darcy|atrito friccional|atrito da parede/i, 'Darcy friction factor. Importance: represents wall-friction resistance in the duct. Impact example: doubling this factor doubles the Darcy-Weisbach friction-loss component when other variables remain fixed.'],
+                        [/comprimento.*prim[aá]ri|extens[aã]o.*prim[aá]ri/i, 'Primary-duct length. Importance: pressure loss accumulates along the wall-contact distance. Impact example: doubling length doubles the distributed friction loss at unchanged flow conditions.'],
+                        [/perda distribu[ií]da prim[aá]ria|resist[eê]ncia acumulada prim[aá]ria/i, 'Distributed pressure loss along the primary duct. Importance: reduces pressure available at the tower. Impact example: increasing friction factor, length, density, or velocity increases this loss.'],
+                        [/coeficiente.*torre|fator k/i, 'Tower local-loss coefficient K. Importance: represents turbulence and direction-change losses. Impact example: increasing K increases tower pressure loss proportionally.'],
+                        [/perda localizada.*torre|sangria.*torre/i, 'Local pressure loss through the distribution tower. Importance: reduces pressure available to secondary rows. Impact example: increasing K or primary velocity increases this loss.'],
+                        [/área secund[aá]ria|canal secund[aá]rio/i, 'Secondary-hose cross-sectional area. Importance: converts row airflow into hose velocity. Impact example: increasing diameter increases area and lowers velocity at unchanged flow.'],
+                        [/vaz[aã]o por linha|vaz[aã]o secund[aá]ria|vaz[aã]o integral atuante/i, 'Volumetric airflow assigned to one secondary row. Importance: determines final transport velocity. Impact example: increasing row flow raises velocity and pressure loss.'],
+                        [/velocidade secund[aá]ria|velocidade final de arraste/i, 'Actual air velocity in a secondary hose. Importance: must sustain particle transport to the outlet. Impact example: increasing velocity improves suspension but raises Darcy-Weisbach loss approximately with velocity squared.'],
+                        [/raz[aã]o de carregamento.*mangueira|slr.*secund/i, 'Secondary solids loading ratio: row solid mass flow divided by row air mass flow. Importance: indicates final-hose transport severity. Impact example: increasing SLR raises corrected loss and clogging risk.'],
+                        [/comprimento.*secund|extens[aã]o.*mangueira/i, 'Secondary-hose length. Importance: determines the distance over which wall friction accumulates. Impact example: doubling length doubles distributed loss at unchanged conditions.'],
+                        [/perda distribu[ií]da secund[aá]ria|atrito.*tubula[cç][aã]o/i, 'Distributed pressure loss along a secondary hose. Importance: determines pressure remaining at the application point. Impact example: increasing length, friction factor, density, or velocity increases this loss.'],
+                        [/densidade.*ar|densidade termodin[aâ]mica|pesagem do vapor|densidade natural/i, 'Air density used in dynamic-pressure and air-mass-flow calculations. Importance: links velocity to pressure and solids loading. Impact example: increasing density raises dynamic pressure at the same velocity.'],
+                        [/fator de acoplamento|redu[cç][aã]o de vaz[aã]o/i, 'Turbine flow-coupling factor after backpressure. Importance: scales nominal flow to actual operating flow. Impact example: higher total pressure loss reduces this factor and delivered airflow.'],
+                        [/press[aã]o fechada|press[aã]o.*m[aá]xima/i, 'Maximum turbine static pressure at shutoff. Importance: defines the backpressure limit of the simplified fan curve. Impact example: increasing this capacity preserves more airflow for the same network loss.'],
+                        [/vaz[aã]o total real|vaz[aã]o.*trabalho/i, 'Actual total turbine airflow after network backpressure. Importance: feeds all primary and secondary branches. Impact example: increasing the coupling factor or nominal turbine flow increases actual flow.'],
+                        [/tempo de voo|tempo de queda/i, 'Seed flight time from deflector to ground. Importance: determines longitudinal and lateral travel. Impact example: increasing flight time increases traveled distance at unchanged velocity.'],
+                        [/gravidade/i, 'Standard gravitational acceleration. Importance: controls vertical seed motion and flight time. Impact example: increasing gravity shortens flight time and reduces travel distance.'],
+                        [/coeficiente.*restitui[cç][aã]o|restitui[cç][aã]o/i, 'Impact restitution coefficient. Importance: defines the fraction of speed retained after striking the deflector. Impact example: increasing it raises rebound speed and spreading distance.'],
+                        [/raio de curvatura/i, 'Deflector curvature radius. Importance: controls the lateral escape angle. Impact example: reducing the radius increases curvature and lateral spreading for the same tube diameter.'],
+                        [/altura da chapa/i, 'Vertical distance from deflector to ground. Importance: affects seed flight time. Impact example: increasing height increases flight time and potential spreading.']
+                    ];
+                    const caso = casos.find(([padrao]) => padrao.test(descricao));
+                    if (caso) return `${unidade || '[unit defined by the variable]'} ${caso[1]}`;
+                    console.warn(`[i18n-formula] Tooltip sem tradução específica: ${simbolo} :: ${descricao}`);
+                    return `${unidade || '[unit defined by the variable]'} ${simbolo}. Definition: engineering term used in the displayed relationship. Importance and impact must be verified from the linked technical reference.`;
+                }
+
+                let resultado = '';
+                let cursor = 0;
+                while (cursor < html.length) {
+                    const inicioTexttip = html.indexOf(prefixo, cursor);
+                    if (inicioTexttip < 0) {
+                        resultado += html.slice(cursor);
+                        break;
+                    }
+
+                    resultado += html.slice(cursor, inicioTexttip);
+                    const inicioSimbolo = inicioTexttip + prefixo.length - 1;
+                    const simbolo = lerGrupoBalanceado(html, inicioSimbolo);
+                    if (!simbolo || html[simbolo.fim] !== '{') {
+                        resultado += prefixo;
+                        cursor = inicioTexttip + prefixo.length;
+                        continue;
+                    }
+
+                    const descricao = lerGrupoBalanceado(html, simbolo.fim);
+                    if (!descricao) {
+                        resultado += prefixo;
+                        cursor = inicioTexttip + prefixo.length;
+                        continue;
+                    }
+
+                    let textoTooltip = descricao.conteudo;
+                    if (portuguesVisivel.test(textoTooltip)) {
+                        textoTooltip = criarTooltipEspecificoEmIngles(simbolo.conteudo, textoTooltip);
+                    }
+
+                    resultado += `${prefixo}${simbolo.conteudo}}{${textoTooltip}}`;
+                    cursor = descricao.fim;
+                }
+                return resultado;
+            }
+
+            function lerValorSincronizado(rangeId) {
+                const range = document.getElementById(rangeId);
+                if (!range) return NaN;
+                const number = range.parentElement?.querySelector('input[type="number"]');
+                const valorNumero = number ? normalizarValorNumerico(number.value) : NaN;
+                if (!Number.isNaN(valorNumero)) return valorNumero;
+                const valorRange = parseFloat(range.value);
+                return Number.isNaN(valorRange) ? NaN : valorRange;
+            }
+
             function ehEntradaNumericaParcial(valorTexto) {
                 if (typeof valorTexto !== 'string') return false;
                 const texto = valorTexto.trim();
@@ -928,8 +1305,26 @@ console.log('🔧 Script iniciando...');
 
             dom.resetButtons.forEach((button) => {
                 button.addEventListener('click', function() {
-                    resetarDashboard(this.dataset.dashboardReset);
+                    abrirConfirmacaoReset(this.dataset.dashboardReset);
                 });
+            });
+
+            dom.resetModalCancel?.addEventListener('click', fecharConfirmacaoReset);
+            dom.resetModalConfirm?.addEventListener('click', () => {
+                if (!resetDashboardPendente) return;
+                const dashboardKey = resetDashboardPendente;
+                fecharConfirmacaoReset();
+                resetarDashboard(dashboardKey);
+            });
+            dom.resetModal?.addEventListener('click', (event) => {
+                if (event.target === dom.resetModal) {
+                    fecharConfirmacaoReset();
+                }
+            });
+            document.addEventListener('keydown', (event) => {
+                if (event.key === 'Escape' && !dom.resetModal?.classList.contains('hidden')) {
+                    fecharConfirmacaoReset();
+                }
             });
 
             Object.keys(dashboardProfiles).forEach((dashboardKey) => {
@@ -1029,7 +1424,7 @@ console.log('🔧 Script iniciando...');
                 const I = parseFloat(dom.corrente.value);
                 const eta_m = parseFloat(dom.eficiencia.value) / 100.0;
                 const red = parseFloat(dom.reducao.value);
-                let taxa = parseFloat(dom.taxaRange.value);
+                let taxa = lerValorSincronizado('in_taxa_range');
                 
                 // Prevenção caso o usuário apague o número da caixa de texto
                 if(isNaN(taxa)) taxa = 0.1;
@@ -1041,7 +1436,7 @@ console.log('🔧 Script iniciando...');
                 let htmlDireito = "";
 
                 if (modo === "1") {
-                    dom.lblCorrente.innerText = "Corrente Aplicada (A)";
+                    dom.lblCorrente.innerText = textoIdioma('Corrente Aplicada (A)', 'Applied Current (A)');
                     
                     const P_ele = V * I;
                     const P_util = P_ele * eta_m;
@@ -1054,75 +1449,75 @@ console.log('🔧 Script iniciando...');
 
                     let statusBox = "";
                     if (!isStalled) {
-                        statusBox = "<div class='alert alert-success'><strong>✅ SISTEMA OPERANDO LISO</strong><br><br>A potência exigida para fraturar o material é de <strong>" + P_exigida.toFixed(1) + " Watts</strong>, o que está dentro da margem de segurança da sua potência útil de <strong>" + P_util.toFixed(1) + " Watts</strong>.</div>";
+                        statusBox = "<div class='alert alert-success'><strong>" + textoIdioma('✅ SISTEMA OPERANDO LISO', '✅ SYSTEM OPERATING SMOOTHLY') + "</strong><br><br>" + textoIdioma('A potência exigida para fraturar o material é de', 'The power required to fracture the material is') + " <strong>" + P_exigida.toFixed(1) + " Watts</strong>, " + textoIdioma('o que está dentro da margem de segurança da sua potência útil de', 'which is within the safety margin of your useful power of') + " <strong>" + P_util.toFixed(1) + " Watts</strong>.</div>";
                     } else {
-                        statusBox = "<div class='alert alert-error'><strong>❌ MOTOR EM ESTOL (TRAVADO)</strong><br><br>A potência exigida para fraturar o material (<strong>" + P_exigida.toFixed(1) + " Watts</strong>) é superior à potência útil disponível no eixo (<strong>" + P_util.toFixed(1) + " Watts</strong>). O material encavalou.</div>";
+                        statusBox = "<div class='alert alert-error'><strong>" + textoIdioma('❌ MOTOR EM ESTOL (TRAVADO)', '❌ MOTOR STALLED (JAMMED)') + "</strong><br><br>" + textoIdioma('A potência exigida para fraturar o material', 'The power required to fracture the material') + " (<strong>" + P_exigida.toFixed(1) + " Watts</strong>) " + textoIdioma('é superior à potência útil disponível no eixo', 'is greater than the useful power available at the shaft') + " (<strong>" + P_util.toFixed(1) + " Watts</strong>). " + textoIdioma('O material encavalou.', 'The material jammed.') + "</div>";
                     }
 
                     htmlEsquerdo = `
-                        <h3 style="color: #fff; margin-bottom: 15px;">Análise de Conversão de Energia</h3>
+                        <h3 style="color: #fff; margin-bottom: 15px;">${textoIdioma('Análise de Conversão de Energia', 'Energy Conversion Analysis')}</h3>
                         <div class="metrics-row">
-                            <div class="metric-card" title="Energia bruta puxada da bateria (Tensão x Corrente)."><div class="metric-label">Potência Elétrica Consumida</div><div class="metric-value">${P_ele.toFixed(1)} W</div></div>
-                            <div class="metric-card" title="Energia que sobreviveu à dissipação térmica do motor e está efetivamente girando o eixo."><div class="metric-label">Potência Útil Entregue ao Eixo</div><div class="metric-value">${P_util.toFixed(1)} W</div></div>
+                            <div class="metric-card" title="Energia bruta puxada da bateria (Tensão x Corrente)."><div class="metric-label">${textoIdioma('Potência Elétrica Consumida', 'Electrical Power Consumption')}</div><div class="metric-value">${P_ele.toFixed(1)} W</div></div>
+                            <div class="metric-card" title="${textoIdioma('Energia que sobreviveu à dissipação térmica do motor e está efetivamente girando o eixo.', 'Energy remaining after the motor’s thermal losses and effectively driving the shaft.')}"><div class="metric-label">${textoIdioma('Potência Útil Entregue ao Eixo', 'Useful Power Delivered to the Shaft')}</div><div class="metric-value">${P_util.toFixed(1)} W</div></div>
                         </div>
                         <h3 style="color: #fff; margin-bottom: 15px;">Análise de Força Bruta</h3>
                         <div class="metrics-row">
                             <div class="metric-card" title="Força de torção máxima que o dente do rolo consegue aplicar no grão de NPK. Calculado dividindo a potência útil pela velocidade angular final."><div class="metric-label">Torque Disponível nos Rolos</div><div class="metric-value">${T_disp.toFixed(2)} N.m</div></div>
-                            <div class="metric-card" title="Velocidade física dos rolos após passar pelo redutor."><div class="metric-label">Rotação Final nos Rolos</div><div class="metric-value">${rot_final.toFixed(1)} RPM</div></div>
+                            <div class="metric-card" title="Velocidade física dos rolos após passar pelo redutor."><div class="metric-label">${textoIdioma('Rotação Final nos Rolos', 'Final Roller Speed')}</div><div class="metric-value">${rot_final.toFixed(1)} RPM</div></div>
                         </div>
                         <h3 style="color: #fff; margin-bottom: 15px;">Status de Operação</h3>
                         ${statusBox}
                     `;
 
                     htmlDireito = `
-                        <h3 style="color: #fff; margin-top: 0;">📚 Memorial de Cálculo</h3>
+                        <h3 style="color: #fff; margin-top: 0;">${textoIdioma('📚 Memorial de Cálculo', '📚 Calculation Report')}</h3>
                         <div style="margin-bottom: 15px; font-size: 0.9em; color: var(--text-muted);">
-                            <strong>Parâmetros Base Assumidos</strong><br>
-                            • Energia Específica (E<sub>e</sub>): ${E_e.toFixed(1)} J/g<br>
-                            • Eficiência Mecânica (&eta;<sub>redutor</sub>): ${(EFICIENCIA_REDUTOR*100).toFixed(0)}%<br>
-                            • Motor: ${RPM_BASE} RPM na base
+                            <strong>${textoIdioma('Parâmetros Base Assumidos', 'Assumed Base Parameters')}</strong><br>
+                            &bull; ${textoIdioma('Energia Específica', 'Specific Energy')} (E<sub>e</sub>): ${E_e.toFixed(1)} J/g<br>
+                            &bull; ${textoIdioma('Eficiência Mecânica', 'Mechanical Efficiency')} (&eta;<sub>redutor</sub>): ${(EFICIENCIA_REDUTOR*100).toFixed(0)}%<br>
+                            &bull; ${textoIdioma('Motor na rotação base', 'Motor at baseline speed')}: ${RPM_BASE} RPM
                         </div>
                         <div class="memorial-item">
                             <strong title="Potência elétrica e conversão de energia. Clique para referência bibliográfica.">
-                                <a href="https://openstax.org/books/college-physics-2e/pages/20-4-electric-power-and-energy" target="_blank" style="color: inherit; text-decoration: underline;">1. Conversão Elétrica ➔ Mecânica 🔗</a>
+                                <a href="https://openstax.org/books/college-physics-2e/pages/20-4-electric-power-and-energy" target="_blank" style="color: inherit; text-decoration: underline;">${textoIdioma('1. Conversão Elétrica ➡ Mecânica 🔗', '1. Electrical Conversion ➡ Mechanical 🔗')}</a>
                             </strong><br>
-                            <p style="margin: 10px 0 5px 0; font-size: 0.9em;">Potência elétrica total consumida da fonte de alimentação:</p>
-                            $$ \\require{action} \\texttip{P_{ele}}{[W] Potência Elétrica. Definição: Energia bruta puxada da fonte. Importância: Fundamental para dimensionar a bateria e a bitola dos cabos de energia.} = \\texttip{V}{[V] Tensão Nominal. Definição: Potencial do sistema elétrico. Importância: Define a categoria do equipamento (ex: 12V ou 24V).} \\cdot \\texttip{I}{[A] Corrente Elétrica. Definição: Fluxo de elétrons. Importância: Principal gerador de calor (Joule); controlá-la evita a queima do motor.} $$
+                            <p style="margin: 10px 0 5px 0; font-size: 0.9em;">${textoIdioma('Potência elétrica total consumida da fonte de alimentação:', 'Total electrical power consumed from the supply source:')}</p>
+                            $$ \\require{action} \\texttip{P_{ele}}{${textoIdioma('[W] Potência Elétrica. Definição: Energia bruta puxada da fonte. Importância: Fundamental para dimensionar a bateria e a bitola dos cabos de energia.', '[W] Electrical Power. Definition: Gross energy drawn from the source. Importance: Fundamental for sizing the battery and power cable gauge.')}} = \\texttip{V}{${textoIdioma('[V] Tensão Nominal. Definição: Potencial do sistema elétrico. Importância: Define a categoria do equipamento (ex: 12V ou 24V).', '[V] Nominal Voltage. Definition: Electrical system potential. Importance: Defines the equipment class (e.g. 12V or 24V).')}} \\cdot \\texttip{I}{${textoIdioma('[A] Corrente Elétrica. Definição: Fluxo de elétrons. Importância: Principal gerador de calor (Joule); controlá-la evita a queima do motor.', '[A] Electric Current. Definition: Electron flow. Importance: Main heat generator (Joule); controlling it avoids motor burn-out.')}} $$
                             $$ P_{ele} = ${V} \\cdot ${I.toFixed(1)} $$
                             $$ P_{ele} = ${P_ele.toFixed(1)} \\text{ W} $$
                             <hr style="border: 0; border-top: 1px dashed rgba(255,255,255,0.05); margin: 10px 0;">
-                            <p style="margin: 5px 0; font-size: 0.9em;">Potência mecânica útil convertida no eixo do motor:</p>
-                            $$ \\require{action} \\texttip{P_{util}}{[W] Potência Útil. Definição: Energia efetiva de giro. Importância: É a força real, descontadas as perdas de calor, que vai triturar a pedra.} = \\texttip{P_{ele}}{[W] Potência Elétrica Bruta.} \\cdot \\texttip{\\eta_{mot}}{[%] Eficiência Eletromagnética. Definição: Fração de eletricidade convertida em giro. Importância: Motores ruins (baixa %) esquentam mais e puxam mais bateria.} $$
+                            <p style="margin: 5px 0; font-size: 0.9em;">${textoIdioma('Potência mecânica útil convertida no eixo do motor:', 'Useful mechanical power converted at the motor shaft:')}</p>
+                            $$ \\require{action} \\texttip{P_{util}}{${textoIdioma('[W] Potência Útil. Definição: Energia efetiva de giro. Importância: É a força real, descontadas as perdas de calor, que vai triturar a pedra.', '[W] Useful Power. Definition: Effective rotational energy. Importance: The real force, after heat losses, that will crush the stone.')}} = \\texttip{P_{ele}}{${textoIdioma('[W] Potência Elétrica Bruta.', '[W] Gross Electrical Power.')}} \\cdot \\texttip{\\eta_{mot}}{${textoIdioma('[%] Eficiência Eletromagnética. Definição: Fração de eletricidade convertida em giro. Importância: Motores ruins (baixa %) esquentam mais e puxam mais bateria.', '[%] Electromagnetic Efficiency. Definition: Fraction of electricity converted into rotation. Importance: Poor motors (low %) run hotter and draw more battery.')}} $$
                             $$ P_{util} = ${P_ele.toFixed(1)} \\cdot ${eta_m.toFixed(2)} $$
                             $$ P_{util} = ${P_util.toFixed(1)} \\text{ W} $$
                         </div>
                         <div class="memorial-item yellow">
                             <strong title="Potência como taxa de energia por tempo. A energia específica E_e deve vir de ensaio ou ficha técnica do material.">
-                                <a href="https://openstax.org/books/college-physics-2e/pages/7-7-power" target="_blank" style="color: inherit; text-decoration: underline;">2. Demanda do Material (Fratura) 🔗</a>
+                                <a href="https://openstax.org/books/college-physics-2e/pages/7-7-power" target="_blank" style="color: inherit; text-decoration: underline;">${textoIdioma('2. Demanda do Material (Fratura) 🔗', '2. Material Demand (Fracture) 🔗')}</a>
                             </strong><br>
-                            <p style="margin: 10px 0 5px 0; font-size: 0.9em;">Potência mecânica exigida pelos rolos para esmagar os grãos:</p>
-                            $$ \\require{action} \\texttip{P_{exigida}}{[W] Potência Exigida. Definição: Esforço necessário para fraturar a vazão alvo. Importância: Se superar a P_util, o rolo trava (estola).} = \\frac{\\texttip{\\dot{m}}{[g/s] Taxa de Moagem. Definição: Massa triturada por segundo. Importância: Dita a capacidade produtiva comercial da máquina.} \\cdot \\texttip{E_e}{[J/g] Energia Específica. Definição: Resistência do material. Importância: Adubos mais duros exigem motores mais caros e potentes.}}{\\texttip{\\eta_{red}}{[%] Eficiência da Caixa. Definição: Perdas por atrito. Importância: Redutores planetários bons mantêm 85% da força.}} $$
+                            <p style="margin: 10px 0 5px 0; font-size: 0.9em;">${textoIdioma('Potência mecânica exigida pelos rolos para esmagar os grãos:', 'Mechanical power required by the rollers to crush the granules:')}</p>
+                            $$ \\require{action} \\texttip{P_{exigida}}{${textoIdioma('[W] Potência Exigida. Definição: Esforço necessário para fraturar a vazão alvo. Importância: Se superar a P_util, o rolo trava (estola).', '[W] Required Power. Definition: Effort needed to fracture the target flow. Importance: If it exceeds P_util, the roller stalls.')}} = \\frac{\\texttip{\\dot{m}}{${textoIdioma('[g/s] Taxa de Moagem. Definição: Massa triturada por segundo. Importância: Dita a capacidade produtiva comercial da máquina.', "[g/s] Grinding Rate. Definition: Mass crushed per second. Importance: Determines the machine's commercial production capacity.")}} \\cdot \\texttip{E_e}{${textoIdioma('[J/g] Energia Específica. Definição: Resistência do material. Importância: Adubos mais duros exigem motores mais caros e potentes.', '[J/g] Specific Energy. Definition: Material resistance. Importance: Harder fertilizers require more expensive and powerful motors.')}}}{\\texttip{\\eta_{red}}{${textoIdioma('[%] Eficiência da Caixa. Definição: Perdas por atrito. Importância: Redutores planetários bons mantêm 85% da força.', '[%] Gearbox Efficiency. Definition: Friction losses. Importance: Good planetary reducers keep 85% of the force.')}}} $$
                             $$ P_{exigida} = \\frac{${taxa.toFixed(1)} \\cdot ${E_e.toFixed(1)}}{${EFICIENCIA_REDUTOR}} $$
                             $$ P_{exigida} = ${P_exigida.toFixed(1)} \\text{ W} $$
                         </div>
                         <div class="memorial-item green">
                             <strong title="Relação entre potência, torque e velocidade angular em movimento rotacional. Clique para referência.">
-                                <a href="https://openstax.org/books/university-physics-volume-1/pages/10-8-work-and-power-for-rotational-motion" target="_blank" style="color: inherit; text-decoration: underline;">3. Cinemática e Torque 🔗</a>
+                                <a href="https://openstax.org/books/university-physics-volume-1/pages/10-8-work-and-power-for-rotational-motion" target="_blank" style="color: inherit; text-decoration: underline;">${textoIdioma('3. Cinemática e Torque 🔗', '3. Kinematics and Torque 🔗')}</a>
                             </strong><br>
-                            <p style="margin: 10px 0 5px 0; font-size: 0.9em;">Rotação mecânica final na saída do redutor:</p>
-                            $$ \\require{action} \\texttip{N_{final}}{[RPM] Rotação Final. Definição: Rotação visível do rolo. Importância: Determina o tempo que o material fica retido esmagando.} = \\frac{\\texttip{RPM_{base}}{[RPM] Rotação Motor. Definição: Velocidade nominal do rotor livre.}}{\\texttip{Red_{caixa}}{[Adim.] Fator de Redução. Definição: Relação das engrenagens. Importância: Transforma rotação inútil em torque esmagador brutal.}} $$
+                            <p style="margin: 10px 0 5px 0; font-size: 0.9em;">${textoIdioma('Rotação mecânica final na saída do redutor:', 'Final mechanical rotation at the reducer output:')}</p>
+                            $$ \\require{action} \\texttip{N_{final}}{${textoIdioma('[RPM] Rotação Final. Definição: Rotação visível do rolo. Importância: Determina o tempo que o material fica retido esmagando.', '[RPM] Final Rotation. Definition: Visible roller rotation. Importance: Determines how long the material stays crushing.')}} = \\frac{\\texttip{RPM_{base}}{${textoIdioma('[RPM] Rotação Motor. Definição: Velocidade nominal do rotor livre.', '[RPM] Motor Rotation. Definition: Nominal free-rotor speed.')}}}{\\texttip{Red_{caixa}}{${textoIdioma('[Adim.] Fator de Redução. Definição: Relação das engrenagens. Importância: Transforma rotação inútil em torque esmagador brutal.', '[Dimensionless] Reduction factor. Definition: Gear ratio. Importance: Converts useless rotation into brutal crushing torque.')}}} $$
                             $$ N_{final} = \\frac{${RPM_BASE}}{${red}} $$
                             $$ N_{final} = ${rot_final.toFixed(1)} \\text{ RPM} $$
                             <hr style="border: 0; border-top: 1px dashed rgba(255,255,255,0.05); margin: 10px 0;">
-                            <p style="margin: 5px 0; font-size: 0.9em;">Torque resultante disponível nas estrias do rolo:</p>
-                            $$ \\require{action} \\texttip{T_{disp}}{[N.m] Torque Disponível. Definição: Força de torção nas estrias. Importância: Capacidade limite de morder e quebrar rochas sem parar.} = \\frac{\\texttip{P_{util}}{[W] Potência Útil Limite.} \\cdot \\texttip{\\eta_{red}}{[%] Eficiência Mecânica.}}{\\texttip{\\omega}{[rad/s] Vel. Angular. Definição: Rotação convertida para o Sistema Internacional.}} $$
+                            <p style="margin: 5px 0; font-size: 0.9em;">${textoIdioma('Torque resultante disponível nas estrias do rolo:', 'Resulting torque available on the roller splines:')}</p>
+                            $$ \\require{action} \\texttip{T_{disp}}{${textoIdioma('[N.m] Torque Disponível. Definição: Força de torção nas estrias. Importância: Capacidade limite de morder e quebrar rochas sem parar.', '[N.m] Available Torque. Definition: Twisting force on the splines. Importance: Limit capacity to bite and break stones without stopping.')}} = \\frac{\\texttip{P_{util}}{${textoIdioma('[W] Potência Útil Limite.', '[W] Useful Power Limit.')}} \\cdot \\texttip{\\eta_{red}}{${textoIdioma('[%] Eficiência Mecânica.', '[%] Mechanical Efficiency.')}}}{\\texttip{\\omega}{${textoIdioma('[rad/s] Vel. Angular. Definição: Rotação convertida para o Sistema Internacional.', '[rad/s] Angular velocity. Definition: Rotation converted to the SI system.')}}} $$
                             $$ T_{disp} = \\frac{${P_util.toFixed(1)} \\cdot ${EFICIENCIA_REDUTOR}}{${rot_final.toFixed(1)} \\cdot \\frac{\\pi}{30}} $$
                             $$ T_{disp} = ${T_disp.toFixed(2)} \\text{ N.m} $$
                         </div>
                     `;
 
                 } else {
-                    dom.lblCorrente.innerText = "Corrente Máxima Suportada (A)";
+                    dom.lblCorrente.innerText = textoIdioma('Corrente M?xima Suportada (A)', 'Maximum Supported Current (A)');
 
                     const P_mec_exigida = (taxa * E_e) / EFICIENCIA_REDUTOR;
                     const P_ele_exigida = P_mec_exigida / eta_m;
@@ -1139,70 +1534,70 @@ console.log('🔧 Script iniciando...');
 
                     let statusBox = "";
                     if (I_exigida > I) {
-                        statusBox = "<div class='alert alert-error'><strong>🔥 SOBRECARGA ELÉTRICA DO MOTOR</strong><br><br>Para não travar os rolos trituradores, o motor teria de puxar <strong>" + I_exigida.toFixed(1) + " Amperes</strong> da fonte. Como o limite informado é <strong>" + I.toFixed(1) + " A</strong>, a condição excede a corrente nominal e aumenta a dissipação térmica nas bobinas.</div>";
+                        statusBox = `<div class='alert alert-error'><strong>${textoIdioma('🔥 SOBRECARGA ELÉTRICA DO MOTOR', '🔥 ELECTRICAL MOTOR OVERLOAD')}</strong><br><br>${textoIdioma('Para não travar os rolos trituradores, o motor teria de puxar', 'To keep the crushing rollers from stalling, the motor would need to draw')} <strong>${I_exigida.toFixed(1)} A</strong> ${textoIdioma('da fonte. Como o limite informado é', 'from the power source. Since the specified limit is')} <strong>${I.toFixed(1)} A</strong>, ${textoIdioma('a condição excede a corrente nominal e aumenta a dissipação térmica nas bobinas.', 'this condition exceeds the rated current and increases thermal dissipation in the windings.')}</div>`;
                     } else {
-                        statusBox = "<div class='alert alert-success'><strong>✅ OPERAÇÃO ESTÁVEL E FRIA</strong><br><br>A demanda mecânica nos rolos gera um esforço elétrico de apenas <strong>" + I_exigida.toFixed(1) + " A</strong>, o que está perfeitamente dentro da capacidade contínua de <strong>" + I.toFixed(1) + " A</strong>. Operação segura.</div>";
+                        statusBox = `<div class='alert alert-success'><strong>${textoIdioma('✅ OPERAÇÃO ESTÁVEL E FRIA', '✅ STABLE, COOL OPERATION')}</strong><br><br>${textoIdioma('A demanda mecânica nos rolos gera uma corrente de apenas', 'The mechanical demand at the rollers draws only')} <strong>${I_exigida.toFixed(1)} A</strong>, ${textoIdioma('dentro da capacidade contínua de', 'within the continuous capacity of')} <strong>${I.toFixed(1)} A</strong>. ${textoIdioma('Operação segura.', 'Safe operation.')}</div>`;
                     }
 
                     htmlEsquerdo = `
-                        <h3 style="color: #fff; margin-bottom: 15px;">Análise de Conversão de Energia</h3>
+                        <h3 style="color: #fff; margin-bottom: 15px;">${textoIdioma('Análise de Conversão de Energia', 'Energy Conversion Analysis')}</h3>
                         <div class="metrics-row">
-                            <div class="metric-card" title="Energia total circulando no sistema no limite da corrente estipulada."><div class="metric-label">Potência Elétrica Consumida</div><div class="metric-value">${P_ele_consumida.toFixed(1)} W</div></div>
-                            <div class="metric-card" title="Potência mecânica máxima que o motor consegue entregar antes de queimar."><div class="metric-label">Potência Útil Entregue ao Eixo</div><div class="metric-value">${P_util_disp.toFixed(1)} W</div></div>
+                            <div class="metric-card" title="Energia total circulando no sistema no limite da corrente estipulada."><div class="metric-label">${textoIdioma('Potência Elétrica Consumida', 'Electrical Power Consumption')}</div><div class="metric-value">${P_ele_consumida.toFixed(1)} W</div></div>
+                            <div class="metric-card" title="Potência mecânica máxima que o motor consegue entregar antes de queimar."><div class="metric-label">${textoIdioma('Potência Útil Entregue ao Eixo', 'Useful Power Delivered to the Shaft')}</div><div class="metric-value">${P_util_disp.toFixed(1)} W</div></div>
                         </div>
-                        <h3 style="color: #fff; margin-bottom: 15px;">Análise de Demanda de Corrente</h3>
+                        <h3 style="color: #fff; margin-bottom: 15px;">${textoIdioma('Análise de Demanda de Corrente', 'Current Demand Analysis')}</h3>
                         <div class="metrics-row">
                             <div class="metric-card" title="Como o motor DC tenta manter o torque variando a corrente, esta é a Amperagem real que a pedra exige do sistema para quebrar. Se for maior que a Etiqueta, o motor queima.">
-                                <div class="metric-label">Corrente Exigida para Moer</div>
+                                <div class="metric-label">${textoIdioma('Corrente Exigida para Moer', 'Required Grinding Current')}</div>
                                 <div class="metric-value">${I_exigida.toFixed(1)} A</div>
                                 <div class="metric-delta ${delta > 0 ? 'delta-red' : 'delta-green'}">${delta > 0 ? '↑ ' + delta.toFixed(1) + ' A acima do limite' : '↓ Seguro'}</div>
                             </div>
-                            <div class="metric-card" title="Limite térmico do fabricante (Amperes de placa)."><div class="metric-label">Corrente Máxima (Etiqueta)</div><div class="metric-value">${I.toFixed(1)} A</div></div>
+                            <div class="metric-card" title="Limite térmico do fabricante (Amperes de placa)."><div class="metric-label">${textoIdioma('Corrente Máxima (Etiqueta)', 'Maximum Current (Nameplate)')}</div><div class="metric-value">${I.toFixed(1)} A</div></div>
                         </div>
                         <div class="metrics-row">
-                            <div class="metric-card" title="Torque de Estol referencial. Acima deste torque, a amperagem ultrapassa o limite térmico."><div class="metric-label">Torque Máximo de Trabalho</div><div class="metric-value">${T_disp.toFixed(2)} N.m</div></div>
-                            <div class="metric-card" title="Velocidade cinemática na ponta do eixo triturador."><div class="metric-label">Rotação Final nos Rolos</div><div class="metric-value">${rot_final.toFixed(1)} RPM</div></div>
+                            <div class="metric-card" title="Torque de Estol referencial. Acima deste torque, a amperagem ultrapassa o limite térmico."><div class="metric-label">${textoIdioma('Torque Máximo de Trabalho', 'Maximum Working Torque')}</div><div class="metric-value">${T_disp.toFixed(2)} N.m</div></div>
+                            <div class="metric-card" title="Velocidade cinemática na ponta do eixo triturador."><div class="metric-label">${textoIdioma('Rotação Final nos Rolos', 'Final Roller Speed')}</div><div class="metric-value">${rot_final.toFixed(1)} RPM</div></div>
                         </div>
-                        <h3 style="color: #fff; margin-bottom: 15px;">Integridade do Sistema</h3>
+                        <h3 style="color: #fff; margin-bottom: 15px;">${textoIdioma('Integridade do Sistema', 'System Integrity')}</h3>
                         ${statusBox}
                     `;
 
                     htmlDireito = `
-                        <h3 style="color: #fff; margin-top: 0;">📚 Memorial de Cálculo Inverso</h3>
+                        <h3 style="color: #fff; margin-top: 0;">${textoIdioma('📚 Memorial de Cálculo Inverso', '📚 Reverse Calculation Report')}</h3>
                         <div style="margin-bottom: 15px; font-size: 0.9em; color: var(--text-muted);">
-                            <strong>Parâmetros Base Assumidos</strong><br>
-                            • Energia Específica (E<sub>e</sub>): ${E_e.toFixed(1)} J/g<br>
-                            • Eficiência Mecânica (&eta;<sub>redutor</sub>): ${(EFICIENCIA_REDUTOR*100).toFixed(0)}%<br>
-                            • Motor: ${RPM_BASE} RPM na base
+                            <strong>${textoIdioma('Parâmetros Base Assumidos', 'Assumed Base Parameters')}</strong><br>
+                            &bull; ${textoIdioma('Energia Específica', 'Specific Energy')} (E<sub>e</sub>): ${E_e.toFixed(1)} J/g<br>
+                            &bull; ${textoIdioma('Eficiência Mecânica', 'Mechanical Efficiency')} (&eta;<sub>redutor</sub>): ${(EFICIENCIA_REDUTOR*100).toFixed(0)}%<br>
+                            &bull; ${textoIdioma('Motor na rotação base', 'Motor at baseline speed')}: ${RPM_BASE} RPM
                         </div>
                         <div class="memorial-item yellow">
-                            <strong title="Potência mecânica como taxa de energia por tempo. A energia específica E_e deve vir de calibração do material.">
-                                <a href="https://openstax.org/books/college-physics-2e/pages/7-7-power" target="_blank" style="color: inherit; text-decoration: underline;">1. Demanda Mecânica (Rolos) 🔗</a>
+                            <strong title="${textoIdioma('Potência mecânica como taxa de energia por tempo. A energia específica E_e deve vir de calibração do material.', 'Mechanical power as an energy rate over time. The specific energy E_e must come from material calibration.')} ">
+                                <a href="https://openstax.org/books/college-physics-2e/pages/7-7-power" target="_blank" style="color: inherit; text-decoration: underline;">${textoIdioma('1. Demanda Mecânica (Rolos) 🔗', '1. Mechanical Demand (Rollers) 🔗')}</a>
                             </strong><br>
-                            <p style="margin: 10px 0 5px 0; font-size: 0.9em;">Potência mecânica refletida na ponta do eixo do motor:</p>
+                            <p style="margin: 10px 0 5px 0; font-size: 0.9em;">${textoIdioma('Potência mecânica refletida na ponta do eixo do motor:', 'Mechanical power reflected at the motor shaft end:')}</p>
                             $$ \\require{action} \\texttip{P_{mec}}{[W] Potência Mecânica. Definição: Esforço real exercido pelas pedras sobre o motor. Importância: Define o peso mecânico do sistema no limite.} = \\frac{\\texttip{\\dot{m}}{[g/s] Taxa de Moagem Alvo.} \\cdot \\texttip{E_e}{[J/g] Resistência do NPK.}}{\\texttip{\\eta_{red}}{[%] Perdas da Caixa Redutora.}} $$
                             $$ P_{mec} = \\frac{${taxa.toFixed(1)} \\cdot ${E_e.toFixed(1)}}{${EFICIENCIA_REDUTOR}} $$
                             $$ P_{mec} = ${P_mec_exigida.toFixed(1)} \\text{ W} $$
                         </div>
                         <div class="memorial-item red">
                             <strong title="Potência elétrica, tensão, corrente e conversão de energia. Clique para referência.">
-                                <a href="https://openstax.org/books/college-physics-2e/pages/20-4-electric-power-and-energy" target="_blank" style="color: inherit; text-decoration: underline;">2. Reflexo Elétrico (Tomada) 🔗</a>
+                                <a href="https://openstax.org/books/college-physics-2e/pages/20-4-electric-power-and-energy" target="_blank" style="color: inherit; text-decoration: underline;">${textoIdioma('2. Reflexo Elétrico (Tomada) 🔗', '2. Electrical Demand (Supply) 🔗')}</a>
                             </strong><br>
-                            <p style="margin: 10px 0 5px 0; font-size: 0.9em;">O que o motor precisará drenar da bateria para não travar:</p>
+                            <p style="margin: 10px 0 5px 0; font-size: 0.9em;">${textoIdioma('O que o motor precisará drenar da bateria para não travar:', 'Electrical power the motor must draw from the battery to avoid stalling:')}</p>
                             $$ \\require{action} \\texttip{P_{ele}}{[W] Potência Elétrica Exigida. Definição: Energia elétrica drenada para suprir o esforço mecânico. Importância: Base para calcular a corrente de sobrecarga.} = \\frac{\\texttip{P_{mec}}{[W] Potência Mecânica Requerida.}}{\\texttip{\\eta_{mot}}{[%] Eficiência Eletromecânica.}} $$
                             $$ P_{ele} = \\frac{${P_mec_exigida.toFixed(1)}}{${eta_m.toFixed(2)}} $$
                             $$ P_{ele} = ${P_ele_exigida.toFixed(1)} \\text{ W} $$
                             <hr style="border: 0; border-top: 1px dashed rgba(255,255,255,0.05); margin: 10px 0;">
-                            <p style="margin: 5px 0; font-size: 0.9em;">Corrente resultante dessa demanda forçada:</p>
+                            <p style="margin: 5px 0; font-size: 0.9em;">${textoIdioma('Corrente resultante dessa demanda forçada:', 'Current resulting from this forced demand:')}</p>
                             $$ \\require{action} \\texttip{I_{exigida}}{[A] Corrente Exigida. Definição: Amperagem real puxada sob carga pesada. Importância: Se ultrapassar o limite nominal, causa degradação térmica acelerada.} = \\frac{\\texttip{P_{ele}}{[W] Potência Elétrica Calculada.}}{\\texttip{V}{[V] Tensão da Bateria.}} $$
                             $$ I_{exigida} = \\frac{${P_ele_exigida.toFixed(1)}}{${V}} $$
                             $$ I_{exigida} = ${I_exigida.toFixed(1)} \\text{ A} $$
                         </div>
                         <div class="memorial-item">
                             <strong title="Potência dissipada em resistência elétrica e aquecimento por corrente. Clique para referência.">
-                                <a href="https://openstax.org/books/college-physics-2e/pages/20-4-electric-power-and-energy" target="_blank" style="color: inherit; text-decoration: underline;">3. Risco de Queima (Lei de Joule) 🔗</a>
+                                <a href="https://openstax.org/books/college-physics-2e/pages/20-4-electric-power-and-energy" target="_blank" style="color: inherit; text-decoration: underline;">${textoIdioma('3. Risco de Queima (Lei de Joule) 🔗', '3. Overheating Risk (Joule’s Law) 🔗')}</a>
                             </strong><br>
-                            <p style="margin-bottom: 15px; margin-top: 10px;">A energia térmica dissipada na carcaça do motor cresce de forma brutal e quadrática. Ao saltar a exigência para <strong>${I_exigida.toFixed(1)} A</strong>, o verniz protetor derrete.</p>
+                            <p style="margin-bottom: 15px; margin-top: 10px;">${textoIdioma(`A energia térmica dissipada na carcaça do motor cresce de forma quadrática. Com a corrente exigida em <strong>${I_exigida.toFixed(1)} A</strong>, aumenta o risco de degradação do verniz isolante.`, `Thermal energy dissipated in the motor housing grows quadratically. With the required current at <strong>${I_exigida.toFixed(1)} A</strong>, the risk of insulation-varnish degradation increases.`)}</p>
                             $$ \\require{action} \\texttip{Q}{[J] Calor Gerado. Definição: Energia térmica dissipada no motor. Importância: Cresce ao quadrado com a corrente, sendo a principal causa de incêndios em motores em estol.} = \\texttip{I_{exigida}^2}{[A²] Corrente ao Quadrado. Definição: Crescimento exponencial do Efeito Joule.} \\cdot \\texttip{R}{[Ohms] Resistência interna das bobinas de cobre.} \\cdot \\texttip{t}{[s] Tempo. Definição: Tempo de exposição à sobrecarga. Importância: Define se o fusível desarmará antes da queima.} $$
                             $$ Q = ${I_exigida.toFixed(1)}^2 \\cdot R \\cdot t $$
                             $$ Q = ${(I_exigida * I_exigida).toFixed(1)} \\cdot R \\cdot t \\text{ Joules} $$
@@ -1217,7 +1612,7 @@ console.log('🔧 Script iniciando...');
                 mathJaxTimer = setTimeout(function() {
                     // Cria uma "tela fantasma" na memória
                     const bufferInvisivel = document.createElement('div');
-                    bufferInvisivel.innerHTML = htmlDireito;
+                    bufferInvisivel.innerHTML = traduzirTextosDeFormula(htmlDireito);
                     
                     if (window.MathJax && MathJax.typesetPromise) {
                         // Cria uma fila para garantir que o MathJax não se atropele no arrasto rápido
@@ -1235,7 +1630,7 @@ console.log('🔧 Script iniciando...');
                             });
                         }).catch(function(err){ console.log(err); });
                     } else {
-                        dom.painelDireito.innerHTML = htmlDireito;
+                        dom.painelDireito.innerHTML = traduzirTextosDeFormula(htmlDireito);
                     }
                 }, 80); // 80ms: o equilíbrio perfeito entre responsividade visual e alívio da GPU
             }
@@ -1260,7 +1655,7 @@ console.log('🔧 Script iniciando...');
                     const n_primarios = parseInt(dom.distQtdPrimarios.value);
                     const L_tubo_m = parseFloat(dom.distComprimento.value);
                     const L_primario_m = parseFloat(dom.distComprimentoPrimario.value);
-                    const taxa_ha = parseFloat(dom.distTaxa.value);
+                    const taxa_ha = lerValorSincronizado('in_dist_taxa');
                     const v_trator = parseFloat(dom.distVelTrator.value);
                     const largura = parseFloat(dom.distLargura.value);
                     const geometriaRolo = calcularVolumeRolo();
@@ -1326,153 +1721,172 @@ console.log('🔧 Script iniciando...');
 
                     let statusEletrico = "";
                     if (P_mec_req > P_util_max) {
-                        statusEletrico = `<div class='alert alert-error'><strong>❌ MOTOR TRAVADO (SOBRECARGA)</strong><br>O motor elétrico precisa fornecer <strong>${P_mec_req.toFixed(1)} W</strong>, mas ele queima em <strong>${P_util_max.toFixed(1)} W</strong>.</div>`;
+                        statusEletrico = `<div class='alert alert-error'><strong>${textoIdioma('❌ MOTOR TRAVADO (SOBRECARGA)', '❌ MOTOR STALLED (OVERLOAD)')}</strong><br>${textoIdioma('A potência mecânica exigida é', 'The required mechanical power is')} <strong>${P_mec_req.toFixed(1)} W</strong>, ${textoIdioma('acima da potência útil máxima de', 'above the maximum useful power of')} <strong>${P_util_max.toFixed(1)} W</strong>.</div>`;
                     } else {
-                        statusEletrico = `<div class='alert alert-success'><strong>✅ MOTOR DIMENSIONADO</strong><br>O esforço puxará apenas <strong>${P_mec_req.toFixed(1)} W</strong> de torque seguro.</div>`;
+                        statusEletrico = `<div class='alert alert-success'><strong>${textoIdioma('✅ MOTOR DIMENSIONADO', '✅ MOTOR PROPERLY SIZED')}</strong><br>${textoIdioma('A potência mecânica exigida é de apenas', 'The required mechanical power is only')} <strong>${P_mec_req.toFixed(1)} W</strong>, ${textoIdioma('dentro do limite seguro do motor.', 'within the motor’s safe limit.')}</div>`;
                     }
 
                     let statusPneumatico = "";
                     if (redeDoisEstagios.deltaPTotal >= pressao_turbina_max) {
-                        statusPneumatico = `<div class='alert alert-error' style="margin-top: 10px;"><strong>❌ ESTOL DA TURBINA</strong><br>A soma das perdas nos dutos primários, torre e linhas secundárias atingiu <strong>${redeDoisEstagios.deltaPTotal.toFixed(0)} Pa</strong>, acima da pressão estática disponível.</div>`;
+                        statusPneumatico = `<div class='alert alert-error' style="margin-top: 10px;"><strong>❌ ${textoIdioma('ESTOL DA TURBINA', 'TURBINE STALL')}</strong><br>${textoIdioma('A soma das perdas nos dutos primários, torre e linhas secundárias atingiu', 'The sum of losses in the primary ducts, tower, and secondary lines reached')} <strong>${redeDoisEstagios.deltaPTotal.toFixed(0)} Pa</strong>, ${textoIdioma('acima da pressão estática disponível.', 'above the available static pressure.')}</div>`;
                     } else if (redeDoisEstagios.velocidadeSecundaria < 15) {
-                        statusPneumatico = `<div class='alert alert-error' style="margin-top: 10px;"><strong>❌ RISCO DE ENTUPIMENTO NAS LINHAS FINAIS</strong><br>A velocidade real nas linhas secundárias caiu para <strong>${redeDoisEstagios.velocidadeSecundaria.toFixed(1)} m/s</strong>. O arraste já não é suficiente para manter fase diluída robusta.</div>`;
+                        statusPneumatico = `<div class='alert alert-error' style="margin-top: 10px;"><strong>❌ ${textoIdioma('RISCO DE ENTUPIMENTO NAS LINHAS FINAIS', 'RISK OF CLOGGING IN THE FINAL LINES')}</strong><br>${textoIdioma('A velocidade real nas linhas secundárias caiu para', 'The actual velocity in the secondary lines dropped to')} <strong>${redeDoisEstagios.velocidadeSecundaria.toFixed(1)} m/s</strong>. ${textoIdioma('O arraste já não é suficiente para manter fase diluída robusta.', 'The drag is no longer enough to maintain a robust dilute phase.')}</div>`;
                     } else if (redeDoisEstagios.slrSecundario > 8) {
-                        statusPneumatico = `<div class='alert alert-error' style="margin-top: 10px;"><strong>❌ AFOGAMENTO DAS LINHAS SECUNDÁRIAS</strong><br>O SLR secundário subiu para <strong>${redeDoisEstagios.slrSecundario.toFixed(2)}</strong>. A linha final está ar/sólido demais para transporte estável.</div>`;
+                        statusPneumatico = `<div class='alert alert-error' style="margin-top: 10px;"><strong>❌ ${textoIdioma('AFOGAMENTO DAS LINHAS SECUNDÁRIAS', 'SECONDARY LINE FLOODING')}</strong><br>${textoIdioma('O SLR secundário subiu para', 'The secondary SLR rose to')} <strong>${redeDoisEstagios.slrSecundario.toFixed(2)}</strong>. ${textoIdioma('A linha final está ar/sólido demais para transporte estável.', 'The final line has too much air/solid ratio for stable transport.')}</div>`;
                     } else {
-                        statusPneumatico = `<div class='alert alert-success' style="margin-top: 10px;"><strong>✅ REDE PRIMÁRIA APROVEITANDO MELHOR A TURBINA</strong><br>As linhas secundárias recebem <strong>${redeDoisEstagios.velocidadeSecundaria.toFixed(1)} m/s</strong> com perda total de <strong>${redeDoisEstagios.deltaPTotal.toFixed(0)} Pa</strong>. Frente à divisão direta, o ganho de velocidade é <strong>${ganhoVelocidadeMs.toFixed(1)} m/s</strong>.</div>`;
+                        statusPneumatico = `<div class='alert alert-success' style="margin-top: 10px;"><strong>✅ ${textoIdioma('REDE PRIMÁRIA APROVEITANDO MELHOR A TURBINA', 'PRIMARY NETWORK MAKING BETTER USE OF THE TURBINE')}</strong><br>${textoIdioma('As linhas secundárias recebem', 'The secondary lines receive')} <strong>${redeDoisEstagios.velocidadeSecundaria.toFixed(1)} m/s</strong> ${textoIdioma('com perda total de', 'with total loss of')} <strong>${redeDoisEstagios.deltaPTotal.toFixed(0)} Pa</strong>. ${textoIdioma('Frente à divisão direta, o ganho de velocidade é', 'Compared with the direct split, the velocity gain is')} <strong>${ganhoVelocidadeMs.toFixed(1)} m/s</strong>.</div>`;
                     }
 
                     const avisoDistribuicao = !distribuicaoInteira
-                        ? `<div class='alert alert-warning' style="margin-top: 10px;"><strong>⚠️ DIVISÃO MÉDIA NA TORRE</strong><br>O modelo assume balanceamento médio de <strong>${linhas_por_primario_media.toFixed(2)}</strong> linhas secundárias por duto primário. Se a torre real alimentar grupos diferentes, será preciso modelar cada ramo separadamente.</div>`
+                        ? `<div class='alert alert-warning' style="margin-top: 10px;"><strong>${textoIdioma('⚠️ DIVISÃO MÉDIA NA TORRE', '⚠️ AVERAGE SPLIT AT THE TOWER')}</strong><br>${textoIdioma('O modelo assume balanceamento médio de', 'The model assumes an average balance of')} <strong>${linhas_por_primario_media.toFixed(2)}</strong> ${textoIdioma('linhas secundárias por duto primário. Se a torre real alimentar grupos diferentes, será preciso modelar cada ramo separadamente.', 'secondary rows per primary duct. If the actual tower feeds different groups, each branch must be modeled separately.')}</div>`
                         : '';
 
                     htmlEsquerdo = `
-                        <h3 style="color: #fff; margin-bottom: 15px;">Dinâmica de Dosagem Agronômica</h3>
+                        <h3 style="color: #fff; margin-bottom: 15px;">${textoIdioma('Dinâmica de Dosagem Agronômica', 'Agronomic Metering Dynamics')}</h3>
                         <div class="metrics-row">
-                            <div class="metric-card" title="Velocidade exigida pela controladora do trator."><div class="metric-label">Rotação do Rolo</div><div class="metric-value">${N_r.toFixed(1)} RPM</div></div>
-                            <div class="metric-card" title="Massa de material despejado em uma única linha final."><div class="metric-label">Taxa Mássica por Linha</div><div class="metric-value">${m_s_kgh_linha.toFixed(1)} kg/h</div></div>
+                            <div class="metric-card" title="${textoIdioma('Velocidade exigida pela controladora do trator.', 'Speed required by the tractor controller.')}"><div class="metric-label">${textoIdioma('Rotação do Rolo', 'Roller Speed')}</div><div class="metric-value">${N_r.toFixed(1)} RPM</div></div>
+                            <div class="metric-card" title="${textoIdioma('Massa de material despejado em uma única linha final.', 'Mass of material discharged into one final row.')}"><div class="metric-label">${textoIdioma('Taxa Mássica por Linha', 'Mass Flow per Row')}</div><div class="metric-value">${m_s_kgh_linha.toFixed(1)} kg/h</div></div>
                         </div>
                         <div class="metrics-row">
-                            <div class="metric-card" title="Volume integral calculado por revolução a partir da geometria do rolo."><div class="metric-label">Volume Integral do Rolo</div><div class="metric-value">${V_r_mm3.toFixed(0)} mm³/rev</div></div>
-                            <div class="metric-card" title="Vazão total de sólido entregue ao conjunto das linhas finais."><div class="metric-label">Taxa Mássica Total</div><div class="metric-value">${m_s_kgh_total.toFixed(1)} kg/h</div></div>
+                            <div class="metric-card" title="${textoIdioma('Volume integral calculado por revolução a partir da geometria do rolo.', 'Integral volume calculated per revolution from roller geometry.')}"><div class="metric-label">${textoIdioma('Volume Integral do Rolo', 'Integral Roller Volume')}</div><div class="metric-value">${V_r_mm3.toFixed(0)} mm³/rev</div></div>
+                            <div class="metric-card" title="${textoIdioma('Vazão total de sólido entregue ao conjunto das linhas finais.', 'Total solid flow delivered to the set of final rows.')}"><div class="metric-label">${textoIdioma('Taxa Mássica Total', 'Total Mass Flow')}</div><div class="metric-value">${m_s_kgh_total.toFixed(1)} kg/h</div></div>
                         </div>
-                        <h3 style="color: #fff; margin-bottom: 15px;">Rede Pneumática em Dois Estágios</h3>
+                        <h3 style="color: #fff; margin-bottom: 15px;">${textoIdioma('Rede Pneumática em Dois Estágios', 'Two-Stage Pneumatic Network')}</h3>
                         <div class="metrics-row">
-                            <div class="metric-card" title="Velocidade real do ar nos dutos primários de grande diâmetro."><div class="metric-label">Velocidade no Duto Primário</div><div class="metric-value">${redeDoisEstagios.velocidadePrimaria.toFixed(1)} m/s</div></div>
-                            <div class="metric-card" title="Velocidade real do ar nas linhas secundárias de aplicação."><div class="metric-label">Velocidade na Linha Secundária</div><div class="metric-value">${redeDoisEstagios.velocidadeSecundaria.toFixed(1)} m/s</div></div>
-                        </div>
-                        <div class="metrics-row">
-                            <div class="metric-card" title="Perda total do sistema considerando duto primário, torre e linha secundária."><div class="metric-label">Perda Total</div><div class="metric-value">${redeDoisEstagios.deltaPTotal.toFixed(0)} Pa</div></div>
-                            <div class="metric-card" title="Diferença de pressão entre o arranjo com rede primária e a divisão direta nas linhas pequenas."><div class="metric-label">Ganho vs Divisão Direta</div><div class="metric-value">${ganhoPressaoPa.toFixed(0)} Pa</div></div>
+                            <div class="metric-card" title="${textoIdioma('Velocidade real do ar nos dutos primários de grande diâmetro.', 'Actual air velocity in the large-diameter primary ducts.')}"><div class="metric-label">${textoIdioma('Velocidade no Duto Primário', 'Primary Duct Velocity')}</div><div class="metric-value">${redeDoisEstagios.velocidadePrimaria.toFixed(1)} m/s</div></div>
+                            <div class="metric-card" title="${textoIdioma('Velocidade real do ar nas linhas secundárias de aplicação.', 'Actual air velocity in the application secondary lines.')}"><div class="metric-label">${textoIdioma('Velocidade na Linha Secundária', 'Secondary Line Velocity')}</div><div class="metric-value">${redeDoisEstagios.velocidadeSecundaria.toFixed(1)} m/s</div></div>
                         </div>
                         <div class="metrics-row">
-                            <div class="metric-card" title="Pressão estática remanescente na entrada da torre após o trecho primário."><div class="metric-label">Pressão na Torre</div><div class="metric-value">${redeDoisEstagios.pressaoNaTorre.toFixed(0)} Pa</div></div>
-                            <div class="metric-card" title="Pressão estática disponível na entrada das linhas secundárias após a perda no duto primário e na torre."><div class="metric-label">Pressão nas Linhas</div><div class="metric-value">${redeDoisEstagios.pressaoNaLinha.toFixed(0)} Pa</div></div>
+                            <div class="metric-card" title="${textoIdioma('Perda total do sistema considerando duto primário, torre e linha secundária.', 'Total system loss considering the primary duct, tower, and secondary line.')}"><div class="metric-label">${textoIdioma('Perda Total', 'Total Loss')}</div><div class="metric-value">${redeDoisEstagios.deltaPTotal.toFixed(0)} Pa</div></div>
+                            <div class="metric-card" title="${textoIdioma('Diferença de pressão entre o arranjo com rede primária e a divisão direta nas linhas pequenas.', 'Pressure difference between the primary-network arrangement and the direct split across the small lines.')}"><div class="metric-label">${textoIdioma('Ganho vs Divisão Direta', 'Gain vs Direct Split')}</div><div class="metric-value">${ganhoPressaoPa.toFixed(0)} Pa</div></div>
                         </div>
-                        <h3 style="color: #fff; margin-bottom: 15px;">Status do Sistema</h3>
+                        <div class="metrics-row">
+                            <div class="metric-card" title="${textoIdioma('Pressão estática remanescente na entrada da torre após o trecho primário.', 'Remaining static pressure at the tower inlet after the primary section.')}"><div class="metric-label">${textoIdioma('Pressão na Torre', 'Tower Pressure')}</div><div class="metric-value">${redeDoisEstagios.pressaoNaTorre.toFixed(0)} Pa</div></div>
+                            <div class="metric-card" title="${textoIdioma('Pressão estática disponível na entrada das linhas secundárias após a perda no duto primário e na torre.', 'Available static pressure at the secondary-line inlet after losses in the primary duct and tower.')}"><div class="metric-label">${textoIdioma('Pressão nas Linhas', 'Line Pressure')}</div><div class="metric-value">${redeDoisEstagios.pressaoNaLinha.toFixed(0)} Pa</div></div>
+                        </div>
+                        <h3 style="color: #fff; margin-bottom: 15px;">${textoIdioma('Status do Sistema', 'System Status')}</h3>
                         ${statusEletrico}
                         ${statusPneumatico}
                         ${avisoDistribuicao}
                     `;
 
                     htmlDireito = `
-                        <h3 style="color: #fff; margin-top: 0;">📚 Memorial da Semeadura</h3>
+                        <h3 style="color: #fff; margin-top: 0;">${textoIdioma('📚 Memorial da Semeadura', '📚 Seeding Calculation Report')}</h3>
                         <div style="margin-bottom: 15px; font-size: 0.9em; color: var(--text-muted);">
-                            <strong>Rede Pneumática em Dois Estágios</strong><br>
-                            • Dutos primários: ${n_primarios} unidades de ${D_primario_pol.toFixed(2)} pol (${D_primario_mm.toFixed(1)} mm)<br>
-                            • Linhas secundárias totais: ${n_linhas}<br>
-                            • Média de linhas por torre: ${linhas_por_primario_media.toFixed(2)}<br>
-                            • Fator de Atrito Darcy (&lambda;): ${fator_atrito.toFixed(3)}<br>
-                            • Perda Local da Torre (K): ${k_torre.toFixed(2)}<br>
-                            • Aproveitamento de vazão da turbina: ${aproveitamentoTurbina.toFixed(0)}%
+                            <strong>${textoIdioma('Rede Pneumática em Dois Estágios', 'Two-Stage Pneumatic Network')}</strong><br>
+                            &bull; ${textoIdioma('Dutos primários', 'Primary ducts')}: ${n_primarios} ${textoIdioma('unidades de', 'units of')} ${D_primario_pol.toFixed(2)} ${textoIdioma('pol', 'in')} (${D_primario_mm.toFixed(1)} mm)<br>
+                            &bull; ${textoIdioma('Linhas secundárias totais', 'Total secondary rows')}: ${n_linhas}<br>
+                            &bull; ${textoIdioma('Média de linhas por torre', 'Average rows per tower')}: ${linhas_por_primario_media.toFixed(2)}<br>
+                            &bull; ${textoIdioma('Fator de Atrito Darcy', 'Darcy Friction Factor')} (&lambda;): ${fator_atrito.toFixed(3)}<br>
+                            &bull; ${textoIdioma('Perda Local da Torre', 'Tower Local Loss')} (K): ${k_torre.toFixed(2)}<br>
+                            &bull; ${textoIdioma('Aproveitamento de vazão da turbina', 'Turbine flow utilization')}: ${aproveitamentoTurbina.toFixed(0)}%
                         </div>
                         <div class="memorial-item">
-                            <strong title="Relação geométrica do volume do rolo com a espessura, discos e cavidades.">
-                                <a href="https://openstax.org/books/college-physics-2e/pages/12-1-flow-rate-and-its-relation-to-velocity" target="_blank" style="color: inherit; text-decoration: underline;">1. Volume Integral do Rolo por Revolução</a>
+                            <strong title="${textoIdioma('Relação geométrica do volume do rolo com a espessura, discos e cavidades.', 'Geometric relation between roller volume, thickness, discs, and cavities.')}">
+                                <a href="https://openstax.org/books/college-physics-2e/pages/12-1-flow-rate-and-its-relation-to-velocity" target="_blank" style="color: inherit; text-decoration: underline;">${textoIdioma('1. Volume Integral do Rolo por Revolução', '1. Integral Roller Volume per Revolution')}</a>
                             </strong><br>
-                            <p style="margin: 10px 0 5px 0; font-size: 0.9em;">Composição geométrica do volume útil por rotação:</p>
+                            <p style="margin: 10px 0 5px 0; font-size: 0.9em;">${textoIdioma('Composição geométrica do volume útil por rotação:', 'Geometric composition of the useful volume per rotation:')}</p>
+                            $$ \\require{action} \\texttip{V_r}{${textoIdioma('[mm³/rev] Volume Integral do Rolo. Definição: capacidade volumétrica total a cada volta do eixo.', '[mm³/rev] Integral Roller Volume. Definition: total volumetric capacity per shaft revolution.')}} = \\texttip{\\mathrm{${textoIdioma('espessura', 'thickness')}}}{${textoIdioma('[mm] Espessura do disco.', '[mm] Disc thickness.')}} \\cdot \\texttip{\\mathrm{${textoIdioma('discos', 'discs')}}}{${textoIdioma('[un] Quantidade de discos úteis.', '[unit] Number of active discs.')}} \\cdot \\texttip{\\mathrm{${textoIdioma('cavidades', 'cavities')}}}{${textoIdioma('[un] Cavidades por disco.', '[unit] Cavities per disc.')}} \\cdot \\texttip{\\mathrm{${textoIdioma('área', 'area')}}}{${textoIdioma('[mm²] Área lateral da cavidade.', '[mm²] Lateral cavity area.')}} $$
                             $$ \\require{action} \\texttip{V_r}{[mm³/rev] Volume Integral do Rolo. Definição: Capacidade volumétrica total a cada volta do eixo.} = \\texttip{${espessura_disco.toFixed(0)}}{[mm] Espessura do Disco. Impacto: Espessuras maiores aumentam o volume geométrico da fatia do rolo, permitindo reduzir a RPM do motor elétrico para atingir a mesma dose.} \\cdot \\texttip{${qtd_discos_uteis.toFixed(0)}}{[un] Quantidade de Discos Úteis. Impacto: Adicionar discos multiplica transversalmente a capacidade volumétrica final da máquina.} \\cdot \\texttip{${cavidades_por_disco.toFixed(0)}}{[un] Cavidades por Disco. Impacto: Define a quantidade de 'pulsos' de semente despejados a cada volta. Mais cavidades suavizam o fluxo contínuo na mangueira.} \\cdot \\texttip{${area_lateral_cavidade.toFixed(0)}}{[mm²] Área Lateral da Cavidade. Impacto: Funciona como o tamanho da 'colher' que pega o grão. Sementes grandes como soja/milho exigem áreas maiores para não serem esmagadas na roseta.} = \\texttip{${V_r_mm3.toFixed(0)}}{[mm³/rev] Volume Integral Calculado. Impacto: É a cilindrada matemática bruta do rotor. Dita a relação direta entre o giro do motor elétrico e a massa despejada no tubo.} \\text{ mm}^3\\text{/rev} $$
                         </div>
                         <div class="memorial-item">
-                            <strong title="Conversão agronômica de taxa por área para vazão mássica por linha.">
-                                <a href="https://www.nist.gov/pml/special-publication-811/nist-guide-si-chapter-5-units-outside-si" target="_blank" style="color: inherit; text-decoration: underline;">2. Taxa Mássica por Linha</a>
+                            <strong title="${textoIdioma('Conversão agronômica de taxa por área para vazão mássica por linha.', 'Agronomic conversion from rate per area to mass flow per row.')}">
+                                <a href="https://www.nist.gov/pml/special-publication-811/nist-guide-si-chapter-5-units-outside-si" target="_blank" style="color: inherit; text-decoration: underline;">${textoIdioma('2. Taxa Mássica por Linha', '2. Mass Flow per Row')}</a>
                             </strong><br>
-                            <p style="margin: 10px 0 5px 0; font-size: 0.9em;">Conversão dimensional para cada linha final:</p>
+                            <p style="margin: 10px 0 5px 0; font-size: 0.9em;">${textoIdioma('Conversão dimensional para cada linha final:', 'Dimensional conversion for each final row:')}</p>
+                            $$ \\dot{m}_{linha} = \\frac{T_{ha} \\cdot v_{trator} \\cdot L_{linha}}{10} $$
+                            $$ \\dot{m}_{total} = \\dot{m}_{linha} \\cdot n_{linhas} $$
+                            $$ N_r = \\frac{\\dot{m}_{linha} \\cdot 1000 / 60}{V_r \\cdot \\rho_s} $$
                             $$ \\require{action} \\texttip{\\dot{m}_{linha}}{[kg/h] Fluxo Mássico por Linha. Definição: Massa de insumo exigida por hora em uma única mangueira final.} = \\frac{\\texttip{${taxa_ha.toFixed(1)}}{[kg/ha] Taxa Agronômica Alvo. Impacto: É a exigência pura do produtor no campo. Taxas altas exigem giro mais rápido e empurram mais massa densa para as mangueiras, elevando a chance de entupir.} \\cdot \\texttip{${v_trator.toFixed(1)}}{[km/h] Velocidade Operacional do Trator. Impacto: Máquinas correndo rápido obrigam o dosador a disparar a RPM para compensar a distância percorrida no solo.} \\cdot \\texttip{${largura.toFixed(2)}}{[m] Largura de Trabalho por Linha (Espaçamento). Impacto: Linhas mais espaçadas forçam uma maior injeção de insumo dentro de um mesmo sulco para bater a taxa por hectare.}}{\\texttip{10}{Constante metrológica. Impacto: Fator físico obrigatório para ajustar e cruzar as unidades rurais (hectares, km/h) para as grandezas do Sistema Internacional (kg/h).}} = \\texttip{${m_s_kgh_linha.toFixed(2)}}{[kg/h] Massa Individual Exigida por Linha. Impacto: Define a carga absoluta de peso de adubo/semente que o vento da turbina será obrigado a arrastar na tubulação secundária.} \\text{ kg/h} $$
                             $$ \\require{action} \\texttip{\\dot{m}_{total}}{[kg/h] Fluxo Mássico Total. Definição: Massa combinada exigida por todas as linhas da máquina.} = \\texttip{${m_s_kgh_linha.toFixed(2)}}{[kg/h] Massa exigida calculada no passo anterior, referente a uma única linha de plantio descendo do Air Cart.} \\cdot \\texttip{${n_linhas}}{[un] Número Total de Linhas da Máquina. Impacto: É o multiplicador extremo do implemento. 60 linhas exigem mangueiramentos massivos e turbinas F10 na exaustão térmica.} = \\texttip{${m_s_kgh_total.toFixed(2)}}{[kg/h] Massa Total Global. Impacto: Representa as centenas de quilos de insumo bruto que o reservatório superior e o ventilador terão de processar em conjunto a cada hora relógio.} \\text{ kg/h} $$
                             $$ \\require{action} \\texttip{N_r}{[RPM] Rotação do Dosador. Definição: Rotação comandada pela ECU para atingir a taxa alvo.} = \\frac{\\texttip{${m_s_kgh_linha.toFixed(2)}}{[kg/h] Fluxo mássico caindo por cada linha acoplada ao dosador.} \\cdot \\texttip{1000}{[Conversão]. Impacto: Transforma quilos em gramas para equivaler volumetricamente.} / \\texttip{60}{[Conversão]. Impacto: Fatora as horas em minutos para obter Rotações Por Minuto (RPM).}}{\\texttip{${V_r_mm3.toFixed(0)}}{[mm³/rev] Volume (Cilindrada) do rolo acrílico ou de chapa calculado na Etapa 1.} \\cdot \\texttip{${rho_s}}{[g/mm³] Densidade do Material Sólido. Impacto: Adubos cristalizados muito pesados reduzem drasticamente a rotação mecânica para bater o alvo da balança; material ultra-leve acelera o eixo.}} = \\texttip{${N_r.toFixed(2)}}{[RPM] Rotação Alvo Controlada. Impacto: É o pulso elétrico exato que a central ISOBUS do trator enviará ao motoredutor ROJ do seu dosador para manter a prescrição.} \\text{ RPM} $$
                         </div>
                         <div class="memorial-item">
                             <strong title="Potência elétrica e potência mecânica com eficiência do motor.">
-                                <a href="https://openstax.org/books/college-physics-2e/pages/20-4-electric-power-and-energy" target="_blank" style="color: inherit; text-decoration: underline;">3. Potência do Motor do Dosador</a>
+                                <a href="https://openstax.org/books/college-physics-2e/pages/20-4-electric-power-and-energy" target="_blank" style="color: inherit; text-decoration: underline;">${textoIdioma('3. Potência do Motor do Dosador', '3. Doser Motor Power')}</a>
                             </strong><br>
-                            <p style="margin: 10px 0 5px 0; font-size: 0.9em;">Capacidade mecânica do motor e potência requerida no dosador:</p>
+                            <p style="margin: 10px 0 5px 0; font-size: 0.9em;">${textoIdioma('Capacidade mecânica do motor e potência requerida no dosador:', 'Mechanical motor capacity and required doser power:')}</p>
+                            $$ \\require{action} \\texttip{P_{util,max}}{[W] Potência Útil Máxima. Definição: Capacidade de trabalho mecânico limite do motor elétrico.} = \\texttip{V_{motor}}{[V] Tensão Contínua.} \\cdot \\texttip{I_{max}}{[A] Corrente Máxima.} \\cdot \\texttip{\\eta_{motor}}{[%] Eficiência Mecânica do Motor.} $$
                             $$ \\require{action} \\texttip{P_{util,max}}{[W] Potência Útil Máxima. Definição: Capacidade de trabalho mecânico limite do motor elétrico.} = \\texttip{${V_motor.toFixed(1)}}{[V] Tensão Contínua. Impacto: Diferença de potencial limitante ditada pelas baterias e alternador do trator.} \\cdot \\texttip{${I_max.toFixed(1)}}{[A] Corrente Máxima. Impacto: É a blindagem térmica da engenharia. Acima dessa amperagem, o esmalte das bobinas superaquece, trinca e gera curto-circuito em campo.} \\cdot \\texttip{${eta_motor_dist.toFixed(2)}}{[%] Eficiência Mecânica do Motor. Impacto: Parcela limpa e nobre da eletricidade que efetivamente se converte em torção mecânica no eixo; a sobra (ex: 25%) é lixo térmico.} = \\texttip{${P_util_max.toFixed(1)}}{[W] Potência Útil Teto Disponível. Impacto: É a força de emergência máxima que seu motor elétrico tem guardada para esmagar uma pedra intrusa no adubo sem desligar.} \\text{ W} $$
                             $$ \\require{action} \\texttip{P_{req}}{[W] Potência Requerida. Definição: Trabalho mecânico exigido para dosar o material.} = \\frac{\\texttip{${m_s_gs.toFixed(3)}}{[g/s] Taxa Instantânea em Gramas. Impacto: Quantidade bruta de material mordida a cada fração de segundo pelo rotor azul estriado.} \\cdot \\texttip{${E_dosador.toFixed(2)}}{[J/g] Energia de Trabalho Mecânico do Dosador. Impacto: Se o material for úmido e muito colante (alta energia requerida), essa métrica salta violentamente e arrasta o motor para baixo.}}{\\texttip{${EFICIENCIA_REDUTOR}}{[%] Eficiência da Transmissão (Redutor Planetário/Ortogonal). Impacto: Perda natural termodinâmica devido ao atrito de aço com aço nas engrenagens redutoras que acoplam o motor no eixo.}} = \\texttip{${P_mec_req.toFixed(2)}}{[W] Potência Requerida Atual. Impacto: A força real do momento. Se esse número ultrapassar a potência útil da linha de cima, seu dosador fatalmente irá estolar (travar duro) no plantio.} \\text{ W} $$
                         </div>
                         <div class="memorial-item green">
                             <strong title="Conversão exata do diâmetro primário de polegadas para SI.">
-                                <a href="https://www.nist.gov/pml/us-surveyfoot/revised-unit-conversion-factors" target="_blank" style="color: inherit; text-decoration: underline;">4. Conversão do Duto Primário para SI</a>
+                                <a href="https://www.nist.gov/pml/us-surveyfoot/revised-unit-conversion-factors" target="_blank" style="color: inherit; text-decoration: underline;">${textoIdioma('4. Conversão do Duto Primário para SI', '4. Primary Duct Conversion to SI')}</a>
                             </strong><br>
-                            <p style="margin: 10px 0 5px 0; font-size: 0.9em;">Usando 1 ft = 0,3048 m exato, então 1 in = 0,0254 m:</p>
+                            <p style="margin: 10px 0 5px 0; font-size: 0.9em;">${textoIdioma('Usando 1 ft = 0,3048 m exato, então 1 in = 0,0254 m:', 'Using exact 1 ft = 0.3048 m, so 1 in = 0.0254 m:')}</p>
+                            $$ \\require{action} \\texttip{D_{prim}}{[m] Diâmetro Primário. Definição: Diâmetro interno do duto primário convertido para SI.} = \\texttip{D_{pol}}{[pol] Diâmetro em Polegadas.} \\cdot \\texttip{0.0254}{[m/pol] Conversão exata de polegadas para metros.} $$
                             $$ \\require{action} \\texttip{D_{prim}}{[m] Diâmetro Primário. Definição: Diâmetro interno do duto primário convertido para SI.} = \\texttip{${D_primario_pol.toFixed(2)}}{[pol] Diâmetro em Polegadas (Bitola Comercial). Impacto: Medida de prateleira da mangueira corrugada primária robusta, vital para alívio da pressão da turbina.} \\cdot \\texttip{0.0254}{[Constante Universal]. Impacto: Converte perfeitamente as polegadas rurais americanas no formato métrico exigido pelas equações clássicas da mecânica dos fluidos.} = \\texttip{${D_primario_m.toFixed(4)}}{[m] Diâmetro Primário Científico. Impacto: A base métrica rigorosa para a extração algébrica da área transversal do cano.} \\text{ m} $$
                             $$ \\require{action} \\texttip{A_{prim}}{[m²] Área Primária. Definição: Área da seção transversal do duto primário.} = \\frac{\\pi \\cdot \\texttip{${D_primario_m.toFixed(4)}^2}{O diâmetro isolado na etapa anterior, agora exposto ao quadrado para revelar o envelope bidimensional interno do tubo.}}{\\texttip{4}{Divisor base geométrico utilizado universalmente em equações circulares de caldeiraria e tubulações focadas no diâmetro (pi*D²/4).}} = \\texttip{${areaPrimaria.toFixed(4)}}{[m²] Área Transversal Interna. Impacto: Áreas muito estreitas estrangulam a saída da Punker; áreas gigantemente largas derrubam o ar a uma velocidade de brisa frouxa (entupindo fácil).} \\text{ m}^2 $$
                         </div>
                         <div class="memorial-item green">
                             <strong title="Continuidade na rede primária até a torre.">
-                                <a href="https://openstax.org/books/college-physics-2e/pages/12-1-flow-rate-and-its-relation-to-velocity" target="_blank" style="color: inherit; text-decoration: underline;">5. Continuidade nos Dutos Primários</a>
+                                <a href="https://openstax.org/books/college-physics-2e/pages/12-1-flow-rate-and-its-relation-to-velocity" target="_blank" style="color: inherit; text-decoration: underline;">${textoIdioma('5. Continuidade nos Dutos Primários', '5. Continuity in Primary Ducts')}</a>
                             </strong><br>
-                            <p style="margin: 10px 0 5px 0; font-size: 0.9em;">A vazão total é dividida primeiro pelos dutos grandes:</p>
+                            <p style="margin: 10px 0 5px 0; font-size: 0.9em;">${textoIdioma('A vazão total é dividida primeiro pelos dutos grandes:', 'The total flow is first split by the large ducts:')}</p>
+                            $$ Q_{prim} = \\frac{Q_{total,real}}{n_{prim}} $$
+                            $$ v_{prim} = \\frac{Q_{prim}/60}{A_{prim}} $$
+                            $$ SLR_{prim} = \\frac{\\dot{m}_{s,prim}}{\\dot{m}_{ar,prim}} $$
                             $$ \\require{action} \\texttip{Q_{prim}}{[m³/min] Vazão por Duto Primário. Definição: Quantidade de ar que passa por um único duto grosso.} = \\frac{\\texttip{${redeDoisEstagios.vazaoTotalReal.toFixed(2)}}{[m³/min] Vazão Real Calculada da Máquina. Impacto: Ar total absoluto que a turbina ainda obteve coragem matemática para impelir após sentir todo o pesadelo do atrito.}}{\\texttip{${n_primarios}}{[un] Divisões do Coletor Base. Impacto: O Air Cart quebra e distribui seu tufão de vento primeiramente pelas pernas principais grossas da plantadeira.}} = \\texttip{${redeDoisEstagios.vazaoPrimariaReal.toFixed(2)}}{[m³/min] Vazão Isolada por Duto Principal. Impacto: É o pulmão exclusivo que abastecerá de vento a base estática de uma única Torre de Distribuição (cogumelo divisório) lá na frente.} \\text{ m}^3\\text{/min} $$
                             $$ \\require{action} \\texttip{v_{prim}}{[m/s] Velocidade Primária. Definição: Velocidade média do ar no duto primário.} = \\frac{\\texttip{${redeDoisEstagios.vazaoPrimariaReal.toFixed(2)}}{A vazão isolada e dedicada apenas ao cano grosso no trecho do chassi.} / \\texttip{60}{Fator conversor de Tempo. Reduz métrica pesada de minutos para segundos SI.}}{\\texttip{${areaPrimaria.toFixed(4)}}{Seção Transversal Circular extraída no Passo 4 (m²).}} = \\texttip{${redeDoisEstagios.velocidadePrimaria.toFixed(2)}}{[m/s] Velocidade Bruta Primária. Impacto: Força frontal maciça com que o ar captura a semente que acabou de chover da boca do dosador elétrico em direção à torre.} \\text{ m/s} $$
                             $$ \\require{action} \\texttip{SLR_{prim}}{[Adim.] Razão de Carregamento (Duto). Definição: Relação mássica Insumo/Ar no trecho primário.} = \\frac{\\texttip{${m_s_kgh_primario.toFixed(2)}}{[kg/h] Massa Individual da Tubulação. Impacto: O peso acumulado das sementes daquele cluster.}}{\\texttip{${redeDoisEstagios.massaArPrimariaKgh.toFixed(2)}}{[kg/h] Massa Transportadora Gasosa. Impacto: O peso etéreo do ar que forma o colchão fluidizado suspensor das partículas densas de adubo.}} = \\texttip{${redeDoisEstagios.slrPrimario.toFixed(2)}}{[Adim.] Fator SLR do Trecho 1. Impacto: Razão Sólido/Gás. Limiar superior a 5 aproxima o maquinário rural a zonas perigosas de estrangulamento coloidal intermitente e pulsações violentas nas torres.} $$
                         </div>
                         <div class="memorial-item yellow">
                             <strong title="Perda distribuída por atrito ao longo do duto primário.">
-                                <a href="https://www.engineeringtoolbox.com/darcy-weisbach-equation-d_646.html" target="_blank" style="color: inherit; text-decoration: underline;">6. Perda no Duto Primário (Darcy-Weisbach)</a>
+                                <a href="https://www.engineeringtoolbox.com/darcy-weisbach-equation-d_646.html" target="_blank" style="color: inherit; text-decoration: underline;">${textoIdioma('6. Perda no Duto Primário (Darcy-Weisbach)', '6. Primary Duct Loss (Darcy-Weisbach)')}</a>
                             </strong><br>
-                            <p style="margin: 10px 0 5px 0; font-size: 0.9em;">Perda distribuída com correção simplificada para sólido em suspensão:</p>
+                            <p style="margin: 10px 0 5px 0; font-size: 0.9em;">${textoIdioma('Perda distribuída com correção simplificada para sólido em suspensão:', 'Distributed loss with simplified correction for solid suspension:')}</p>
+                            $$ \\Delta P_{prim} = \\lambda \\cdot \\frac{L_{prim}}{D_{prim}} \\cdot \\frac{\\rho_a \\cdot v_{prim}^{2}}{2} \\cdot (1 + SLR_{prim}) $$
                             $$ \\require{action} \\texttip{\\Delta P_{prim}}{[Pa] Perda Distribuída Primária. Definição: Queda de pressão por atrito na extensão do tubo primário.} = \\texttip{${fator_atrito.toFixed(3)}}{[Adim.] Atrito Friccional Darcy-Weisbach (Lambda). Impacto: Tubulações flexíveis sanfonadas raspam e frenam severamente o ar (fator sobe). Tubos PVC ou PU liso espelhado conservam imensamente a energia cinética (fator cai).} \\cdot \\frac{\\texttip{${L_primario_m.toFixed(2)}}{[m] Comprimento Físico Linear da Tubulação Primária do chassi do Air Cart. Impacto: Custo friccional quilométrico ao escoamento.}}{\\texttip{${D_primario_m.toFixed(4)}}{[m] Diâmetro Base. Impacto: Quanto mais grosso e espaçoso o túnel flexível, menos arrasto nas margens o vento sentirá.}} \\cdot \\frac{\\texttip{${rho_a.toFixed(2)}}{[kg/m³] Densidade Termodinâmica (Tensão superficial do gás nas mangueiras flexíveis do trator).} \\cdot \\texttip{${redeDoisEstagios.velocidadePrimaria.toFixed(2)}^2}{A quadratura caótica da velocidade de vento da linha grossa punindo impiedosamente a turbina se os diâmetros primários forem muito delgados e longos.}}{\\texttip{2}{Estabilizador algébrico da constante universal associada na pressão e energia cinética de empuxo dos fluidos industriais gasosos.}} \\cdot (1 + \\texttip{${redeDoisEstagios.slrPrimario.toFixed(2)}}{A somatória do arrasto pesado inerente e colisional da semente caindo pela extensão cilíndrica.}) $$
                             $$ \\require{action} \\texttip{\\Delta P_{prim}}{[Pa] Perda Distribuída Primária. Definição: Queda de pressão por atrito na extensão do tubo primário.} = \\texttip{${redeDoisEstagios.deltaPPrimario.toFixed(0)}}{[Pa] Resistência Acumulada Primária Total. Impacto: Quantidade nítida de sucção magnética fantasma e atrito puro que se opõe passivamente à descarga exaustora originária do ventilador de hélice curva.} \\text{ Pa} $$
                         </div>
                         <div class="memorial-item yellow">
                             <strong title="Perda localizada por divisão e mudança de direção na torre.">
-                                <a href="https://www.engineeringtoolbox.com/minor-loss-air-ducts-fittings-d_208.html" target="_blank" style="color: inherit; text-decoration: underline;">7. Perda Localizada da Torre</a>
+                                <a href="https://www.engineeringtoolbox.com/minor-loss-air-ducts-fittings-d_208.html" target="_blank" style="color: inherit; text-decoration: underline;">${textoIdioma('7. Perda Localizada da Torre', '7. Tower Local Loss')}</a>
                             </strong><br>
-                            <p style="margin: 10px 0 5px 0; font-size: 0.9em;">Modelo de perda localizada com coeficiente K referido à velocidade no duto primário:</p>
+                            <p style="margin: 10px 0 5px 0; font-size: 0.9em;">${textoIdioma('Modelo de perda localizada com coeficiente K referido à velocidade no duto primário:', 'Local loss model with K coefficient referenced to primary duct velocity:')}</p>
+                            $$ \\Delta P_{torre} = K_{torre} \\cdot \\frac{\\rho_a \\cdot v_{prim}^{2}}{2} \\cdot (1 + SLR_{prim}) $$
                             $$ \\require{action} \\texttip{\\Delta P_{torre}}{[Pa] Perda Localizada (Torre). Definição: Dissipação de energia cinética por turbulência no cogumelo divisor.} = \\texttip{${k_torre.toFixed(2)}}{[Adim.] Coeficiente Arquitetônico Obstrutivo Local de Torre de Choque (Fator K). Impacto: Torre cogumelo chata, reta 90° e plana no teto explode a turbulência (K altíssimo; ex: 1,8); Torre de ogiva cônica pontiaguda lisa acalma o ar com desvios em lâminas suaves (K minúsculo; ex: 0,3).} \\cdot \\frac{\\texttip{${rho_a.toFixed(2)}}{Densidade natural do balanço.} \\cdot \\texttip{${redeDoisEstagios.velocidadePrimaria.toFixed(2)}^2}{[m/s] Fatoração caótica violenta explodindo nas costelas oblíquas metálicas das aletas curvas na redoma da torre.}}{\\texttip{2}{Estabilizador de conversão fluidodinâmica termocinética de pressão.}} \\cdot (1 + \\texttip{${redeDoisEstagios.slrPrimario.toFixed(2)}}{Projeção de peso da poeira da braquiária ricocheteando brutalmente e estancando no cogumelo difusor mecânico superior.}) $$
                             $$ \\require{action} \\texttip{\\Delta P_{torre}}{[Pa] Perda Localizada (Torre). Definição: Dissipação de energia cinética por turbulência no cogumelo divisor.} = \\texttip{${redeDoisEstagios.deltaPTorre.toFixed(0)}}{[Pa] Sangria Plena de Choque da Transição da Torre Distributiva de Escoamento. Impacto: Indica se o domo da torre virou um gargalo inaceitável. O alvo clássico de engenheiros de design industrial em arado é manter esta métrica microscópica perante o todo.} \\text{ Pa} $$
                         </div>
                         <div class="memorial-item green">
                             <strong title="Continuidade nas linhas menores após a torre.">
-                                <a href="https://openstax.org/books/college-physics-2e/pages/12-1-flow-rate-and-its-relation-to-velocity" target="_blank" style="color: inherit; text-decoration: underline;">8. Continuidade nas Linhas Secundárias</a>
+                                <a href="https://openstax.org/books/college-physics-2e/pages/12-1-flow-rate-and-its-relation-to-velocity" target="_blank" style="color: inherit; text-decoration: underline;">${textoIdioma('8. Continuidade nas Linhas Secundárias', '8. Continuity in Secondary Lines')}</a>
                             </strong><br>
-                            <p style="margin: 10px 0 5px 0; font-size: 0.9em;">A vazão real remanescente é dividida entre as linhas finais:</p>
+                            <p style="margin: 10px 0 5px 0; font-size: 0.9em;">${textoIdioma('A vazão real remanescente é dividida entre as linhas finais:', 'The remaining real flow is divided among the final rows:')}</p>
+                            $$ A_{sec} = \\frac{\\pi \\cdot D_{sec}^{2}}{4} $$
+                            $$ Q_{sec} = \\frac{Q_{total,real}}{n_{linhas}} $$
+                            $$ v_{sec} = \\frac{Q_{sec}/60}{A_{sec}} $$
+                            $$ SLR_{sec} = \\frac{\\dot{m}_{s,linha}}{\\dot{m}_{ar,sec}} $$
                             $$ \\require{action} \\texttip{A_{sec}}{[m²] Área Secundária. Definição: Área da seção transversal da mangueira fina.} = \\frac{\\pi \\cdot \\texttip{${D_m.toFixed(4)}^2}{Diâmetro fino engasgado da tubulação fina escorrendo arame liso para a extremidade terminal em milímetros.}}{\\texttip{4}{Divisor de planificação redonda da sessão retangular.}} = \\texttip{${areaSecundaria.toFixed(4)}}{[m²] Canal Secundário Minúsculo Transversal. Impacto: Tubagens muito curtas agudamente finalizam o afunilamento de Bernoulli para tentar recuperar velocidades moribundas após a torre.} \\text{ m}^2 $$
                             $$ \\require{action} \\texttip{Q_{sec}}{[m³/min] Vazão por Linha. Definição: Quantidade de ar que passa por uma única mangueira secundária.} = \\frac{\\texttip{${redeDoisEstagios.vazaoTotalReal.toFixed(2)}}{Vazão Integral Atuante.}}{\\texttip{${n_linhas}}{[un] Fracionamento Micro-Segmentar Oblíquo Total da Semeadora de 60 linhas paralelas. Impacto: O pulverizador do exaustor mestre de injeção original.}} = \\texttip{${redeDoisEstagios.vazaoSecundariaReal.toFixed(2)}}{[m³/min] Vazão Tênue Marginal Injetada Diretamente. Impacto: Quantidade delicadíssima real enviada gota a gota para proteger do embuchamento as ponteiras finais plantadoras de braquiária do disco duplo cortador de solo profundo.} \\text{ m}^3\\text{/min} $$
                             $$ \\require{action} \\texttip{v_{sec}}{[m/s] Velocidade Secundária. Definição: Velocidade final de arraste na mangueira. Essencial para evitar embuchamento.} = \\frac{\\texttip{${redeDoisEstagios.vazaoSecundariaReal.toFixed(2)}}{Vazão minuciosa remanescente fluida na mangueirinha.} / \\texttip{60}{Relatório conversional de desmembramento temporal.}}{\\texttip{${areaSecundaria.toFixed(4)}}{Aperto transversal geofísico limitador das condutas finais restritivas.}} = \\texttip{${redeDoisEstagios.velocidadeSecundaria.toFixed(2)}}{[m/s] CÚPULA DE VELOCIDADE CLÍNICA FINAL (ZONA DE SALTAÇÃO EXTREMA E FATAL PARA ENTUPIMENTO). Impacto: A sentinela mestra da mecânica plantadora! Abaixo de gloriosos 15 metros cravados oscilando e rangendo a mangueira o fluxo sucumbe, o grão despenca como pedras fúteis para a gravidade trágica trancando e engasgando o terminal difusor da plantadeira mortalmente!} \\text{ m/s} $$
                             $$ \\require{action} \\texttip{SLR_{sec}}{[Adim.] Razão de Carregamento (Mangueira). Definição: Relação mássica Insumo/Ar na mangueira fina.} = \\frac{\\texttip{${m_s_kgh_linha.toFixed(2)}}{Massa micro pulverizada isolada individual finita pendular por roseta das cavidades rurais do cilindro dentado acrílico de cor opaca.}}{\\texttip{${redeDoisEstagios.massaArSecundariaKgh.toFixed(2)}}{Respiro massivo aerodinâmico escasso em filetes de vento terminal restrito encurvado. }} = \\texttip{${redeDoisEstagios.slrSecundario.toFixed(2)}}{[Adim.] Coeficiente Pulmonar Gaseificado Mássico Friccional Secundário Mestre e de Carregamento. Impacto: Mostra o peso desproporcional do granulado para uma tubagem final extremamente restritiva de poliuretano, denunciando imediatamente o limite teto fatal do afogamento de adubo intermitente por cansaço aerodinâmico estrutural.} $$
                         </div>
                         <div class="memorial-item yellow">
-                            <strong title="Perda distribuída nas linhas menores até o ponto de aplicação.">
-                                <a href="https://www.engineeringtoolbox.com/darcy-weisbach-equation-d_646.html" target="_blank" style="color: inherit; text-decoration: underline;">9. Perda nas Linhas Secundárias</a>
+                            <strong title="${textoIdioma('Perda distribuída nas linhas menores até o ponto de aplicação.', 'Distributed loss along the smaller lines up to the application point.')}">
+                                <a href="https://www.engineeringtoolbox.com/darcy-weisbach-equation-d_646.html" target="_blank" style="color: inherit; text-decoration: underline;">${textoIdioma('9. Perda nas Linhas Secundárias', '9. Loss in Secondary Lines')}</a>
                             </strong><br>
-                            <p style="margin: 10px 0 5px 0; font-size: 0.9em;">Perda distribuída no trecho final, já após a torre:</p>
+                            <p style="margin: 10px 0 5px 0; font-size: 0.9em;">${textoIdioma('Perda distribuída no trecho final, já após a torre:', 'Distributed loss in the final section, after the tower:')}</p>
+                            $$ \\Delta P_{sec} = \\lambda \\cdot \\frac{L_{sec}}{D_{sec}} \\cdot \\frac{\\rho_a \\cdot v_{sec}^{2}}{2} \\cdot (1 + SLR_{sec}) $$
                             $$ \\require{action} \\texttip{\\Delta P_{sec}}{[Pa] Perda Distribuída Secundária. Definição: Queda de pressão por atrito na extensão da mangueira fina.} = \\texttip{${fator_atrito.toFixed(3)}}{Atrito da parede do caninho flexível terminal descendo a máquina espinhosa.} \\cdot \\frac{\\texttip{${L_tubo_m.toFixed(2)}}{[m] Extensão Tormentosa Secundária Final da Mangueirinha fina enrodilhada contornando suspensões pantográficas pesadas das bandejas basculantes.}}{\\texttip{${D_m.toFixed(4)}}{Diâmetro asfixiante exato final minúsculo engolindo ar desesperadamente.}} \\cdot \\frac{\\texttip{${rho_a.toFixed(2)}}{Pesagem do vapor atmosférico.} \\cdot \\texttip{${redeDoisEstagios.velocidadeSecundaria.toFixed(2)}^2}{Impulso quadrado agressivo abrasivo rasgando o caninho internamente colidindo contra pedras minerais duras pontiagudas NPK 4-14-8 e polímeros corrugados plásticos da linha fina.}}{\\texttip{2}{Restritor Cinético Universal Base}} \\cdot (1 + \\texttip{${redeDoisEstagios.slrSecundario.toFixed(2)}}{Carga Sólida de embuchamento final na descida ao adubador pantográfico pendular oscilante.}) $$
                             $$ \\require{action} \\texttip{\\Delta P_{sec}}{[Pa] Perda Distribuída Secundária. Definição: Queda de pressão por atrito na extensão da mangueira fina.} = \\texttip{${redeDoisEstagios.deltaPSecundario.toFixed(0)}}{[Pa] Atrito Quilométrico Estancador Passivo Final de Tubulação Finíssima do Sistema Distributivo Pêndulo Oscilador Pantográfico Paralelogrâmico Traseiro da Plantadeira Maciça de 60 Linhas de Soja! Impacto: É a drenagem e derramamento de toda e qualquer energia pressional sobressalente da pobre turbina Punker antes do ar ir morrer em exaustão e decantar estéril no arado abrindo o leito espinhoso sulcado pela roseta desencontrada!} \\text{ Pa} $$
                         </div>
                         <div class="memorial-item red">
-                            <strong title="Acoplamento iterativo entre a curva da turbina e as perdas do sistema.">
-                                <a href="https://www.engineeringtoolbox.com/fan-performance-characteristics-d_48.html" target="_blank" style="color: inherit; text-decoration: underline;">10. Fechamento da Rede e Comparação com Divisão Direta</a>
+                            <strong title="${textoIdioma('Acoplamento iterativo entre a curva da turbina e as perdas do sistema.', 'Iterative coupling between turbine curve and system losses.')}">
+                                <a href="https://www.engineeringtoolbox.com/fan-performance-characteristics-d_48.html" target="_blank" style="color: inherit; text-decoration: underline;">${textoIdioma('10. Fechamento da Rede e Comparação com Divisão Direta', '10. Network Closure and Direct Split Comparison')}</a>
                             </strong><br>
-                            <p style="margin: 10px 0 5px 0; font-size: 0.9em;">O modelo recalcula a vazão até convergir entre a contrapressão total e a capacidade do soprador:</p>
+                            <p style="margin: 10px 0 5px 0; font-size: 0.9em;">${textoIdioma('O modelo recalcula a vazão até convergir entre a contrapressão total e a capacidade do soprador:', 'The model recalculates flow until it converges between total backpressure and blower capacity:')}</p>
+                            $$ \\Delta P_{total} = \\Delta P_{prim} + \\Delta P_{torre} + \\Delta P_{sec} $$
+                            $$ f = 1 - \\frac{\\Delta P_{total}}{P_{max}} $$
+                            $$ Q_{total,real} = f \\cdot Q_{turbina} $$
                             $$ \\require{action} \\texttip{\\Delta P_{total}}{[Pa] Perda de Carga Total. Definição: Contrapressão macro do sistema resistindo ao fluxo da turbina.} = \\texttip{${redeDoisEstagios.deltaPPrimario.toFixed(0)}}{Pressão Friccional Morta no Custo da Transferência de Carga Bruta Frontal Pela Parede de Borracha ou Silicone Grossa Liso} + \\texttip{${redeDoisEstagios.deltaPTorre.toFixed(0)}}{Soco Impactante Dinâmico Caótico Morto Fracassado no Teto do Chapéu Divisor ou Venturi Salvação} + \\texttip{${redeDoisEstagios.deltaPSecundario.toFixed(0)}}{Arrasto Espiral Espremido Serpenteante Estiolante das Linhas Longilíneas Sibilantes Mangueiradas} = \\texttip{${redeDoisEstagios.deltaPTotal.toFixed(0)}}{[Pa] BARREIRA RESISTIVA INTEGRAL DO SISTEMA. Impacto: A força cega invisível e brutal do vento engarrafado dentro da couraça de canos ocos colidindo empedernida batendo de frente contra o olho do furacão centrífugo metálico na boca exaustora da turbina Fprime de ferro trancando e ensurdecendo a mesma violentamente em desespero restritivo aerodinâmico!} \\text{ Pa} $$
                             $$ \\require{action} \\texttip{f}{[Adim.] Fator de Acoplamento. Definição: Fator de redução de vazão da turbina devido à contrapressão da rede.} = \\texttip{1}{Rendimento Livre Máximo Fantasia sem atrito.} - \\frac{\\texttip{${redeDoisEstagios.deltaPTotal.toFixed(0)}}{Frenagem e freio resistivo duro de trancar o vento.}}{\\texttip{${pressao_turbina_max.toFixed(0)}}{[Pa] Pressão Fechada Absoluta Trancada (Ponto Morto Estol). Impacto: A turbina uivará em 2900 RPM e nenhuma fagulha de ar escapará das suas beiradas emparedadas!}} = \\texttip{${redeDoisEstagios.fatorVazao.toFixed(3)}}{[Adim.] Ponto Cruzado de Equilíbrio Tênue Resultante de Escoamento Fluidodinâmico da Curva Plena Original Fabril de Desempenho. Impacto: A fatia matemática final gloriosa que escapou de toda a morte e restrição do sistema físico da tubagem!} $$
                             $$ \\require{action} \\texttip{Q_{total,real}}{[m³/min] Vazão Total Real. Definição: Volume de ar real que a turbina consegue empurrar na rede.} = \\texttip{${redeDoisEstagios.fatorVazao.toFixed(3)}}{Eficiência Final Acoplada Relativa Resistida} \\cdot \\texttip{${Q_turbina_m3min.toFixed(2)}}{Vazão Virgem Absoluta de Laboratório Ideal sem canos no vento frio limpo e silencioso germânico testado na Punker.} = \\texttip{${redeDoisEstagios.vazaoTotalReal.toFixed(2)}}{[m³/min] VAZÃO MAGISTRAL DE TRABALHO EMPÍRICA REAL E VERDADEIRA! Impacto: É este pulmão matemático inegável retroativo e exato que permitiu trancar o balanço e resolver em frações as velocidades milimétricas que manterão as toneladas de adubo e soja de 60 covas perfeitamente suspensas como mágica flutuante e assopradas contra o abismo do leito arado no solo quente da fazenda!} \\text{ m}^3\\text{/min} $$
                             <hr style="border: 0; border-top: 1px dashed rgba(255,255,255,0.05); margin: 10px 0;">
-                            <p style="margin: 5px 0; font-size: 0.9em;">Comparação com a divisão direta em ${n_linhas} linhas pequenas:</p>
-                            $$ \\require{action} \\texttip{\\Delta P_{direto}}{[Pa] Perda Direta. Definição: Perda hipotética caso a turbina soprasse direto para linhas pequenas sem torre divisora.} = \\texttip{${redeDireta.deltaPLinha.toFixed(0)}}{[Pa] Pressão Fantasia Direta. Impacto: A morte súbita se você não comprasse a torre para centralizar o ar.} \\text{ Pa}, \\quad \\texttip{v_{direto}}{[m/s] Velocidade Direta. Definição: Velocidade final hipotética no esquema de divisão direta.} = \\texttip{${redeDireta.velocidadeLinha.toFixed(2)}}{[m/s] Fuga de Ar Direto Simples Direta Simplista. Impacto: Como o vento dispararia na falha teórica simplória linear basilar de caninhos saindo direto do Air Cart sem inteligência dividida volumétrica.} \\text{ m/s} $$
-                            $$ \\text{Ganho de pressão} = \\texttip{${ganhoPressaoPa.toFixed(0)}}{[Pa] Alívio Bruto Salvífico. Impacto: Saldo termodinâmico vitorioso de Pascal provando que as duas tubagens cruzadas por torre são imensamente mais limpas (fator de ganho positivo em Pascal) ou um erro miserável (fator perdedor afogando e trancando o equipamento de fábrica e afogando o ar).} \\text{ Pa}, \\quad \\text{Ganho de velocidade} = \\texttip{${ganhoVelocidadeMs.toFixed(2)}}{[m/s] O Salto Salvação Físico do Entupimento Brutal de Decantação Crítica Final. Impacto: Os benditos metros por segundo de brisa extra ganhos de presente apenas pela mudança espetacular macro-geométrica do engenheiro!} \\text{ m/s} $$
+                            <p style="margin: 5px 0; font-size: 0.9em;">${textoIdioma(`Comparação com a divisão direta em ${n_linhas} linhas pequenas:`, `Comparison with direct split across ${n_linhas} small rows:`)}</p>
+                            $$ \\require{action} \\texttip{\\Delta P_{${textoIdioma('direto', 'direct')}}}{${textoIdioma('[Pa] Perda direta. Definição: perda hipotética caso a turbina soprasse diretamente para as linhas pequenas sem torre divisora.', '[Pa] Direct loss. Definition: hypothetical loss if the turbine blew directly into the small rows without a distribution tower.')}} = \\texttip{${redeDireta.deltaPLinha.toFixed(0)}}{${textoIdioma('[Pa] Perda de pressão calculada para a divisão direta. Impacto: permite comparar a contrapressão desse arranjo com a rede em dois estágios.', '[Pa] Pressure loss calculated for the direct split. Impact: allows comparison of this arrangement’s backpressure with the two-stage network.')}} \\text{ Pa}, \\quad \\texttip{v_{${textoIdioma('direto', 'direct')}}}{${textoIdioma('[m/s] Velocidade direta. Definição: velocidade final hipotética no esquema de divisão direta.', '[m/s] Direct velocity. Definition: hypothetical final velocity in the direct-split arrangement.')}} = \\texttip{${redeDireta.velocidadeLinha.toFixed(2)}}{${textoIdioma('[m/s] Velocidade calculada nas linhas com divisão direta. Impacto: referência para avaliar o ganho ou a perda de velocidade da rede em dois estágios.', '[m/s] Velocity calculated in the rows with direct splitting. Impact: reference for evaluating the velocity gain or loss of the two-stage network.')}} \\text{ m/s} $$
+                            $$ \\text{${textoIdioma('Ganho de pressão', 'Pressure gain')}} = \\texttip{${ganhoPressaoPa.toFixed(0)}}{${textoIdioma('[Pa] Diferença entre a perda da divisão direta e a perda da rede em dois estágios. Valor positivo indica menor perda na rede em dois estágios.', '[Pa] Difference between direct-split loss and two-stage-network loss. A positive value indicates lower loss in the two-stage network.')}} \\text{ Pa}, \\quad \\text{${textoIdioma('Ganho de velocidade', 'Velocity gain')}} = \\texttip{${ganhoVelocidadeMs.toFixed(2)}}{${textoIdioma('[m/s] Diferença entre a velocidade secundária da rede em dois estágios e a velocidade da divisão direta. Valor positivo indica aumento de velocidade.', '[m/s] Difference between the two-stage network’s secondary velocity and the direct-split velocity. A positive value indicates increased velocity.')}} \\text{ m/s} $$
                         </div>
                     `;
 
@@ -1535,105 +1949,105 @@ console.log('🔧 Script iniciando...');
                     if (alcance_abs < 0.02) {
                         statusCinematica = `<div class='alert alert-warning'><strong>⚠️ ESPALHAMENTO VERTICAL (QUEDA LIVRE)</strong><br><br>A inclinação da chapa (${theta_deg}°) está desviando a semente quase completamente para baixo (ângulo de saída: ${angulo_saida_deg.toFixed(1)}°). O material formará uma fileira grossa e concentrada no sulco.</div>`;
                     } else if (Math.abs(angulo_saida_deg) > 45) {
-                        statusCinematica = `<div class='alert alert-warning'><strong>⚠️ DEFLEXÃO EXCESSIVA PARA CIMA</strong><br><br>O ângulo do defletor (${theta_deg}°) está lançando a semente para cima (ângulo: ${angulo_saida_deg.toFixed(1)}°). Alto risco de deriva pelo vento do ambiente externo.</div>`;
+                        statusCinematica = `<div class='alert alert-warning'><strong>${textoIdioma('⚠️ DEFLEXÃO EXCESSIVA PARA CIMA', '⚠️ EXCESSIVE UPWARD DEFLECTION')}</strong><br><br>${textoIdioma(`O ângulo do defletor (${theta_deg}°) está lançando a semente para cima (ângulo: ${angulo_saida_deg.toFixed(1)}°). Alto risco de deriva pelo vento do ambiente externo.`, `The deflector angle (${theta_deg}°) is launching the seed upward (angle: ${angulo_saida_deg.toFixed(1)}°). High risk of drift caused by ambient wind.`)}</div>`;
                     } else {
-                        statusCinematica = `<div class='alert alert-success'><strong>✅ DISTRIBUIÇÃO PARABÓLICA ATIVA</strong><br><br>Semente lançada frontalmente por <strong>${alcance_abs.toFixed(2)} m</strong> e espalhada lateralmente por causa do arco em uma faixa de <strong>${largura_faixa.toFixed(2)} m</strong>. Boa uniformidade.</div>`;
+                        statusCinematica = `<div class='alert alert-success'><strong>${textoIdioma('✅ DISTRIBUIÇÃO PARABÓLICA ATIVA', '✅ ACTIVE PARABOLIC DISTRIBUTION')}</strong><br><br>${textoIdioma(`Semente lançada frontalmente por <strong>${alcance_abs.toFixed(2)} m</strong> e espalhada lateralmente por causa do arco em uma faixa de <strong>${largura_faixa.toFixed(2)} m</strong>. Boa uniformidade.`, `Seed launched forward by <strong>${alcance_abs.toFixed(2)} m</strong> and spread laterally by the arc across a <strong>${largura_faixa.toFixed(2)} m</strong> swath. Good uniformity.`)}</div>`;
                     }
 
                     htmlEsquerdo = `
-                        <h3 style="color: #fff; margin-bottom: 15px;">Mecânica do Impacto (Defletor)</h3>
+                        <h3 style="color: #fff; margin-bottom: 15px;">${textoIdioma('Mecânica do Impacto (Defletor)', 'Impact Mechanics (Deflector)')}</h3>
                         <div class="metrics-row">
-                            <div class="metric-card" title="Velocidade vertical da semente ao atingir o defletor (após sair do tubo pneumático)."><div class="metric-label">Velocidade de Queda (V₀)</div><div class="metric-value">${v0_vertical.toFixed(1)} m/s</div></div>
-                            <div class="metric-card" title="Velocidade da semente imediatamente após bater na chapa, descontada a perda pelo coeficiente de restituição."><div class="metric-label">Velocidade Refletida (Vᵣ)</div><div class="metric-value">${v_refl.toFixed(1)} m/s</div></div>
+                            <div class="metric-card" title="${textoIdioma('Velocidade vertical da semente ao atingir o defletor (após sair do tubo pneumático).', 'Vertical seed speed when reaching the deflector (after leaving the pneumatic tube).')}"><div class="metric-label">${textoIdioma('Velocidade de Queda (V₀)', 'Fall Velocity (V₀)')}</div><div class="metric-value">${v0_vertical.toFixed(1)} m/s</div></div>
+                            <div class="metric-card" title="${textoIdioma('Velocidade da semente imediatamente após bater na chapa, descontada a perda pelo coeficiente de restituição.', 'Seed speed immediately after striking the plate, discounting the loss from the restitution coefficient.')}"><div class="metric-label">${textoIdioma('Velocidade Refletida (Váµ£)', 'Reflected Velocity (Váµ£)')}</div><div class="metric-value">${v_refl.toFixed(1)} m/s</div></div>
                         </div>
-                        <h3 style="color: #fff; margin-bottom: 15px;">Análise Vetorial</h3>
+                        <h3 style="color: #fff; margin-bottom: 15px;">${textoIdioma('Análise Vetorial', 'Vector Analysis')}</h3>
                         <div class="metrics-row">
-                            <div class="metric-card" title="Ângulo em relação à horizontal com que a semente é lançada pelo centro da chapa."><div class="metric-label">Ângulo Saída Frontal</div><div class="metric-value">${angulo_saida_deg.toFixed(1)}°</div></div>
-                            <div class="metric-card" title="Desvio lateral tangencial na borda da chapa gerado pelo Raio de Curvatura de ${raio_mm}mm."><div class="metric-label">Ângulo Curva Máx. (&gamma;)</div><div class="metric-value">${gama_max_deg.toFixed(1)}°</div></div>
+                            <div class="metric-card" title="${textoIdioma('Ângulo em relação à horizontal com que a semente é lançada pelo centro da chapa.', 'Angle relative to the horizontal at which the seed leaves the center of the plate.')}"><div class="metric-label">${textoIdioma('Ângulo Saída Frontal', 'Front Exit Angle')}</div><div class="metric-value">${angulo_saida_deg.toFixed(1)}°</div></div>
+                            <div class="metric-card" title="${textoIdioma(`Desvio lateral tangencial na borda da chapa gerado pelo raio de curvatura de ${raio_mm} mm.`, `Tangential lateral deviation at the plate edge generated by the ${raio_mm} mm curvature radius.`)}"><div class="metric-label">${textoIdioma('Ângulo Curva Máx. (γ)', 'Maximum Curve Angle (γ)')}</div><div class="metric-value">${gama_max_deg.toFixed(1)}°</div></div>
                         </div>
-                        <h3 style="color: #fff; margin-bottom: 15px;">Projeção Cinemática no Solo</h3>
+                        <h3 style="color: #fff; margin-bottom: 15px;">${textoIdioma('Projeção Cinemática no Solo', 'Kinematic Projection on the Ground')}</h3>
                         <div class="metrics-row">
-                            <div class="metric-card" title="Tempo total de voo da semente."><div class="metric-label">Tempo de Queda</div><div class="metric-value">${t_queda.toFixed(3)} s</div></div>
-                            <div class="metric-card" title="Alcance longitudinal máximo gerado na linha da máquina (Eixo X)."><div class="metric-label">Alcance Longitudinal</div><div class="metric-value">${alcance_abs.toFixed(2)} m</div></div>
+                            <div class="metric-card" title="Tempo total de voo da semente."><div class="metric-label">${textoIdioma('Tempo de Queda', 'Fall Time')}</div><div class="metric-value">${t_queda.toFixed(3)} s</div></div>
+                            <div class="metric-card" title="Alcance longitudinal máximo gerado na linha da máquina (Eixo X)."><div class="metric-label">${textoIdioma('Alcance Longitudinal', 'Longitudinal Range')}</div><div class="metric-value">${alcance_abs.toFixed(2)} m</div></div>
                         </div>
                         <div class="metrics-row">
                             <div class="metric-card" style="grid-column: span 2;" title="A abertura total da faixa no solo provocada pelo espalhamento tangencial (Eixo Z)."><div class="metric-label">Largura da Faixa Distribuída (Espalhamento Z)</div><div class="metric-value">${largura_faixa.toFixed(2)} m</div></div>
                         </div>
-                        <h3 style="color: #fff; margin-bottom: 15px;">Perfil de Distribuição</h3>
+                        <h3 style="color: #fff; margin-bottom: 15px;">${textoIdioma('Perfil de Distribuição', 'Distribution Profile')}</h3>
                         ${statusCinematica}
                     `;
 
                     htmlDireito = `
-                        <h3 style="color: #fff; margin-top: 0;">📚 Memorial da Cinemática</h3>
+                        <h3 style="color: #fff; margin-top: 0;">${textoIdioma('📚 Memorial da Cinemática', '📚 Kinematics Calculation Report')}</h3>
                         <div style="margin-bottom: 15px; font-size: 0.9em; color: var(--text-muted);">
-                            <strong>Física de Projéteis Assumida</strong><br>
-                            • Tubo de descida estritamente vertical.<br>
-                            • Inclinação Frontal do Defletor: ${theta_deg}°<br>
-                            • Diâmetro do Tubo (D): ${diam_tubo_mm} mm<br>
-                            • Raio de Curvatura Transversal (R): ${raio_mm} mm
+                            <strong>${textoIdioma('Física de Projéteis Assumida', 'Assumed Projectile Physics')}</strong><br>
+                            &bull; ${textoIdioma('Tubo de descida estritamente vertical.', 'Strictly vertical descent tube.')}<br>
+                            &bull; ${textoIdioma('Inclinação Frontal do Defletor', 'Front Deflector Inclination')}: ${theta_deg}°<br>
+                            &bull; ${textoIdioma('Diâmetro do Tubo (D)', 'Tube Diameter (D)')}: ${diam_tubo_mm} mm<br>
+                            &bull; ${textoIdioma('Raio de Curvatura Transversal (R)', 'Transverse Curvature Radius (R)')}: ${raio_mm} mm
                         </div>
                         
                         <div class="memorial-item">
-                            <strong title="Coeficiente de restituição e elasticidade. Clique para referência.">
-                                <a href="https://scienceworld.wolfram.com/physics/CoefficientofRestitution.html" target="_blank" style="color: inherit; text-decoration: underline;">1. Reflexão no Defletor Frontal (XY) 🔗</a>
+                            <strong title="${textoIdioma('Coeficiente de restituição e elasticidade. Clique para referência.', 'Coefficient of restitution and elasticity. Click for reference.')}">
+                                <a href="https://scienceworld.wolfram.com/physics/CoefficientofRestitution.html" target="_blank" style="color: inherit; text-decoration: underline;">${textoIdioma('1. Reflexão no Defletor Frontal (XY) 🔗', '1. Front Deflector Reflection (XY) 🔗')}</a>
                             </strong><br>
-                            <p style="margin: 10px 0 5px 0; font-size: 0.9em;">Desvio baseado na lei da reflexão especular:</p>
-                            $$ \\require{action} \\texttip{\\alpha}{[Graus] Ângulo de Saída. Definição: Ângulo do vetor de velocidade da semente após bater no defletor. Importância: Define a parábola de voo no eixo longitudinal.} = 2 \\cdot \\texttip{\\theta}{[Graus] Ângulo da Chapa. Definição: Inclinação do defletor. Importância: Regula se a semente vai mais para frente ou mais para baixo.} - 90^\\circ $$
+                            <p style="margin: 10px 0 5px 0; font-size: 0.9em;">${textoIdioma('Desvio baseado na lei da reflexão especular:', 'Deviation based on the law of specular reflection:')}</p>
+                            $$ \\require{action} \\texttip{\\alpha}{${textoIdioma('[Graus] Ângulo de Saída. Definição: Ângulo do vetor de velocidade da semente após bater no defletor. Importância: Define a parábola de voo no eixo longitudinal.', '[Degrees] Exit Angle. Definition: Angle of the seed velocity vector after impact on the deflector. Importance: Defines the flight parabola along the longitudinal axis.')}} = 2 \\cdot \\texttip{\\theta}{${textoIdioma('[Graus] Ângulo da Chapa. Definição: Inclinação do defletor. Importância: Regula se a semente vai mais para frente ou mais para baixo.', '[Degrees] Plate Angle. Definition: Deflector inclination. Importance: Controls whether the seed goes more forward or more downward.')}} - 90^\\circ $$
                             $$ \\alpha = 2 \\cdot ${theta_deg}^\\circ - 90^\\circ $$
                             $$ \\alpha = ${angulo_saida_deg.toFixed(1)}^\\circ $$
                             <hr style="border: 0; border-top: 1px dashed rgba(255,255,255,0.05); margin: 10px 0;">
-                            <p style="margin: 5px 0; font-size: 0.9em;">Velocidade de saída descontando a perda por restituição mecânica:</p>
-                            $$ \\require{action} \\texttip{V_r}{[m/s] Vel. Pós-Choque. Definição: Velocidade resultante após impacto. Importância: Vetor principal que será decomposto nos 3 eixos (X, Y, Z).} = \\texttip{V_0}{[m/s] Vel. Queda. Definição: Velocidade com que a semente desce do tubo pneumático. Importância: Dita a energia cinética inicial da colisão.} \\cdot \\texttip{e}{[Adim.] Restituição. Definição: Coeficiente elástico do impacto. Importância: Aço puro repica mais (0.7); borracha amortece e espalha menos (0.4).} $$
+                            <p style="margin: 5px 0; font-size: 0.9em;">${textoIdioma('Velocidade de saída descontando a perda por restituição mecânica:', 'Exit speed discounting the loss from mechanical restitution:')}</p>
+                            $$ \\require{action} \\texttip{V_r}{${textoIdioma('[m/s] Vel. Pós-Choque. Definição: Velocidade resultante após impacto. Importância: Vetor principal que será decomposto nos 3 eixos (X, Y, Z).', '[m/s] Post-impact velocity. Definition: Resulting speed after impact. Importance: Main vector to be decomposed into the 3 axes (X, Y, Z).')}} = \\texttip{V_0}{${textoIdioma('[m/s] Vel. Queda. Definição: Velocidade com que a semente desce do tubo pneumático. Importância: Dita a energia cinética inicial da colisão.', '[m/s] Fall speed. Definition: Speed at which the seed exits the pneumatic tube. Importance: Sets the initial kinetic energy of the collision.')}} \\cdot \\texttip{e}{${textoIdioma('[Adim.] Restituição. Definição: Coeficiente elástico do impacto. Importância: Aço puro repica mais (0.7); borracha amortece e espalha menos (0.4).', '[Dimensionless] Restitution. Definition: Impact elasticity coefficient. Importance: Bare steel rebounds more (0.7); rubber dampens and spreads less (0.4).')}} $$
                             $$ V_r = ${v0_vertical.toFixed(1)} \\cdot ${e_rest.toFixed(2)} $$
                             $$ V_r = ${v_refl.toFixed(2)} \\text{ m/s} $$
                         </div>
 
                         <div class="memorial-item yellow">
-                            <strong title="Equações do movimento de projéteis com aceleração gravitacional constante. Clique para referência.">
-                                <a href="https://openstax.org/books/college-physics-2e/pages/3-4-projectile-motion" target="_blank" style="color: inherit; text-decoration: underline;">2. Equação Horária da Posição Vertical 🔗</a>
+                            <strong title="${textoIdioma('Equações do movimento de projéteis com aceleração gravitacional constante. Clique para referência.', 'Projectile motion equations with constant gravitational acceleration. Click for reference.')}">
+                                <a href="https://openstax.org/books/college-physics-2e/pages/3-4-projectile-motion" target="_blank" style="color: inherit; text-decoration: underline;">${textoIdioma('2. Equação Horária da Posição Vertical 🔗', '2. Vertical Position Time Equation 🔗')}</a>
                             </strong><br>
-                            <p style="margin: 10px 0 5px 0; font-size: 0.9em;">Componente vertical inicial da velocidade refletida:</p>
-                            $$ \\require{action} \\texttip{V_y}{[m/s] Vel. Y Inicial. Definição: Vetor vertical da semente. Importância: Impacta o tempo de voo. Se positivo, semente sobe; se negativo, desce rápido.} = \\texttip{V_r}{Vel. Refletida} \\cdot \\sin(\\alpha) $$
+                            <p style="margin: 10px 0 5px 0; font-size: 0.9em;">${textoIdioma('Componente vertical inicial da velocidade refletida:', 'Initial vertical component of the reflected velocity:')}</p>
+                            $$ \\require{action} \\texttip{V_y}{${textoIdioma('[m/s] Vel. Y Inicial. Definição: Vetor vertical da semente. Importância: Impacta o tempo de voo. Se positivo, semente sobe; se negativo, desce rápido.', '[m/s] Initial Y velocity. Definition: Seed vertical vector. Importance: Affects flight time. If positive, the seed rises; if negative, it drops quickly.')}} = \\texttip{V_r}{${textoIdioma('Vel. Refletida', 'Reflected velocity')}} \\cdot \\sin(\\alpha) $$
                             $$ V_y = ${v_refl.toFixed(2)} \\cdot \\sin(${angulo_saida_deg.toFixed(1)}^\\circ) $$
                             $$ V_y = ${v_y.toFixed(2)} \\text{ m/s} $$
                             <hr style="border: 0; border-top: 1px dashed rgba(255,255,255,0.05); margin: 10px 0;">
-                            <p style="margin: 5px 0; font-size: 0.9em;">Tempo de voo obtido isolando a raiz real da função horária da posição (y = 0):</p>
-                            $$ \\require{action} \\texttip{t}{[s] Tempo de Voo. Definição: Duração da queda livre após o defletor. Importância: Quanto mais tempo no ar, maior o espalhamento e o risco de deriva pelo vento.} = \\frac{\\texttip{V_y}{Vel. Vertical} + \\sqrt{\\texttip{V_y^2}{Vel. Vertical Quadrada} + 2 \\cdot \\texttip{g}{[m/s²] Gravidade padrão. Definição: aceleração convencional de 9,80665 m/s². Unidade: metro por segundo ao quadrado. Importância: puxa a semente para o solo; se g aumentar, o tempo de voo diminui e a faixa reduz; se g diminuir, a semente fica mais tempo no ar. Exemplo: maior g reduz D_x e D_z.} \\cdot \\texttip{h}{[m] Altura da Chapa. Definição: Distância do defletor ao solo. Importância: Chapas muito altas sofrem deriva severa de vento externo.}}}{\\texttip{g}{[m/s²] Gravidade padrão usada no cálculo.}} $$
+                            <p style="margin: 5px 0; font-size: 0.9em;">${textoIdioma('Tempo de voo obtido isolando a raiz real da função horária da posição (y = 0):', 'Flight time obtained by isolating the real root of the position-time equation (y = 0):')}</p>
+                            $$ \\require{action} \\texttip{t}{${textoIdioma('[s] Tempo de Voo. Definição: Duração da queda livre após o defletor. Importância: Quanto mais tempo no ar, maior o espalhamento e o risco de deriva pelo vento.', '[s] Flight Time. Definition: Duration of free fall after the deflector. Importance: More time in the air means more spreading and more risk of wind drift.')}} = \\frac{\\texttip{V_y}{${textoIdioma('Vel. Vertical', 'Vertical velocity')}} + \\sqrt{\\texttip{V_y^2}{${textoIdioma('Vel. Vertical Quadrada', 'Squared vertical velocity')}} + 2 \\cdot \\texttip{g}{${textoIdioma('[m/s²] Gravidade padrão. Definição: aceleração convencional de 9,80665 m/s². Unidade: metro por segundo ao quadrado. Importância: puxa a semente para o solo; se g aumentar, o tempo de voo diminui e a faixa reduz; se g diminuir, a semente fica mais tempo no ar. Exemplo: maior g reduz D_x e D_z.', '[m/s²] Standard gravity. Definition: conventional acceleration of 9.80665 m/s². Unit: meter per second squared. Importance: pulls the seed toward the ground; if g increases, flight time decreases and the swath shrinks; if g decreases, the seed stays in the air longer. Example: larger g reduces D_x and D_z.')}} \\cdot \\texttip{h}{${textoIdioma('[m] Altura da Chapa. Definição: Distância do defletor ao solo. Importância: Chapas muito altas sofrem deriva severa de vento externo.', '[m] Plate Height. Definition: Distance from the deflector to the ground. Importance: Very high plates suffer severe external wind drift.')}}}}{\\texttip{g}{${textoIdioma('[m/s²] Gravidade padrão usada no cálculo.', '[m/s²] Standard gravity used in the calculation.')}}} $$
                             $$ t = \\frac{(${v_y.toFixed(2)}) + \\sqrt{(${v_y.toFixed(2)})^2 + 2 \\cdot ${g.toFixed(5)} \\cdot ${h.toFixed(2)}}}{${g.toFixed(5)}} $$
                             $$ t = ${t_queda.toFixed(3)} \\text{ s} $$
                         </div>
 
                         <div class="memorial-item green">
-                            <strong title="Cinemática bidimensional de projéteis. Clique para referência.">
-                                <a href="https://openstax.org/books/college-physics-2e/pages/3-4-projectile-motion" target="_blank" style="color: inherit; text-decoration: underline;">3. Alcance Longitudinal (Eixo X) 🔗</a>
+                            <strong title="${textoIdioma('Cinemática bidimensional de projéteis. Clique para referência.', 'Two-dimensional projectile kinematics. Click for reference.')}">
+                                <a href="https://openstax.org/books/college-physics-2e/pages/3-4-projectile-motion" target="_blank" style="color: inherit; text-decoration: underline;">${textoIdioma('3. Alcance Longitudinal (Eixo X) 🔗', '3. Longitudinal Range (X Axis) 🔗')}</a>
                             </strong><br>
-                            <p style="margin: 10px 0 5px 0; font-size: 0.9em;">Componente horizontal constante da velocidade projetada (MRU):</p>
-                            $$ \\require{action} \\texttip{V_x}{[m/s] Vel. X. Definição: Deslocamento na linha do trator. Importância: Compõe o alcance longitudinal.} = \\texttip{V_r}{Vel. Refletida} \\cdot \\cos(\\alpha) $$
+                            <p style="margin: 10px 0 5px 0; font-size: 0.9em;">${textoIdioma('Componente horizontal constante da velocidade projetada (MRU):', 'Constant horizontal component of the projected velocity (uniform motion):')}</p>
+                            $$ \\require{action} \\texttip{V_x}{${textoIdioma('[m/s] Vel. X. Definição: Deslocamento na linha do trator. Importância: Compõe o alcance longitudinal.', '[m/s] X velocity. Definition: Displacement along the tractor line. Importance: Forms the longitudinal range.')}} = \\texttip{V_r}{${textoIdioma('Vel. Refletida', 'Reflected velocity')}} \\cdot \\cos(\\alpha) $$
                             $$ V_x = ${v_refl.toFixed(2)} \\cdot \\cos(${angulo_saida_deg.toFixed(1)}^\\circ) $$
                             $$ V_x = ${v_x.toFixed(2)} \\text{ m/s} $$
                             <hr style="border: 0; border-top: 1px dashed rgba(255,255,255,0.05); margin: 10px 0;">
-                            <p style="margin: 5px 0; font-size: 0.9em;">Alcance máximo frontal percorrido no solo:</p>
-                            $$ \\require{action} \\texttip{D_x}{[m] Alcance Longitudinal. Definição: O quanto a semente vai para frente antes de cair. Importância: Atrasos longos exigem ajuste do offset no GPS do trator para não plantar fora do alvo.} = \\texttip{V_x}{Vel. Horizontal} \\cdot \\texttip{t}{Tempo de Voo} $$
+                            <p style="margin: 5px 0; font-size: 0.9em;">${textoIdioma('Alcance máximo frontal percorrido no solo:', 'Maximum frontal range traveled on the ground:')}</p>
+                            $$ \\require{action} \\texttip{D_x}{[m] ${textoIdioma('Alcance Longitudinal', 'Longitudinal Range')}. Definição: O quanto a semente vai para frente antes de cair. Importância: Atrasos longos exigem ajuste do offset no GPS do trator para não plantar fora do alvo.} = \\texttip{V_x}{${textoIdioma('Vel. Horizontal', 'Horizontal velocity')}} \\cdot \\texttip{t}{${textoIdioma('Tempo de Voo', 'Flight Time')}} $$
                             $$ D_x = ${v_x.toFixed(2)} \\cdot ${t_queda.toFixed(3)} $$
                             $$ D_x = ${alcance_abs.toFixed(2)} \\text{ m} $$
                         </div>
 
                         <div class="memorial-item red">
-                            <strong title="Geometria de raio de curvatura aplicada à chapa curva. Clique para referência.">
-                                <a href="https://mathworld.wolfram.com/RadiusofCurvature.html" target="_blank" style="color: inherit; text-decoration: underline;">4. Espalhamento Transversal Geométrico (Eixo Z) 🔗</a>
+                            <strong title="${textoIdioma('Geometria de raio de curvatura aplicada à chapa curva. Clique para referência.', 'Curvature-radius geometry applied to the curved plate. Click for reference.')}">
+                                <a href="https://mathworld.wolfram.com/RadiusofCurvature.html" target="_blank" style="color: inherit; text-decoration: underline;">${textoIdioma('4. Espalhamento Transversal Geométrico (Eixo Z) 🔗', '4. Geometric Transverse Spreading (Z Axis) 🔗')}</a>
                             </strong><br>
-                            <p style="margin: 10px 0 5px 0; font-size: 0.9em;">Ângulo tangencial máximo de escape ditado pelas bordas do duto de ar:</p>
-                            $$ \\require{action} \\texttip{\\gamma}{[Graus] Ângulo Tangencial. Definição: Ângulo de fuga na borda da chapa curva. Importância: Dita o poder de esparramar a semente nos lados do sulco.} = \\arcsin \\left( \\frac{\\texttip{D_{tubo}/2}{[mm] Diâmetro Tubo. Definição: Abertura por onde a semente cai. Importância: Se o tubo é largo, a semente bate na extremidade curva do defletor e espalha mais.}}{\\texttip{R}{[mm] Raio de Curvatura. Definição: Grau de dobra lateral da chapa defletora. Importância: Raios fechados (ex: 80mm) geram altíssimo espalhamento lateral.}} \\right) $$
+                            <p style="margin: 10px 0 5px 0; font-size: 0.9em;">${textoIdioma('Ângulo tangencial máximo de escape ditado pelas bordas do duto de ar:', 'Maximum tangential escape angle dictated by the air duct edges:')}</p>
+                            $$ \\require{action} \\texttip{\\gamma}{${textoIdioma('[Graus] Ângulo Tangencial. Definição: Ângulo de fuga na borda da chapa curva. Importância: Dita o poder de esparramar a semente nos lados do sulco.', '[Degrees] Tangential angle. Definition: Escape angle at the curved plate edge. Importance: Controls how strongly the seed spreads to both sides of the furrow.')}} = \\arcsin \\left( \\frac{\\texttip{D_{tubo}/2}{${textoIdioma('[mm] Diâmetro Tubo. Definição: Abertura por onde a semente cai. Importância: Se o tubo é largo, a semente bate na extremidade curva do defletor e espalha mais.', '[mm] Tube Diameter. Definition: Opening through which the seed falls. Importance: If the tube is wide, the seed hits the curved edge of the deflector and spreads more.')}}}{\\texttip{R}{${textoIdioma('[mm] Raio de Curvatura. Definição: Grau de dobra lateral da chapa defletora. Importância: Raios fechados (ex: 80mm) geram altíssimo espalhamento lateral.', '[mm] Curvature Radius. Definition: Lateral bending degree of the deflector plate. Importance: Tight radii (e.g. 80 mm) generate very high lateral spreading.')}}} \\right) $$
                             $$ \\gamma = \\arcsin \\left( \\frac{${diam_tubo_mm}/2}{${raio_mm}} \\right) $$
                             $$ \\gamma = ${gama_max_deg.toFixed(1)}^\\circ $$
                             <hr style="border: 0; border-top: 1px dashed rgba(255,255,255,0.05); margin: 10px 0;">
-                            <p style="margin: 5px 0; font-size: 0.9em;">Componente de velocidade máxima lateral gerada no repique:</p>
-                            $$ \\require{action} \\texttip{V_z}{[m/s] Vel. Z. Definição: Vetor de velocidade transversal. Importância: Força com que a semente se afasta do centro da linha.} = \\texttip{V_r}{Velocidade Refletida} \\cdot \\sin(\\gamma) $$
+                            <p style="margin: 5px 0; font-size: 0.9em;">${textoIdioma('Componente de velocidade máxima lateral gerada no repique:', 'Maximum lateral velocity component generated by the bounce:')}</p>
+                            $$ \\require{action} \\texttip{V_z}{${textoIdioma('[m/s] Vel. Z. Definição: Vetor de velocidade transversal. Importância: Força com que a semente se afasta do centro da linha.', '[m/s] Z velocity. Definition: Transverse velocity vector. Importance: Force with which the seed moves away from the line center.')}} = \\texttip{V_r}{${textoIdioma('Velocidade Refletida', 'Reflected velocity')}} \\cdot \\sin(\\gamma) $$
                             $$ V_z = ${v_refl.toFixed(2)} \\cdot \\sin(${gama_max_deg.toFixed(1)}^\\circ) $$
                             $$ V_z = ${vz_max.toFixed(2)} \\text{ m/s} $$
                             <hr style="border: 0; border-top: 1px dashed rgba(255,255,255,0.05); margin: 10px 0;">
-                            <p style="margin: 5px 0; font-size: 0.9em; padding-left: 10px; border-left: 2px solid var(--error);"><strong>A Faixa Total:</strong><br>A largura depositada no solo (Dz) é a soma da abertura bilateral (2 &times; Vel. Lateral &times; Tempo) com a largura física do duto.</p>
-                            $$ \\require{action} \\texttip{D_z}{[m] Faixa de Distribuição. Definição: Largura total coberta pela sementeira. Importância: Precisa casar (match) perfeitamente com a distância entre as linhas de plantio para não haver falha ou sobreposição.} = \\texttip{D_{tubo}}{Largura Inicial da Cortina} + 2 \\cdot ( \\texttip{V_z}{Vel. Lateral Z} \\cdot \\texttip{t}{Tempo de Queda} ) $$
+                            <p style="margin: 5px 0; font-size: 0.9em; padding-left: 10px; border-left: 2px solid var(--error);"><strong>${textoIdioma('A Faixa Total:', 'Total Swath:')}</strong><br>${textoIdioma('A largura depositada no solo (Dz) é a soma da abertura bilateral (2 × Vel. Lateral × Tempo) com a largura física do duto.', 'The width deposited on the ground (Dz) is the sum of the bilateral opening (2 × Lateral Velocity × Time) and the physical duct width.')}</p>
+                            $$ \\require{action} \\texttip{D_z}{${textoIdioma('[m] Faixa de Distribuição. Definição: Largura total coberta pela sementeira. Importância: Precisa casar (match) perfeitamente com a distância entre as linhas de plantio para não haver falha ou sobreposição.', '[m] Distribution Swath. Definition: Total width covered by the seeder. Importance: It must match the planting row spacing perfectly to avoid gaps or overlap.')}} = \\texttip{D_{tubo}}{${textoIdioma('Largura Inicial da Cortina', 'Initial curtain width')}} + 2 \\cdot ( \\texttip{V_z}{${textoIdioma('Vel. Lateral Z', 'Lateral velocity Z')}} \\cdot \\texttip{t}{${textoIdioma('Tempo de Queda', 'Fall Time')}} ) $$
                             $$ D_z = ${diam_tubo_m.toFixed(3)} + 2 \\cdot (${vz_max.toFixed(2)} \\cdot ${t_queda.toFixed(3)}) $$
                             $$ D_z = ${largura_faixa.toFixed(2)} \\text{ m} $$
                         </div>
@@ -1644,7 +2058,7 @@ console.log('🔧 Script iniciando...');
                 if (mathJaxTimerDist) clearTimeout(mathJaxTimerDist);
                 mathJaxTimerDist = setTimeout(function() {
                     const buffer = document.createElement('div');
-                    buffer.innerHTML = htmlDireito;
+                    buffer.innerHTML = traduzirTextosDeFormula(htmlDireito);
                     if (window.MathJax && MathJax.typesetPromise) {
                         if (!window.mjPromiseDist) window.mjPromiseDist = Promise.resolve();
                         window.mjPromiseDist = window.mjPromiseDist.then(function() {
@@ -1654,7 +2068,7 @@ console.log('🔧 Script iniciando...');
                             });
                         }).catch(err => console.log(err));
                     } else {
-                        dom.painelDirDist.innerHTML = htmlDireito;
+                        dom.painelDirDist.innerHTML = traduzirTextosDeFormula(htmlDireito);
                     }
                 }, 80);
             }
@@ -1728,7 +2142,7 @@ console.log('🔧 Script iniciando...');
                 desenharRolo(centroX - 102, centroY, 90, anguloEsquerdo, true);
                 desenharRolo(centroX + 102, centroY, 90, anguloDireito, false);
 
-                let taxaAtual = parseFloat(dom.taxaRange.value);
+                let taxaAtual = lerValorSincronizado('in_taxa_range');
                 if(isNaN(taxaAtual)) taxaAtual = 0;
 
                 if (!isStalled && velAngular > 0) {
@@ -1922,7 +2336,7 @@ console.log('🔧 Script iniciando...');
                 // Efeito de vento dinâmico
                 ctxDist.fillStyle = 'rgba(88, 166, 255, 0.3)';
                 ctxDist.font = '16px monospace';
-                ctxDist.fillText('💨 Ar (' + velAr + ' m/s) ➔', centroX - 180, centroY + 80);
+                ctxDist.fillText('💨 Ar (' + velAr + ' m/s) ➡', centroX - 180, centroY + 80);
 
                 // === TREMONHA (Funil Superior) ===
                 ctxDist.fillStyle = 'rgba(88, 166, 255, 0.05)';
@@ -2308,7 +2722,7 @@ console.log('🔧 Script iniciando...');
             // Ativa o sistema
             console.log('✅ Ativando sistema...');
             atualizarDashboard();    // Pré-renderiza o Destorroador
-            atualizarDistribuidor(); // Pré-renderiza o Distribuidor (corrige o bug do MathJax vazio na 1ª abertura)
+            atualizarDistribuidor(); // Pré-renderiza o Distribuidor (corrige o bug do MathJax vazio na 1Âª abertura)
             console.log('✅ Dashboards atualizados');
             renderizar();
             console.log('✅ Renderizadores iniciados');
@@ -2316,3 +2730,4 @@ console.log('🔧 Script iniciando...');
             renderizarDosador(); // Inicia o laço 2D do dosador pneumático
             console.log('✅ ===== APLICAÇÃO INICIADA COM SUCESSO! =====');
         }  // Fecha iniciarAplicacao
+

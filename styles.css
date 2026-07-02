@@ -162,7 +162,7 @@
         .state-toggle {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 10px;
+            gap: 10px 10px;
             margin-bottom: 20px;
         }
         .state-btn {
@@ -170,11 +170,11 @@
             border: 1px solid var(--border);
             color: var(--text-main);
             border-radius: 6px;
-            padding: 11px 12px;
+            padding: 10px 12px;
             font-size: 0.9em;
             cursor: pointer;
             transition: 0.2s ease;
-            min-height: 44px;
+            min-height: 40px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -192,16 +192,79 @@
         }
         .state-btn[data-dashboard-reset] {
             grid-column: 1 / -1;
-            margin-top: 2px;
-            background: rgba(255, 107, 107, 0.12);
-            border-color: rgba(255, 107, 107, 0.45);
-            color: var(--text-strong);
-            font-weight: 700;
-            letter-spacing: 0.01em;
+            justify-self: end;
+            width: calc(50% - 5px);
+            margin-top: 4px;
+            background: transparent;
+            border-style: dashed;
+            border-color: var(--border);
+            color: var(--text-muted);
+            font-weight: 500;
+            letter-spacing: 0;
         }
         .state-btn[data-dashboard-reset]:hover {
-            background: rgba(255, 107, 107, 0.2);
-            border-color: rgba(255, 107, 107, 0.75);
+            background: rgba(255, 255, 255, 0.03);
+            border-color: var(--accent);
+            color: var(--text-main);
+        }
+
+        .reset-confirmation-modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(6, 10, 16, 0.72);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            z-index: 1000;
+            backdrop-filter: blur(4px);
+        }
+        body[data-theme="light"] .reset-confirmation-modal {
+            background: rgba(15, 23, 42, 0.28);
+        }
+        .reset-confirmation-card {
+            width: min(420px, 100%);
+            background: var(--bg-panel);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            box-shadow: 0 20px 45px rgba(0, 0, 0, 0.35);
+            padding: 22px;
+            color: var(--text-main);
+        }
+        .reset-confirmation-card h3 {
+            margin: 0 0 10px;
+            color: var(--text-strong);
+            font-size: 1.1rem;
+        }
+        .reset-confirmation-card p {
+            margin: 0 0 18px;
+            color: var(--text-muted);
+            line-height: 1.5;
+        }
+        .reset-confirmation-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+        .reset-confirmation-actions button {
+            border-radius: 8px;
+            padding: 10px 14px;
+            border: 1px solid var(--border);
+            background: var(--bg-card);
+            color: var(--text-main);
+            cursor: pointer;
+        }
+        .reset-confirmation-actions button:hover,
+        .reset-confirmation-actions button:focus-visible {
+            border-color: var(--accent);
+            color: var(--text-strong);
+        }
+        .reset-confirmation-confirm {
+            background: rgba(88, 166, 255, 0.14) !important;
+            border-color: rgba(88, 166, 255, 0.45) !important;
+        }
+        .reset-confirmation-cancel {
+            background: transparent !important;
         }
 
         /* Main Content Styling */
