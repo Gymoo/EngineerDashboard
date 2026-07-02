@@ -12,6 +12,10 @@
 </head>
 <body>
 <div id="home-screen">
+        <div class="home-toolbar" aria-label="Preferências da interface">
+            <button type="button" class="sidebar-control language-control" data-language-toggle aria-label="Mudar idioma para inglês" title="Mudar idioma para inglês">EN</button>
+            <button type="button" class="sidebar-control" data-theme-toggle aria-label="Ativar modo claro" title="Ativar modo claro">☀️</button>
+        </div>
         <h1 class="home-title">Portal de Engenharia</h1>
         <p class="home-subtitle">Selecione a ferramenta de simulação desejada.</p>
         
@@ -41,10 +45,16 @@
     </div>
 
     <div id="sidebar" class="hidden">
+        <div class="sidebar-toolbar" aria-label="Controles da barra lateral">
+            <button type="button" class="sidebar-control language-control" data-language-toggle aria-label="Mudar idioma para inglês" title="Mudar idioma para inglês">EN</button>
+            <button type="button" class="sidebar-control" data-theme-toggle aria-label="Ativar modo claro" title="Ativar modo claro">☀️</button>
+            <button type="button" class="sidebar-control" data-sidebar-toggle="destorroador" aria-expanded="true" title="Recolher barra lateral">☰</button>
+            <button type="button" class="sidebar-control active" data-sidebar-pin="destorroador" aria-pressed="true" title="Desafixar barra lateral">📌</button>
+        </div>
         <div class="btn-voltar" id="btn-voltar">⬅ Voltar ao Portal</div>
         <div class="state-toggle" data-dashboard-state="destorroador">
-            <button type="button" class="state-btn active" data-dashboard="destorroador" data-profile="minimo">Mínimo</button>
-            <button type="button" class="state-btn" data-dashboard="destorroador" data-profile="maximo">Máximo</button>
+            <button type="button" class="state-btn active" data-dashboard="destorroador" data-profile="minimo">↓ Mínimo</button>
+            <button type="button" class="state-btn" data-dashboard="destorroador" data-profile="maximo">↑ Máximo</button>
             <button type="button" class="state-btn" data-dashboard-reset="destorroador">Resetar</button>
         </div>
         
@@ -127,10 +137,16 @@
     </div>
 
     <div id="sidebar-distribuidor" class="hidden">
+        <div class="sidebar-toolbar" aria-label="Controles da barra lateral">
+            <button type="button" class="sidebar-control language-control" data-language-toggle aria-label="Mudar idioma para inglês" title="Mudar idioma para inglês">EN</button>
+            <button type="button" class="sidebar-control" data-theme-toggle aria-label="Ativar modo claro" title="Ativar modo claro">☀️</button>
+            <button type="button" class="sidebar-control" data-sidebar-toggle="distribuidor" aria-expanded="true" title="Recolher barra lateral">☰</button>
+            <button type="button" class="sidebar-control active" data-sidebar-pin="distribuidor" aria-pressed="true" title="Desafixar barra lateral">📌</button>
+        </div>
         <div class="btn-voltar" id="btn-voltar-dist">⬅ Voltar ao Portal</div>
         <div class="state-toggle" data-dashboard-state="distribuidor">
-            <button type="button" class="state-btn active" data-dashboard="distribuidor" data-profile="minimo">Mínimo</button>
-            <button type="button" class="state-btn" data-dashboard="distribuidor" data-profile="maximo">Máximo</button>
+            <button type="button" class="state-btn active" data-dashboard="distribuidor" data-profile="minimo">↓ Mínimo</button>
+            <button type="button" class="state-btn" data-dashboard="distribuidor" data-profile="maximo">↑ Máximo</button>
             <button type="button" class="state-btn" data-dashboard-reset="distribuidor">Resetar</button>
         </div>
 

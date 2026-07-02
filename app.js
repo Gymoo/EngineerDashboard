@@ -46,6 +46,9 @@ console.log('🔧 Script iniciando...');
         // DOM
         let dom = null;
         const STORAGE_KEY = 'portal-engenharia-dashboard-state-v1';
+        const SIDEBAR_STORAGE_KEY = 'portal-engenharia-sidebar-state-v1';
+        const THEME_STORAGE_KEY = 'portal-engenharia-theme-v1';
+        const LANGUAGE_STORAGE_KEY = 'portal-engenharia-language-v1';
 
         // Aguardar Matter.js e depois inicializar
         console.log('⏳ Aguardando Matter.js...');
@@ -117,6 +120,14 @@ console.log('🔧 Script iniciando...');
                 canvasDist.width = canvasDist.clientWidth;
                 canvasDist.height = canvasDist.clientHeight;
             }
+
+            function redimensionarCanvasDoDashboard(dashboardKey) {
+                if (dashboardKey === 'destorroador' && !dom?.mainContent?.classList.contains('hidden')) {
+                    redimensionarCanvas();
+                } else if (dashboardKey === 'distribuidor' && !dom?.mainDist?.classList.contains('hidden')) {
+                    redimensionarCanvasDist();
+                }
+            }
             window.addEventListener('resize', redimensionarCanvas);
             window.addEventListener('resize', redimensionarCanvasDist);
             redimensionarCanvas();
@@ -136,6 +147,10 @@ console.log('🔧 Script iniciando...');
                 btnVoltarDist: document.getElementById('btn-voltar-dist'),
                 stateButtons: document.querySelectorAll('.state-btn'),
                 resetButtons: document.querySelectorAll('[data-dashboard-reset]'),
+                sidebarToggleButtons: document.querySelectorAll('[data-sidebar-toggle]'),
+                sidebarPinButtons: document.querySelectorAll('[data-sidebar-pin]'),
+                themeToggleButtons: document.querySelectorAll('[data-theme-toggle]'),
+                languageToggleButtons: document.querySelectorAll('[data-language-toggle]'),
                 
                 // Variáveis Destorroador
                 energia: document.getElementById('in_energia'),
@@ -201,6 +216,282 @@ console.log('🔧 Script iniciando...');
                 }
             };
             const dashboardDefaults = {};
+            const sidebarConfigs = {
+                destorroador: { element: dom.sidebar, pinned: true, collapsed: false },
+                distribuidor: { element: dom.sidebarDist, pinned: true, collapsed: false }
+            };
+            const textosOriginais = new WeakMap();
+            const traducoesIngles = {
+                'Portal de Engenharia': 'Engineering Portal',
+                'Selecione a ferramenta de simulação desejada.': 'Select the desired simulation tool.',
+                'Destorroador NPK': 'NPK Lump Breaker',
+                'Distribuidor de Sólidos': 'Solid Material Distributor',
+                'Aplicação de Fluido no Solo': 'Soil Fluid Application',
+                'Aplicação Linha Pressurizada': 'Pressurized Line Application',
+                'Acessar Simulador': 'Open Simulator',
+                'Em desenvolvimento': 'In development',
+                '⬅ Voltar ao Portal': '⬅ Back to Portal',
+                '↓ Mínimo': '↓ Minimum',
+                '↑ Máximo': '↑ Maximum',
+                'Resetar': 'Reset',
+                '🪨 Propriedades do Material': '🪨 Material Properties',
+                'Energia Específica de Fratura': 'Specific Fracture Energy',
+                'Trabalho para romper o grão. NPK = ~15 a 20 J/g.': 'Work required to break the granule. NPK = ~15 to 20 J/g.',
+                '🔄 Modo de Simulação': '🔄 Simulation Mode',
+                '⚙️ 1. Sistema Mecânico (Foco em Potência)': '⚙️ 1. Mechanical System (Power Focus)',
+                '⚡ 2. Sistema Elétrico (Risco de Queima)': '⚡ 2. Electrical System (Overheating Risk)',
+                '⚡ Parâmetros Elétricos': '⚡ Electrical Parameters',
+                'Tensão Nominal (Vdc)': 'Nominal Voltage (Vdc)',
+                'Corrente Aplicada (A)': 'Applied Current (A)',
+                'Corrente Máxima Suportada (A)': 'Maximum Supported Current (A)',
+                'Eficiência do Motor (%)': 'Motor Efficiency (%)',
+                '🎛️ Parâmetros do Moinho': '🎛️ Mill Parameters',
+                'Relação de Redução (1:X)': 'Reduction Ratio (1:X)',
+                'Taxa de Moagem Alvo (g/s)': 'Target Grinding Rate (g/s)',
+                '⚙️ Dashboard: Destorroador NPK': '⚙️ Dashboard: NPK Lump Breaker',
+                'Simulador dinâmico de dimensionamento mecânico e proteção elétrica a 60 FPS.': 'Dynamic mechanical sizing and electrical protection simulator at 60 FPS.',
+                '🚜 1. Dosagem e Arraste Pneumático': '🚜 1. Metering and Pneumatic Conveying',
+                '☄️ 2. Cinemática de Espalhamento (Queda)': '☄️ 2. Spreading Kinematics (Fall)',
+                '🚜 Demanda Agronômica': '🚜 Agronomic Demand',
+                'Taxa Alvo (kg/ha)': 'Target Rate (kg/ha)',
+                'Velocidade do Trator (km/h)': 'Tractor Speed (km/h)',
+                'Largura de Trabalho (m)': 'Working Width (m)',
+                '⚙️ Implemento e Motor': '⚙️ Implement and Motor',
+                'Espessura do Disco (mm)': 'Disc Thickness (mm)',
+                'Quantidade Útil de Discos': 'Number of Active Discs',
+                'Cavidades Externas por Disco': 'External Cavities per Disc',
+                'Área Lateral por Cavidade (mm²)': 'Lateral Area per Cavity (mm²)',
+                '🚜 Dashboard: Distribuidor de Sólidos': '🚜 Dashboard: Solid Material Distributor',
+                'Simulador pneumático para projeto de semeadoras (Fase Diluída).': 'Pneumatic simulator for seed drill design (Dilute Phase).',
+                'Análise de Conversão de Energia': 'Energy Conversion Analysis',
+                'Potência Elétrica Consumida': 'Electrical Power Consumption',
+                'Potência Útil Entregue ao Eixo': 'Useful Power Delivered to the Shaft',
+                'Análise de Força Bruta': 'Gross Force Analysis',
+                'Torque Disponível nos Rolos': 'Available Roller Torque',
+                'Rotação Final nos Rolos': 'Final Roller Speed',
+                'Status de Operação': 'Operating Status',
+                'Integridade do Sistema': 'System Integrity',
+                'Análise de Demanda de Corrente': 'Current Demand Analysis',
+                'Corrente Exigida para Moer': 'Required Grinding Current',
+                'Corrente Máxima (Etiqueta)': 'Maximum Current (Nameplate)',
+                'Torque Máximo de Trabalho': 'Maximum Working Torque',
+                '📚 Memorial de Cálculo': '📚 Calculation Report',
+                '📚 Memorial de Cálculo Inverso': '📚 Reverse Calculation Report',
+                'Parâmetros Base Assumidos': 'Assumed Base Parameters',
+                'Dinâmica de Dosagem Agronômica': 'Agronomic Metering Dynamics',
+                'Rotação do Rolo': 'Roller Speed',
+                'Taxa Mássica por Linha': 'Mass Flow per Row',
+                'Volume Integral do Rolo': 'Integral Roller Volume',
+                'Taxa Mássica Total': 'Total Mass Flow',
+                'Rede Pneumática em Dois Estágios': 'Two-Stage Pneumatic Network',
+                'Velocidade no Duto Primário': 'Primary Duct Velocity',
+                'Velocidade na Linha Secundária': 'Secondary Line Velocity',
+                '📚 Memorial da Semeadura': '📚 Seeding Calculation Report',
+                'Mecânica do Impacto (Defletor)': 'Impact Mechanics (Deflector)',
+                'Velocidade de Queda (V₀)': 'Fall Velocity (V₀)',
+                'Velocidade Refletida (Vᵣ)': 'Reflected Velocity (Vᵣ)',
+                'Análise Vetorial': 'Vector Analysis',
+                'Ângulo Saída Frontal': 'Front Exit Angle',
+                'Ângulo Curva Máx. (γ)': 'Maximum Curve Angle (γ)',
+                'Projeção Cinemática no Solo': 'Kinematic Projection on the Ground',
+                'Tempo de Queda': 'Fall Time',
+                'Alcance Longitudinal': 'Longitudinal Range',
+                'Largura da Faixa Distribuída (Espalhamento Z)': 'Distributed Swath Width (Z Spreading)',
+                'Perfil de Distribuição': 'Distribution Profile',
+                '📚 Memorial da Cinemática': '📚 Kinematics Calculation Report',
+                'Física de Projéteis Assumida': 'Assumed Projectile Physics'
+            };
+
+            function traduzirTexto(texto, idioma) {
+                if (idioma !== 'en') return texto;
+                const inicio = texto.match(/^\s*/)?.[0] || '';
+                const fim = texto.match(/\s*$/)?.[0] || '';
+                const conteudo = texto.trim();
+                return `${inicio}${traducoesIngles[conteudo] || conteudo}${fim}`;
+            }
+
+            function traduzirElemento(raiz, idioma) {
+                if (!raiz || raiz.nodeType !== Node.ELEMENT_NODE) return;
+                if (raiz.matches('script, style, mjx-container') || raiz.closest('mjx-container')) return;
+                const walker = document.createTreeWalker(raiz, NodeFilter.SHOW_TEXT);
+                const nodes = [];
+                while (walker.nextNode()) nodes.push(walker.currentNode);
+                nodes.forEach((node) => {
+                    if (node.parentElement?.closest('script, style, mjx-container')) return;
+                    if (!textosOriginais.has(node)) textosOriginais.set(node, node.nodeValue);
+                    node.nodeValue = traduzirTexto(textosOriginais.get(node), idioma);
+                });
+            }
+
+            function aplicarIdioma(idioma, persistir = true) {
+                const inglesAtivo = idioma === 'en';
+                document.documentElement.lang = inglesAtivo ? 'en' : 'pt-BR';
+                document.body.dataset.language = inglesAtivo ? 'en' : 'pt';
+                traduzirElemento(document.body, inglesAtivo ? 'en' : 'pt');
+                dom.languageToggleButtons.forEach((button) => {
+                    button.textContent = inglesAtivo ? 'BR' : 'EN';
+                    const acao = inglesAtivo ? 'Switch language to Portuguese' : 'Mudar idioma para inglês';
+                    button.setAttribute('aria-label', acao);
+                    button.title = acao;
+                });
+                const modoClaroAtivo = document.body.dataset.theme === 'light';
+                dom.themeToggleButtons.forEach((button) => {
+                    const acaoTema = inglesAtivo
+                        ? (modoClaroAtivo ? 'Enable dark mode' : 'Enable light mode')
+                        : (modoClaroAtivo ? 'Ativar modo escuro' : 'Ativar modo claro');
+                    button.setAttribute('aria-label', acaoTema);
+                    button.title = acaoTema;
+                });
+                if (persistir) {
+                    try {
+                        localStorage.setItem(LANGUAGE_STORAGE_KEY, inglesAtivo ? 'en' : 'pt');
+                    } catch (error) {
+                        console.warn('Falha ao persistir idioma:', error);
+                    }
+                }
+            }
+
+            function configurarIdioma() {
+                let idiomaSalvo = 'pt';
+                try {
+                    idiomaSalvo = localStorage.getItem(LANGUAGE_STORAGE_KEY) || 'pt';
+                } catch (error) {
+                    console.warn('Falha ao carregar idioma:', error);
+                }
+                aplicarIdioma(idiomaSalvo, false);
+                dom.languageToggleButtons.forEach((button) => {
+                    button.addEventListener('click', () => {
+                        aplicarIdioma(document.body.dataset.language === 'en' ? 'pt' : 'en');
+                    });
+                });
+                const observer = new MutationObserver((mutations) => {
+                    if (document.body.dataset.language !== 'en') return;
+                    mutations.forEach((mutation) => mutation.addedNodes.forEach((node) => {
+                        if (node.nodeType === Node.ELEMENT_NODE) traduzirElemento(node, 'en');
+                    }));
+                });
+                observer.observe(document.body, { childList: true, subtree: true });
+            }
+
+            function aplicarTema(theme, persistir = true) {
+                const tema = theme === 'light' ? 'light' : 'dark';
+                document.body.dataset.theme = tema;
+                const modoClaroAtivo = tema === 'light';
+                dom.themeToggleButtons.forEach((button) => {
+                    button.textContent = modoClaroAtivo ? '🌙' : '☀️';
+                    const inglesAtivo = document.body.dataset.language === 'en';
+                    const acao = inglesAtivo
+                        ? (modoClaroAtivo ? 'Enable dark mode' : 'Enable light mode')
+                        : (modoClaroAtivo ? 'Ativar modo escuro' : 'Ativar modo claro');
+                    button.setAttribute('aria-label', acao);
+                    button.title = acao;
+                    button.setAttribute('aria-pressed', String(modoClaroAtivo));
+                });
+                if (persistir) {
+                    try {
+                        localStorage.setItem(THEME_STORAGE_KEY, tema);
+                    } catch (error) {
+                        console.warn('Falha ao persistir tema:', error);
+                    }
+                }
+            }
+
+            function configurarTema() {
+                let temaSalvo = 'dark';
+                try {
+                    temaSalvo = localStorage.getItem(THEME_STORAGE_KEY) || 'dark';
+                } catch (error) {
+                    console.warn('Falha ao carregar tema:', error);
+                }
+                aplicarTema(temaSalvo, false);
+                dom.themeToggleButtons.forEach((button) => {
+                    button.addEventListener('click', () => {
+                        aplicarTema(document.body.dataset.theme === 'light' ? 'dark' : 'light');
+                    });
+                });
+            }
+
+            function salvarEstadoSidebars() {
+                const estado = {};
+                Object.entries(sidebarConfigs).forEach(([key, config]) => {
+                    estado[key] = { pinned: config.pinned, collapsed: config.collapsed };
+                });
+                try {
+                    localStorage.setItem(SIDEBAR_STORAGE_KEY, JSON.stringify(estado));
+                } catch (error) {
+                    console.warn('Falha ao persistir estado das barras laterais:', error);
+                }
+            }
+
+            function atualizarSidebar(key, persistir = true) {
+                const config = sidebarConfigs[key];
+                if (!config) return;
+
+                config.element.classList.toggle('sidebar-collapsed', config.collapsed);
+                const toggle = document.querySelector(`[data-sidebar-toggle="${key}"]`);
+                const pin = document.querySelector(`[data-sidebar-pin="${key}"]`);
+                if (toggle) {
+                    toggle.setAttribute('aria-expanded', String(!config.collapsed));
+                    toggle.title = config.collapsed ? 'Expandir barra lateral' : 'Recolher barra lateral';
+                }
+                if (pin) {
+                    pin.classList.toggle('active', config.pinned);
+                    pin.setAttribute('aria-pressed', String(config.pinned));
+                    pin.title = config.pinned ? 'Desafixar barra lateral' : 'Fixar barra lateral';
+                }
+                if (persistir) salvarEstadoSidebars();
+            }
+
+            function configurarSidebars() {
+                try {
+                    const salvo = JSON.parse(localStorage.getItem(SIDEBAR_STORAGE_KEY) || '{}');
+                    Object.entries(sidebarConfigs).forEach(([key, config]) => {
+                        if (typeof salvo[key]?.pinned === 'boolean') config.pinned = salvo[key].pinned;
+                        if (typeof salvo[key]?.collapsed === 'boolean') config.collapsed = salvo[key].collapsed;
+                    });
+                } catch (error) {
+                    console.warn('Falha ao carregar estado das barras laterais:', error);
+                }
+
+                dom.sidebarToggleButtons.forEach((button) => {
+                    button.addEventListener('click', () => {
+                        const key = button.dataset.sidebarToggle;
+                        const config = sidebarConfigs[key];
+                        if (!config) return;
+                        config.collapsed = !config.collapsed;
+                        atualizarSidebar(key);
+                    });
+                });
+
+                dom.sidebarPinButtons.forEach((button) => {
+                    button.addEventListener('click', () => {
+                        const key = button.dataset.sidebarPin;
+                        const config = sidebarConfigs[key];
+                        if (!config) return;
+                        config.pinned = !config.pinned;
+                        config.collapsed = !config.pinned;
+                        atualizarSidebar(key);
+                    });
+                });
+
+                Object.entries(sidebarConfigs).forEach(([key, config]) => {
+                    config.element.addEventListener('transitionend', (event) => {
+                        if (event.propertyName !== 'width') return;
+                        redimensionarCanvasDoDashboard(key);
+                    });
+                    config.element.addEventListener('mouseenter', () => {
+                        if (config.pinned || !config.collapsed) return;
+                        config.collapsed = false;
+                        atualizarSidebar(key, false);
+                    });
+                    config.element.addEventListener('mouseleave', () => {
+                        if (config.pinned || config.collapsed) return;
+                        config.collapsed = true;
+                        atualizarSidebar(key, false);
+                    });
+                    atualizarSidebar(key, false);
+                });
+            }
 
             function clonarEstrutura(dado) {
                 return JSON.parse(JSON.stringify(dado));
@@ -656,6 +947,9 @@ console.log('🔧 Script iniciando...');
             });
 
             restaurarEstadoPersistido();
+            configurarTema();
+            configurarIdioma();
+            configurarSidebars();
 
             // --- NAVEGAÇÃO ENTRE TELAS ---
             function irParaHome() {
