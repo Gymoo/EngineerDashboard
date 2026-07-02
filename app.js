@@ -1,0 +1,2024 @@
+// Verificar se Matter.js carregou
+        function aguardarMatterJS(callback, tentativas = 0) {
+            if (typeof window.Matter !== 'undefined') {
+                console.log('Matter.js carregado com sucesso!');
+                callback();
+            } else if (tentativas < 50) {
+                setTimeout(() => aguardarMatterJS(callback, tentativas + 1), 100);
+            } else {
+                console.warn('Matter.js não disponível!');
+                callback();
+            }
+        }
+
+console.log('🔧 Script iniciando...');
+        
+        // --- CONSTANTES FÍSICAS ---
+        // Essas constantes/variáveis aparecem no memorial e também podem ganhar significado via tooltip.
+        const RPM_BASE = 3400; // [RPM] Rotação nominal do motor na base (para estimar velocidade angular).
+        const EFICIENCIA_REDUTOR = 0.85; // [-] Eficiência mecânica da caixa/redutor (fração que vira potência útil).
+        const GRAVIDADE_PADRAO = 9.80665; // [m/s²] Gravidade padrão definida por convenção metrológica.
+
+        // --- VARIÁVEIS GLOBAIS ---
+        let canvas, ctx;
+        let canvasDist, ctxDist;
+        let anguloEsquerdo = 0;
+        let anguloDireito = 0;
+        let rotacaoFinalGlobal = 0;
+        let isStalled = false;
+        let particulas = [];
+        let particulasDistribuidor = [];
+        let ativarAnimacaoDist = false;
+        let mathJaxTimer = null;
+        
+        // Matter.js
+        let Matter = null;
+        let Engine = null;
+        let World = null;
+        let Bodies = null;
+        let Body = null;
+        let engineDist = null;
+        let worldDist = null;
+        let defletorBody = null;
+        let particulasBodyDist = [];
+        let tempoGeracaoSemente = 0;
+        
+        // DOM
+        let dom = null;
+        const STORAGE_KEY = 'portal-engenharia-dashboard-state-v1';
+
+        // Aguardar Matter.js e depois inicializar
+        console.log('⏳ Aguardando Matter.js...');
+        aguardarMatterJS(function() {
+            console.log('✅ Matter.js carregado!');
+            // Aguardar também que o DOM esteja pronto
+            if (document.readyState === 'loading') {
+                console.log('⏳ Aguardando DOMContentLoaded...');
+                document.addEventListener('DOMContentLoaded', iniciarAplicacao);
+            } else {
+                console.log('✅ DOM já está pronto!');
+                iniciarAplicacao();
+            }
+        });
+        
+        function iniciarAplicacao() {
+            console.log('✅ Aplicação iniciando...');
+            console.log('✅ Window.Matter:', typeof window.Matter);
+            
+            // Inicializar Matter.js
+            inicializarMatterJS();
+
+            // --- VARIÁVEIS DA ANIMAÇÃO ---
+            const canvas = document.getElementById('moinhoCanvas');
+            const ctx = canvas.getContext('2d');
+            let anguloEsquerdo = 0;
+            let anguloDireito = 0;
+            let rotacaoFinalGlobal = 0;
+            let isStalled = false;
+            let particulas = [];
+            let particulasDistribuidor = [];
+            let ativarAnimacaoDist = false;
+            let particulasDosador = [];
+            let ativarAnimacaoDosador = false;
+            let anguloDosador = 0;
+            let mathJaxTimer = null;
+            console.log('✅ Canvas destorroador inicializado');
+            
+            // Inicializar Matter.js
+            function inicializarMatterJS() {
+                // Se Matter.js está desativado, retornar false
+                if (window.Matter && window.Matter.DISABLED) {
+                    console.warn('Matter.js não disponível, usando física simplificada');
+                    return false;
+                }
+                
+                if (window.Matter) {
+                    Matter = window.Matter;
+                    Engine = Matter.Engine;
+                    World = Matter.World;
+                    Bodies = Matter.Bodies;
+                    Body = Matter.Body;
+                    console.log('Matter.js inicializado com sucesso!');
+                    return true;
+                } else {
+                    console.warn('Matter.js ainda não disponível!');
+                    return false;
+                }
+            }
+
+            // Ajuste automático do Canvas para não distorcer em telas diferentes
+            function redimensionarCanvas() {
+                canvas.width = canvas.clientWidth;
+                canvas.height = canvas.clientHeight;
+            }
+            function redimensionarCanvasDist() {
+                canvasDist = document.getElementById('distribuidorCanvas');
+                ctxDist = canvasDist.getContext('2d');
+                canvasDist.width = canvasDist.clientWidth;
+                canvasDist.height = canvasDist.clientHeight;
+            }
+            window.addEventListener('resize', redimensionarCanvas);
+            window.addEventListener('resize', redimensionarCanvasDist);
+            redimensionarCanvas();
+            redimensionarCanvasDist();
+
+            // --- MAPEAMENTO DE DOM SEGURO ---
+            dom = {
+                homeScreen: document.getElementById('home-screen'),
+                sidebar: document.getElementById('sidebar'),
+                mainContent: document.getElementById('main-content'),
+                sidebarDist: document.getElementById('sidebar-distribuidor'),
+                mainDist: document.getElementById('main-distribuidor'),
+                
+                btnDestorroador: document.getElementById('btn-destorroador'),
+                btnDistribuidor: document.getElementById('btn-distribuidor'),
+                btnVoltar: document.getElementById('btn-voltar'),
+                btnVoltarDist: document.getElementById('btn-voltar-dist'),
+                stateButtons: document.querySelectorAll('.state-btn'),
+                resetButtons: document.querySelectorAll('[data-dashboard-reset]'),
+                
+                // Variáveis Destorroador
+                energia: document.getElementById('in_energia'),
+                tensao: document.getElementById('in_tensao'),
+                corrente: document.getElementById('in_corrente'),
+                eficiencia: document.getElementById('in_eficiencia'),
+                reducao: document.getElementById('in_reducao'),
+                taxaRange: document.getElementById('in_taxa_range'),
+                taxaNum: document.getElementById('in_taxa_num'),
+                lblCorrente: document.getElementById('lbl_corrente'),
+                painelEsquerdo: document.getElementById('painel_esquerdo'),
+                painelDireito: document.getElementById('painel_direito'),
+                
+                // Variáveis Distribuidor (Pneumática e Agronômica)
+                distGrpModo1: document.getElementById('grp_dist_modo1'),
+                distGrpModo2: document.getElementById('grp_dist_modo2'),
+                distTaxa: document.getElementById('in_dist_taxa'),
+                distVelTrator: document.getElementById('in_dist_veltrator'),
+                distLargura: document.getElementById('in_dist_largura'),
+                distEspessura: document.getElementById('in_dist_espessura'),
+                distQtdDiscos: document.getElementById('in_dist_qtd_discos'),
+                distCavidades: document.getElementById('in_dist_cavidades'),
+                distAreaCavidade: document.getElementById('in_dist_area_cavidade'),
+                distDensidade: document.getElementById('in_dist_densidade'),
+                distTensao: document.getElementById('in_dist_tensao'),
+                distCorrente: document.getElementById('in_dist_corrente'),
+                distEficienciaMotor: document.getElementById('in_dist_eficiencia_motor'),
+                distEnergiaDosador: document.getElementById('in_dist_energia_dosador'),
+                distQtdPrimarios: document.getElementById('in_dist_qtd_primarios'),
+                distDiametroPrimarioPol: document.getElementById('in_dist_diametro_primario_pol'),
+                distComprimentoPrimario: document.getElementById('in_dist_comprimento_primario'),
+                distKTorre: document.getElementById('in_dist_k_torre'),
+                distLinhas: document.getElementById('in_dist_linhas'),
+                distComprimento: document.getElementById('in_dist_comprimento'),
+                distVazaoTurbina: document.getElementById('in_dist_vazaoturbina'),
+                distDiametro: document.getElementById('in_dist_diametro'),
+                distDensidadeAr: document.getElementById('in_dist_densidade_ar'),
+                distFatorAtrito: document.getElementById('in_dist_fator_atrito'),
+                distPressaoTurbina: document.getElementById('in_dist_pressao_turbina'),
+                
+                // Variáveis Distribuidor (Cinemática)
+                distV0: document.getElementById('in_dist_v0'),
+                distAngulo: document.getElementById('in_dist_angulo'),
+                distRaio: document.getElementById('in_dist_raio'),
+                distLargChapa: document.getElementById('in_dist_largchapa'),
+                distDiamTubo2: document.getElementById('in_dist_diamtubo2'),
+                distAltura: document.getElementById('in_dist_altura'),
+                distCr: document.getElementById('in_dist_cr'),
+                painelEsqDist: document.getElementById('painel_esq_dist'),
+                painelDirDist: document.getElementById('painel_dir_dist')
+            };
+
+            const dashboardProfiles = {
+                destorroador: {
+                    container: dom.sidebar,
+                    activeProfile: 'minimo',
+                    profiles: { minimo: {}, maximo: {} }
+                },
+                distribuidor: {
+                    container: dom.sidebarDist,
+                    activeProfile: 'minimo',
+                    profiles: { minimo: {}, maximo: {} }
+                }
+            };
+            const dashboardDefaults = {};
+
+            function clonarEstrutura(dado) {
+                return JSON.parse(JSON.stringify(dado));
+            }
+
+            function obterRangesDoDashboard(container) {
+                return Array.from(container.querySelectorAll('.control-group input[type="range"]'));
+            }
+
+            function capturarEstadoDashboard(container) {
+                const estado = {};
+                obterRangesDoDashboard(container).forEach((range) => {
+                    const number = range.parentElement.querySelector('input[type="number"]');
+                    estado[range.id] = {
+                        value: range.value,
+                        numberValue: number ? number.value : range.value,
+                        min: range.min,
+                        max: range.max,
+                        step: range.step,
+                        numberMin: number ? number.min : range.min,
+                        numberMax: number ? number.max : range.max,
+                        numberStep: number ? number.step : range.step
+                    };
+                });
+                return estado;
+            }
+
+            function aplicarEstadoDashboard(container, estado) {
+                obterRangesDoDashboard(container).forEach((range) => {
+                    const salvo = estado[range.id];
+                    const number = range.parentElement.querySelector('input[type="number"]');
+                    if (!salvo) return;
+
+                    range.min = salvo.min;
+                    range.max = salvo.max;
+                    range.step = salvo.step || range.step;
+                    range.value = salvo.value;
+
+                    if (number) {
+                        number.min = salvo.numberMin;
+                        number.max = salvo.numberMax;
+                        number.step = salvo.numberStep || number.step;
+                        number.value = salvo.numberValue ?? salvo.value;
+                    }
+                });
+            }
+
+            function salvarEstadoDashboard(dashboardKey) {
+                const dashboard = dashboardProfiles[dashboardKey];
+                if (!dashboard) return;
+                dashboard.profiles[dashboard.activeProfile] = capturarEstadoDashboard(dashboard.container);
+            }
+
+            function obterModoSelecionado(name) {
+                const radio = document.querySelector(`input[name="${name}"]:checked`);
+                return radio ? radio.value : null;
+            }
+
+            function aplicarModoSelecionado(name, value) {
+                if (!value) return;
+                const radio = document.querySelector(`input[name="${name}"][value="${value}"]`);
+                if (radio) radio.checked = true;
+            }
+
+            function obterEstadoPersistivel() {
+                return {
+                    dashboards: {
+                        destorroador: {
+                            activeProfile: dashboardProfiles.destorroador.activeProfile,
+                            profiles: dashboardProfiles.destorroador.profiles
+                        },
+                        distribuidor: {
+                            activeProfile: dashboardProfiles.distribuidor.activeProfile,
+                            profiles: dashboardProfiles.distribuidor.profiles
+                        }
+                    },
+                    radios: {
+                        modo: obterModoSelecionado('modo'),
+                        modo_dist: obterModoSelecionado('modo_dist')
+                    }
+                };
+            }
+
+            function persistirEstadoAplicacao() {
+                try {
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(obterEstadoPersistivel()));
+                } catch (error) {
+                    console.warn('Falha ao persistir estado da aplicação:', error);
+                }
+            }
+
+            function carregarEstadoPersistido() {
+                try {
+                    const bruto = localStorage.getItem(STORAGE_KEY);
+                    return bruto ? JSON.parse(bruto) : null;
+                } catch (error) {
+                    console.warn('Falha ao carregar estado persistido:', error);
+                    return null;
+                }
+            }
+
+            function atualizarBotoesDashboard(dashboardKey) {
+                dom.stateButtons.forEach((button) => {
+                    if (button.dataset.dashboard !== dashboardKey) return;
+                    button.classList.toggle('active', dashboardProfiles[dashboardKey].activeProfile === button.dataset.profile);
+                });
+            }
+
+            function restaurarEstadoDashboard(dashboardKey) {
+                const dashboard = dashboardProfiles[dashboardKey];
+                if (!dashboard) return;
+                aplicarEstadoDashboard(dashboard.container, dashboard.profiles[dashboard.activeProfile]);
+            }
+
+            function atualizarDashboardPorChave(dashboardKey) {
+                if (dashboardKey === 'destorroador') {
+                    atualizarDashboard();
+                    return;
+                }
+
+                atualizarDistribuidor();
+                const modoDistElement = document.querySelector('input[name="modo_dist"]:checked');
+                if (modoDistElement && modoDistElement.value === "2" && ativarAnimacaoDist) {
+                    const v0 = parseFloat(dom.distV0.value) || 12;
+                    const theta = parseFloat(dom.distAngulo.value) || 30;
+                    const h = parseFloat(dom.distAltura.value) || 0.8;
+                    const e = parseFloat(dom.distCr.value) || 0.6;
+                    inicializarFisicaDistribuidor(theta, v0, h, e);
+                }
+            }
+
+            function trocarPerfilDashboard(dashboardKey, profileKey) {
+                const dashboard = dashboardProfiles[dashboardKey];
+                if (!dashboard || dashboard.activeProfile === profileKey) return;
+
+                salvarEstadoDashboard(dashboardKey);
+                dashboard.activeProfile = profileKey;
+                restaurarEstadoDashboard(dashboardKey);
+                atualizarBotoesDashboard(dashboardKey);
+                persistirEstadoAplicacao();
+                atualizarDashboardPorChave(dashboardKey);
+            }
+
+            function restaurarEstadoPersistido() {
+                const estadoSalvo = carregarEstadoPersistido();
+                if (!estadoSalvo) return;
+
+                ['destorroador', 'distribuidor'].forEach((dashboardKey) => {
+                    const salvo = estadoSalvo.dashboards?.[dashboardKey];
+                    if (!salvo) return;
+
+                    if (salvo.profiles?.minimo) {
+                        dashboardProfiles[dashboardKey].profiles.minimo = clonarEstrutura(salvo.profiles.minimo);
+                    }
+                    if (salvo.profiles?.maximo) {
+                        dashboardProfiles[dashboardKey].profiles.maximo = clonarEstrutura(salvo.profiles.maximo);
+                    }
+                    if (salvo.activeProfile === 'minimo' || salvo.activeProfile === 'maximo') {
+                        dashboardProfiles[dashboardKey].activeProfile = salvo.activeProfile;
+                    }
+
+                    restaurarEstadoDashboard(dashboardKey);
+                    atualizarBotoesDashboard(dashboardKey);
+                });
+
+                aplicarModoSelecionado('modo', estadoSalvo.radios?.modo);
+                aplicarModoSelecionado('modo_dist', estadoSalvo.radios?.modo_dist);
+            }
+
+            function resetarDashboard(dashboardKey) {
+                const padrao = dashboardDefaults[dashboardKey];
+                if (!padrao) return;
+
+                dashboardProfiles[dashboardKey].activeProfile = padrao.activeProfile;
+                dashboardProfiles[dashboardKey].profiles.minimo = clonarEstrutura(padrao.profiles.minimo);
+                dashboardProfiles[dashboardKey].profiles.maximo = clonarEstrutura(padrao.profiles.maximo);
+
+                if (dashboardKey === 'destorroador') {
+                    aplicarModoSelecionado('modo', '1');
+                } else {
+                    aplicarModoSelecionado('modo_dist', '1');
+                }
+
+                restaurarEstadoDashboard(dashboardKey);
+                atualizarBotoesDashboard(dashboardKey);
+                persistirEstadoAplicacao();
+                atualizarDashboardPorChave(dashboardKey);
+            }
+
+            function calcularVolumeRolo() {
+                const espessura = parseFloat(dom.distEspessura?.value) || 1;
+                const discos = parseFloat(dom.distQtdDiscos?.value) || 1;
+                const cavidades = parseFloat(dom.distCavidades?.value) || 1;
+                const area = parseFloat(dom.distAreaCavidade?.value) || 1;
+                const volumeRoloMm3 = espessura * discos * cavidades * area;
+                return {
+                    volumeRoloMm3,
+                    volumePorDiscoMm3: espessura * cavidades * area
+                };
+            }
+
+            function calcularPerdaDistribuida(fatorAtrito, comprimento, diametro, densidadeAr, velocidade, slr) {
+                if (diametro <= 0) return 0;
+                return fatorAtrito * (comprimento / diametro) * ((densidadeAr * Math.pow(velocidade, 2)) / 2) * (1 + slr);
+            }
+
+            function calcularPerdaLocal(kLocal, densidadeAr, velocidade, slr) {
+                return kLocal * ((densidadeAr * Math.pow(velocidade, 2)) / 2) * (1 + slr);
+            }
+
+            function simularRedePneumatica(params) {
+                let fatorVazao = 1;
+                let resultado = null;
+
+                for (let iteracao = 0; iteracao < 30; iteracao++) {
+                    const vazaoTotalReal = params.vazaoTotalNominalM3Min * fatorVazao;
+                    const vazaoPrimariaReal = vazaoTotalReal / params.quantidadePrimarios;
+                    const vazaoSecundariaReal = vazaoTotalReal / params.quantidadeLinhas;
+
+                    const velocidadePrimaria = (vazaoPrimariaReal / 60) / params.areaPrimaria;
+                    const velocidadeSecundaria = (vazaoSecundariaReal / 60) / params.areaSecundaria;
+
+                    const massaArPrimariaKgh = vazaoPrimariaReal * 60 * params.densidadeAr;
+                    const massaArSecundariaKgh = vazaoSecundariaReal * 60 * params.densidadeAr;
+
+                    const slrPrimario = params.massaSolidoPrimarioKgh / Math.max(massaArPrimariaKgh, 1e-9);
+                    const slrSecundario = params.massaSolidoSecundarioKgh / Math.max(massaArSecundariaKgh, 1e-9);
+
+                    const deltaPPrimario = calcularPerdaDistribuida(params.fatorAtrito, params.comprimentoPrimarioM, params.diametroPrimarioM, params.densidadeAr, velocidadePrimaria, slrPrimario);
+                    const deltaPTorre = calcularPerdaLocal(params.kTorre, params.densidadeAr, velocidadePrimaria, slrPrimario);
+                    const deltaPSecundario = calcularPerdaDistribuida(params.fatorAtrito, params.comprimentoSecundarioM, params.diametroSecundarioM, params.densidadeAr, velocidadeSecundaria, slrSecundario);
+                    const deltaPTotal = deltaPPrimario + deltaPTorre + deltaPSecundario;
+
+                    const novoFator = Math.max(0.01, 1 - (deltaPTotal / params.pressaoMaxPa));
+                    resultado = {
+                        fatorVazao: novoFator,
+                        vazaoTotalReal,
+                        vazaoPrimariaReal,
+                        vazaoSecundariaReal,
+                        velocidadePrimaria,
+                        velocidadeSecundaria,
+                        massaArPrimariaKgh,
+                        massaArSecundariaKgh,
+                        slrPrimario,
+                        slrSecundario,
+                        deltaPPrimario,
+                        deltaPTorre,
+                        deltaPSecundario,
+                        deltaPTotal,
+                        pressaoNaTorre: Math.max(0, params.pressaoMaxPa - deltaPPrimario),
+                        pressaoNaLinha: Math.max(0, params.pressaoMaxPa - deltaPPrimario - deltaPTorre)
+                    };
+
+                    if (Math.abs(novoFator - fatorVazao) < 1e-4) break;
+                    fatorVazao = novoFator;
+                }
+
+                return resultado;
+            }
+
+            function simularRedeDireta(params) {
+                let fatorVazao = 1;
+                let resultado = null;
+
+                for (let iteracao = 0; iteracao < 30; iteracao++) {
+                    const vazaoTotalReal = params.vazaoTotalNominalM3Min * fatorVazao;
+                    const vazaoLinhaReal = vazaoTotalReal / params.quantidadeLinhas;
+                    const velocidadeLinha = (vazaoLinhaReal / 60) / params.areaSecundaria;
+                    const massaArLinhaKgh = vazaoLinhaReal * 60 * params.densidadeAr;
+                    const slrLinha = params.massaSolidoSecundarioKgh / Math.max(massaArLinhaKgh, 1e-9);
+                    const deltaPLinha = calcularPerdaDistribuida(params.fatorAtrito, params.comprimentoSecundarioM, params.diametroSecundarioM, params.densidadeAr, velocidadeLinha, slrLinha);
+                    const novoFator = Math.max(0.01, 1 - (deltaPLinha / params.pressaoMaxPa));
+
+                    resultado = {
+                        fatorVazao: novoFator,
+                        vazaoTotalReal,
+                        vazaoLinhaReal,
+                        velocidadeLinha,
+                        massaArLinhaKgh,
+                        slrLinha,
+                        deltaPLinha
+                    };
+
+                    if (Math.abs(novoFator - fatorVazao) < 1e-4) break;
+                    fatorVazao = novoFator;
+                }
+
+                return resultado;
+            }
+
+            // --- SINCRONIZAÇÃO DOS CONTROLES ---
+            // Amarração automática de todos os inputs RANGE e NUMBER correspondentes
+            function ajustarFaixaDinamica(range, value) {
+                if (!range || Number.isNaN(value)) return;
+                const atualMin = parseFloat(range.min);
+                const atualMax = parseFloat(range.max);
+                const passo = parseFloat(range.step);
+                const margem = Number.isFinite(passo) ? Math.max(passo, Math.abs(value) * 0.05) : Math.abs(value) * 0.05;
+
+                if (value < atualMin) range.min = String(value - margem);
+                if (value > atualMax) range.max = String(value + margem);
+            }
+
+            function normalizarValorNumerico(valorTexto) {
+                if (typeof valorTexto !== 'string') return NaN;
+                const valorNormalizado = valorTexto.replace(',', '.').trim();
+                return parseFloat(valorNormalizado);
+            }
+
+            function normalizarTextoNumerico(valorTexto) {
+                if (typeof valorTexto !== 'string') return '';
+                return valorTexto.replace(',', '.').trim();
+            }
+
+            function ehEntradaNumericaParcial(valorTexto) {
+                if (typeof valorTexto !== 'string') return false;
+                const texto = valorTexto.trim();
+                return texto.endsWith(',') || texto.endsWith('.') || texto === '-' || texto === '';
+            }
+
+            function contarCasasDecimais(valorTexto) {
+                const texto = normalizarTextoNumerico(valorTexto);
+                if (!texto.includes('.')) return 0;
+                return texto.split('.')[1].length;
+            }
+
+            function ajustarPrecisaoDoRange(range, number, valorTexto) {
+                const casasDecimais = contarCasasDecimais(valorTexto);
+                if (casasDecimais <= 0) return;
+
+                const passoAtual = normalizarTextoNumerico(range.step || '1');
+                const passoAtualDecimais = contarCasasDecimais(passoAtual);
+                if (casasDecimais <= passoAtualDecimais) return;
+
+                const novoStep = (1 / Math.pow(10, casasDecimais)).toFixed(casasDecimais);
+                range.step = novoStep;
+                if (number) number.step = novoStep;
+            }
+
+            document.querySelectorAll('.control-group').forEach(group => {
+                const range = group.querySelector('input[type="range"]');
+                const number = group.querySelector('input[type="number"]');
+                if (range && number) {
+                    range.addEventListener('input', (e) => { 
+                        const valor = parseFloat(e.target.value);
+                        number.value = e.target.value;
+                        ajustarFaixaDinamica(range, valor);
+                        number.min = range.min;
+                        number.max = range.max;
+                        dispararAtualizacaoBaseadoNoPainel(e.target);
+                    });
+                    number.addEventListener('input', (e) => { 
+                        const valorTexto = e.target.value;
+                        const valor = normalizarValorNumerico(valorTexto);
+                        if (Number.isNaN(valor)) return;
+                        ajustarPrecisaoDoRange(range, number, valorTexto);
+                        range.value = normalizarTextoNumerico(valorTexto);
+                        ajustarFaixaDinamica(range, valor);
+                        number.min = range.min;
+                        number.max = range.max;
+                        dispararAtualizacaoBaseadoNoPainel(e.target);
+                    });
+                    number.addEventListener('blur', (e) => {
+                        const valorTexto = e.target.value;
+                        if (ehEntradaNumericaParcial(valorTexto)) {
+                            e.target.value = range.value;
+                            return;
+                        }
+
+                        const valor = normalizarValorNumerico(valorTexto);
+                        if (Number.isNaN(valor)) {
+                            e.target.value = range.value;
+                            return;
+                        }
+
+                        e.target.value = normalizarTextoNumerico(valorTexto);
+                    });
+                }
+            });
+
+            // Função helper para descobrir qual dashboard deve ser atualizado
+            function dispararAtualizacaoBaseadoNoPainel(elemento) {
+                if (dom.sidebar.contains(elemento)) {
+                    salvarEstadoDashboard('destorroador');
+                    persistirEstadoAplicacao();
+                    atualizarDashboard();
+                } else if (dom.sidebarDist.contains(elemento)) {
+                    salvarEstadoDashboard('distribuidor');
+                    persistirEstadoAplicacao();
+                    atualizarDistribuidor();
+                    // Lógica especial de reiniciar física do Distribuidor Modo 2
+                    const modoDistElement = document.querySelector('input[name="modo_dist"]:checked');
+                    if (modoDistElement && modoDistElement.value === "2" && ativarAnimacaoDist) {
+                        const v0 = parseFloat(dom.distV0.value) || 12;
+                        const theta = parseFloat(dom.distAngulo.value) || 30;
+                        const h = parseFloat(dom.distAltura.value) || 0.8;
+                        const e = parseFloat(dom.distCr.value) || 0.6;
+                        inicializarFisicaDistribuidor(theta, v0, h, e);
+                    }
+                }
+            }
+
+            const radiosModo = document.querySelectorAll('input[name="modo"]');
+            radiosModo.forEach(function(radio) {
+                radio.addEventListener('change', function() {
+                    salvarEstadoDashboard('destorroador');
+                    persistirEstadoAplicacao();
+                    atualizarDashboard();
+                });
+            });
+
+            const radiosModoDist = document.querySelectorAll('input[name="modo_dist"]');
+            radiosModoDist.forEach(function(radio) { 
+                radio.addEventListener('change', function() {
+                    salvarEstadoDashboard('distribuidor');
+                    persistirEstadoAplicacao();
+                    atualizarDistribuidor();
+                    // Se mudar para modo 2, inicializar a física
+                    if (this.value === "2" && ativarAnimacaoDist) {
+                        const v0 = parseFloat(dom.distV0.value) || 12;
+                        const theta = parseFloat(dom.distAngulo.value) || 30;
+                        const h = parseFloat(dom.distAltura.value) || 0.8;
+                        const e = parseFloat(dom.distCr.value) || 0.6;
+                        inicializarFisicaDistribuidor(theta, v0, h, e);
+                    }
+                });
+            });
+
+            dom.stateButtons.forEach((button) => {
+                button.addEventListener('click', function() {
+                    trocarPerfilDashboard(this.dataset.dashboard, this.dataset.profile);
+                });
+            });
+
+            dom.resetButtons.forEach((button) => {
+                button.addEventListener('click', function() {
+                    resetarDashboard(this.dataset.dashboardReset);
+                });
+            });
+
+            Object.keys(dashboardProfiles).forEach((dashboardKey) => {
+                const snapshotInicial = capturarEstadoDashboard(dashboardProfiles[dashboardKey].container);
+                dashboardProfiles[dashboardKey].profiles.minimo = clonarEstrutura(snapshotInicial);
+                dashboardProfiles[dashboardKey].profiles.maximo = clonarEstrutura(snapshotInicial);
+                dashboardDefaults[dashboardKey] = {
+                    activeProfile: 'minimo',
+                    profiles: {
+                        minimo: clonarEstrutura(snapshotInicial),
+                        maximo: clonarEstrutura(snapshotInicial)
+                    }
+                };
+                atualizarBotoesDashboard(dashboardKey);
+            });
+
+            restaurarEstadoPersistido();
+
+            // --- NAVEGAÇÃO ENTRE TELAS ---
+            function irParaHome() {
+                dom.sidebar.classList.add('hidden');
+                dom.mainContent.classList.add('hidden');
+                dom.sidebarDist.classList.add('hidden');
+                dom.mainDist.classList.add('hidden');
+                dom.homeScreen.classList.remove('hidden');
+            }
+
+            dom.btnDestorroador.addEventListener('click', function() {
+                console.log('Clicou em Destorroador');
+                try {
+                    dom.homeScreen.classList.add('hidden');
+                    dom.sidebar.classList.remove('hidden');
+                    dom.mainContent.classList.remove('hidden');
+                    setTimeout(redimensionarCanvas, 50);
+                    console.log('Destorroador aberto');
+                } catch(err) {
+                    console.error('Erro ao abrir destorroador:', err);
+                }
+            });
+
+            dom.btnDistribuidor.addEventListener('click', function() {
+                console.log('Clicou em Distribuidor');
+                try {
+                    console.log('Tentando esconder home');
+                    dom.homeScreen.classList.add('hidden');
+                    
+                    console.log('Tentando mostrar sidebar distribuidor');
+                    dom.sidebarDist.classList.remove('hidden');
+                    
+                    console.log('Tentando mostrar main distribuidor');
+                    dom.mainDist.classList.remove('hidden');
+                    
+                    console.log('Tentando redimensionar canvas');
+                    setTimeout(function() {
+                        try {
+                            redimensionarCanvasDist();
+                            console.log('Canvas distribuidor redimensionado');
+                            
+                            console.log('Tentando atualizar distribuidor');
+                            atualizarDistribuidor();
+                            console.log('Distribuidor atualizado');
+                            
+                            // Se estiver em modo 2, inicializar física
+                            const modoDistElement = document.querySelector('input[name="modo_dist"]:checked');
+                            if (modoDistElement && modoDistElement.value === "2") {
+                                console.log('Modo 2 detectado, inicializando física');
+                                const v0 = parseFloat(dom.distV0.value) || 12;
+                                const theta = parseFloat(dom.distAngulo.value) || 30;
+                                const h = parseFloat(dom.distAltura.value) || 0.8;
+                                const e = parseFloat(dom.distCr.value) || 0.6;
+                                inicializarFisicaDistribuidor(theta, v0, h, e);
+                            }
+                            console.log('Distribuidor aberto com sucesso!');
+                        } catch(err) {
+                            console.error('Erro no setTimeout:', err);
+                            console.error('Stack:', err.stack);
+                        }
+                    }, 100);
+                } catch(err) {
+                    console.error('Erro ao navegar para distribuidor:', err);
+                    console.error('Stack:', err.stack);
+                    dom.homeScreen.classList.remove('hidden');
+                }
+            });
+
+            dom.btnVoltar.addEventListener('click', irParaHome);
+            dom.btnVoltarDist.addEventListener('click', irParaHome);
+
+            // --- LÓGICA MATEMÁTICA E RENDERIZAÇÃO DE INTERFACE ---
+            function atualizarDashboard() {
+                // Captura valores numéricos limpos
+                const E_e = parseFloat(dom.energia.value);
+                const V = parseFloat(dom.tensao.value);
+                const I = parseFloat(dom.corrente.value);
+                const eta_m = parseFloat(dom.eficiencia.value) / 100.0;
+                const red = parseFloat(dom.reducao.value);
+                let taxa = parseFloat(dom.taxaRange.value);
+                
+                // Prevenção caso o usuário apague o número da caixa de texto
+                if(isNaN(taxa)) taxa = 0.1;
+
+                const modoElemento = document.querySelector('input[name="modo"]:checked');
+                const modo = modoElemento ? modoElemento.value : "1";
+
+                let htmlEsquerdo = "";
+                let htmlDireito = "";
+
+                if (modo === "1") {
+                    dom.lblCorrente.innerText = "Corrente Aplicada (A)";
+                    
+                    const P_ele = V * I;
+                    const P_util = P_ele * eta_m;
+                    const P_exigida = (taxa * E_e) / EFICIENCIA_REDUTOR;
+                    const rot_final = RPM_BASE / red;
+                    const T_disp = (P_util * EFICIENCIA_REDUTOR) / (rot_final * (Math.PI / 30));
+                    
+                    rotacaoFinalGlobal = rot_final;
+                    isStalled = P_util < P_exigida;
+
+                    let statusBox = "";
+                    if (!isStalled) {
+                        statusBox = "<div class='alert alert-success'><strong>✅ SISTEMA OPERANDO LISO</strong><br><br>A potência exigida para fraturar o material é de <strong>" + P_exigida.toFixed(1) + " Watts</strong>, o que está dentro da margem de segurança da sua potência útil de <strong>" + P_util.toFixed(1) + " Watts</strong>.</div>";
+                    } else {
+                        statusBox = "<div class='alert alert-error'><strong>❌ MOTOR EM ESTOL (TRAVADO)</strong><br><br>A potência exigida para fraturar o material (<strong>" + P_exigida.toFixed(1) + " Watts</strong>) é superior à potência útil disponível no eixo (<strong>" + P_util.toFixed(1) + " Watts</strong>). O material encavalou.</div>";
+                    }
+
+                    htmlEsquerdo = `
+                        <h3 style="color: #fff; margin-bottom: 15px;">Análise de Conversão de Energia</h3>
+                        <div class="metrics-row">
+                            <div class="metric-card" title="Energia bruta puxada da bateria (Tensão x Corrente)."><div class="metric-label">Potência Elétrica Consumida</div><div class="metric-value">${P_ele.toFixed(1)} W</div></div>
+                            <div class="metric-card" title="Energia que sobreviveu à dissipação térmica do motor e está efetivamente girando o eixo."><div class="metric-label">Potência Útil Entregue ao Eixo</div><div class="metric-value">${P_util.toFixed(1)} W</div></div>
+                        </div>
+                        <h3 style="color: #fff; margin-bottom: 15px;">Análise de Força Bruta</h3>
+                        <div class="metrics-row">
+                            <div class="metric-card" title="Força de torção máxima que o dente do rolo consegue aplicar no grão de NPK. Calculado dividindo a potência útil pela velocidade angular final."><div class="metric-label">Torque Disponível nos Rolos</div><div class="metric-value">${T_disp.toFixed(2)} N.m</div></div>
+                            <div class="metric-card" title="Velocidade física dos rolos após passar pelo redutor."><div class="metric-label">Rotação Final nos Rolos</div><div class="metric-value">${rot_final.toFixed(1)} RPM</div></div>
+                        </div>
+                        <h3 style="color: #fff; margin-bottom: 15px;">Status de Operação</h3>
+                        ${statusBox}
+                    `;
+
+                    htmlDireito = `
+                        <h3 style="color: #fff; margin-top: 0;">📚 Memorial de Cálculo</h3>
+                        <div style="margin-bottom: 15px; font-size: 0.9em; color: var(--text-muted);">
+                            <strong>Parâmetros Base Assumidos</strong><br>
+                            • Energia Específica (E<sub>e</sub>): ${E_e.toFixed(1)} J/g<br>
+                            • Eficiência Mecânica (&eta;<sub>redutor</sub>): ${(EFICIENCIA_REDUTOR*100).toFixed(0)}%<br>
+                            • Motor: ${RPM_BASE} RPM na base
+                        </div>
+                        <div class="memorial-item">
+                            <strong title="Potência elétrica e conversão de energia. Clique para referência bibliográfica.">
+                                <a href="https://openstax.org/books/college-physics-2e/pages/20-4-electric-power-and-energy" target="_blank" style="color: inherit; text-decoration: underline;">1. Conversão Elétrica ➔ Mecânica 🔗</a>
+                            </strong><br>
+                            <p style="margin: 10px 0 5px 0; font-size: 0.9em;">Potência elétrica total consumida da fonte de alimentação:</p>
+                            $$ \\require{action} \\texttip{P_{ele}}{[W] Potência Elétrica. Definição: Energia bruta puxada da fonte. Importância: Fundamental para dimensionar a bateria e a bitola dos cabos de energia.} = \\texttip{V}{[V] Tensão Nominal. Definição: Potencial do sistema elétrico. Importância: Define a categoria do equipamento (ex: 12V ou 24V).} \\cdot \\texttip{I}{[A] Corrente Elétrica. Definição: Fluxo de elétrons. Importância: Principal gerador de calor (Joule); controlá-la evita a queima do motor.} $$
+                            $$ P_{ele} = ${V} \\cdot ${I.toFixed(1)} $$
+                            $$ P_{ele} = ${P_ele.toFixed(1)} \\text{ W} $$
+                            <hr style="border: 0; border-top: 1px dashed rgba(255,255,255,0.05); margin: 10px 0;">
+                            <p style="margin: 5px 0; font-size: 0.9em;">Potência mecânica útil convertida no eixo do motor:</p>
+                            $$ \\require{action} \\texttip{P_{util}}{[W] Potência Útil. Definição: Energia efetiva de giro. Importância: É a força real, descontadas as perdas de calor, que vai triturar a pedra.} = \\texttip{P_{ele}}{[W] Potência Elétrica Bruta.} \\cdot \\texttip{\\eta_{mot}}{[%] Eficiência Eletromagnética. Definição: Fração de eletricidade convertida em giro. Importância: Motores ruins (baixa %) esquentam mais e puxam mais bateria.} $$
+                            $$ P_{util} = ${P_ele.toFixed(1)} \\cdot ${eta_m.toFixed(2)} $$
+                            $$ P_{util} = ${P_util.toFixed(1)} \\text{ W} $$
+                        </div>
+                        <div class="memorial-item yellow">
+                            <strong title="Potência como taxa de energia por tempo. A energia específica E_e deve vir de ensaio ou ficha técnica do material.">
+                                <a href="https://openstax.org/books/college-physics-2e/pages/7-7-power" target="_blank" style="color: inherit; text-decoration: underline;">2. Demanda do Material (Fratura) 🔗</a>
+                            </strong><br>
+                            <p style="margin: 10px 0 5px 0; font-size: 0.9em;">Potência mecânica exigida pelos rolos para esmagar os grãos:</p>
+                            $$ \\require{action} \\texttip{P_{exigida}}{[W] Potência Exigida. Definição: Esforço necessário para fraturar a vazão alvo. Importância: Se superar a P_util, o rolo trava (estola).} = \\frac{\\texttip{\\dot{m}}{[g/s] Taxa de Moagem. Definição: Massa triturada por segundo. Importância: Dita a capacidade produtiva comercial da máquina.} \\cdot \\texttip{E_e}{[J/g] Energia Específica. Definição: Resistência do material. Importância: Adubos mais duros exigem motores mais caros e potentes.}}{\\texttip{\\eta_{red}}{[%] Eficiência da Caixa. Definição: Perdas por atrito. Importância: Redutores planetários bons mantêm 85% da força.}} $$
+                            $$ P_{exigida} = \\frac{${taxa.toFixed(1)} \\cdot ${E_e.toFixed(1)}}{${EFICIENCIA_REDUTOR}} $$
+                            $$ P_{exigida} = ${P_exigida.toFixed(1)} \\text{ W} $$
+                        </div>
+                        <div class="memorial-item green">
+                            <strong title="Relação entre potência, torque e velocidade angular em movimento rotacional. Clique para referência.">
+                                <a href="https://openstax.org/books/university-physics-volume-1/pages/10-8-work-and-power-for-rotational-motion" target="_blank" style="color: inherit; text-decoration: underline;">3. Cinemática e Torque 🔗</a>
+                            </strong><br>
+                            <p style="margin: 10px 0 5px 0; font-size: 0.9em;">Rotação mecânica final na saída do redutor:</p>
+                            $$ \\require{action} \\texttip{N_{final}}{[RPM] Rotação Final. Definição: Rotação visível do rolo. Importância: Determina o tempo que o material fica retido esmagando.} = \\frac{\\texttip{RPM_{base}}{[RPM] Rotação Motor. Definição: Velocidade nominal do rotor livre.}}{\\texttip{Red_{caixa}}{[Adim.] Fator de Redução. Definição: Relação das engrenagens. Importância: Transforma rotação inútil em torque esmagador brutal.}} $$
+                            $$ N_{final} = \\frac{${RPM_BASE}}{${red}} $$
+                            $$ N_{final} = ${rot_final.toFixed(1)} \\text{ RPM} $$
+                            <hr style="border: 0; border-top: 1px dashed rgba(255,255,255,0.05); margin: 10px 0;">
+                            <p style="margin: 5px 0; font-size: 0.9em;">Torque resultante disponível nas estrias do rolo:</p>
+                            $$ \\require{action} \\texttip{T_{disp}}{[N.m] Torque Disponível. Definição: Força de torção nas estrias. Importância: Capacidade limite de morder e quebrar rochas sem parar.} = \\frac{\\texttip{P_{util}}{[W] Potência Útil Limite.} \\cdot \\texttip{\\eta_{red}}{[%] Eficiência Mecânica.}}{\\texttip{\\omega}{[rad/s] Vel. Angular. Definição: Rotação convertida para o Sistema Internacional.}} $$
+                            $$ T_{disp} = \\frac{${P_util.toFixed(1)} \\cdot ${EFICIENCIA_REDUTOR}}{${rot_final.toFixed(1)} \\cdot \\frac{\\pi}{30}} $$
+                            $$ T_{disp} = ${T_disp.toFixed(2)} \\text{ N.m} $$
+                        </div>
+                    `;
+
+                } else {
+                    dom.lblCorrente.innerText = "Corrente Máxima Suportada (A)";
+
+                    const P_mec_exigida = (taxa * E_e) / EFICIENCIA_REDUTOR;
+                    const P_ele_exigida = P_mec_exigida / eta_m;
+                    const I_exigida = P_ele_exigida / V;
+                    const P_ele_consumida = V * I;
+                    const P_util_disp = P_ele_consumida * eta_m;
+                    const rot_final = RPM_BASE / red;
+                    const T_disp = (P_util_disp * EFICIENCIA_REDUTOR) / (rot_final * (Math.PI / 30));
+                    
+                    rotacaoFinalGlobal = rot_final;
+                    const margem_queima = I;
+                    isStalled = I_exigida > margem_queima; // Trava quando a demanda ultrapassa a corrente nominal informada
+                    const delta = I_exigida - I;
+
+                    let statusBox = "";
+                    if (I_exigida > I) {
+                        statusBox = "<div class='alert alert-error'><strong>🔥 SOBRECARGA ELÉTRICA DO MOTOR</strong><br><br>Para não travar os rolos trituradores, o motor teria de puxar <strong>" + I_exigida.toFixed(1) + " Amperes</strong> da fonte. Como o limite informado é <strong>" + I.toFixed(1) + " A</strong>, a condição excede a corrente nominal e aumenta a dissipação térmica nas bobinas.</div>";
+                    } else {
+                        statusBox = "<div class='alert alert-success'><strong>✅ OPERAÇÃO ESTÁVEL E FRIA</strong><br><br>A demanda mecânica nos rolos gera um esforço elétrico de apenas <strong>" + I_exigida.toFixed(1) + " A</strong>, o que está perfeitamente dentro da capacidade contínua de <strong>" + I.toFixed(1) + " A</strong>. Operação segura.</div>";
+                    }
+
+                    htmlEsquerdo = `
+                        <h3 style="color: #fff; margin-bottom: 15px;">Análise de Conversão de Energia</h3>
+                        <div class="metrics-row">
+                            <div class="metric-card" title="Energia total circulando no sistema no limite da corrente estipulada."><div class="metric-label">Potência Elétrica Consumida</div><div class="metric-value">${P_ele_consumida.toFixed(1)} W</div></div>
+                            <div class="metric-card" title="Potência mecânica máxima que o motor consegue entregar antes de queimar."><div class="metric-label">Potência Útil Entregue ao Eixo</div><div class="metric-value">${P_util_disp.toFixed(1)} W</div></div>
+                        </div>
+                        <h3 style="color: #fff; margin-bottom: 15px;">Análise de Demanda de Corrente</h3>
+                        <div class="metrics-row">
+                            <div class="metric-card" title="Como o motor DC tenta manter o torque variando a corrente, esta é a Amperagem real que a pedra exige do sistema para quebrar. Se for maior que a Etiqueta, o motor queima.">
+                                <div class="metric-label">Corrente Exigida para Moer</div>
+                                <div class="metric-value">${I_exigida.toFixed(1)} A</div>
+                                <div class="metric-delta ${delta > 0 ? 'delta-red' : 'delta-green'}">${delta > 0 ? '↑ ' + delta.toFixed(1) + ' A acima do limite' : '↓ Seguro'}</div>
+                            </div>
+                            <div class="metric-card" title="Limite térmico do fabricante (Amperes de placa)."><div class="metric-label">Corrente Máxima (Etiqueta)</div><div class="metric-value">${I.toFixed(1)} A</div></div>
+                        </div>
+                        <div class="metrics-row">
+                            <div class="metric-card" title="Torque de Estol referencial. Acima deste torque, a amperagem ultrapassa o limite térmico."><div class="metric-label">Torque Máximo de Trabalho</div><div class="metric-value">${T_disp.toFixed(2)} N.m</div></div>
+                            <div class="metric-card" title="Velocidade cinemática na ponta do eixo triturador."><div class="metric-label">Rotação Final nos Rolos</div><div class="metric-value">${rot_final.toFixed(1)} RPM</div></div>
+                        </div>
+                        <h3 style="color: #fff; margin-bottom: 15px;">Integridade do Sistema</h3>
+                        ${statusBox}
+                    `;
+
+                    htmlDireito = `
+                        <h3 style="color: #fff; margin-top: 0;">📚 Memorial de Cálculo Inverso</h3>
+                        <div style="margin-bottom: 15px; font-size: 0.9em; color: var(--text-muted);">
+                            <strong>Parâmetros Base Assumidos</strong><br>
+                            • Energia Específica (E<sub>e</sub>): ${E_e.toFixed(1)} J/g<br>
+                            • Eficiência Mecânica (&eta;<sub>redutor</sub>): ${(EFICIENCIA_REDUTOR*100).toFixed(0)}%<br>
+                            • Motor: ${RPM_BASE} RPM na base
+                        </div>
+                        <div class="memorial-item yellow">
+                            <strong title="Potência mecânica como taxa de energia por tempo. A energia específica E_e deve vir de calibração do material.">
+                                <a href="https://openstax.org/books/college-physics-2e/pages/7-7-power" target="_blank" style="color: inherit; text-decoration: underline;">1. Demanda Mecânica (Rolos) 🔗</a>
+                            </strong><br>
+                            <p style="margin: 10px 0 5px 0; font-size: 0.9em;">Potência mecânica refletida na ponta do eixo do motor:</p>
+                            $$ \\require{action} \\texttip{P_{mec}}{[W] Potência Mecânica. Definição: Esforço real exercido pelas pedras sobre o motor. Importância: Define o peso mecânico do sistema no limite.} = \\frac{\\texttip{\\dot{m}}{[g/s] Taxa de Moagem Alvo.} \\cdot \\texttip{E_e}{[J/g] Resistência do NPK.}}{\\texttip{\\eta_{red}}{[%] Perdas da Caixa Redutora.}} $$
+                            $$ P_{mec} = \\frac{${taxa.toFixed(1)} \\cdot ${E_e.toFixed(1)}}{${EFICIENCIA_REDUTOR}} $$
+                            $$ P_{mec} = ${P_mec_exigida.toFixed(1)} \\text{ W} $$
+                        </div>
+                        <div class="memorial-item red">
+                            <strong title="Potência elétrica, tensão, corrente e conversão de energia. Clique para referência.">
+                                <a href="https://openstax.org/books/college-physics-2e/pages/20-4-electric-power-and-energy" target="_blank" style="color: inherit; text-decoration: underline;">2. Reflexo Elétrico (Tomada) 🔗</a>
+                            </strong><br>
+                            <p style="margin: 10px 0 5px 0; font-size: 0.9em;">O que o motor precisará drenar da bateria para não travar:</p>
+                            $$ \\require{action} \\texttip{P_{ele}}{[W] Potência Elétrica Exigida. Definição: Energia elétrica drenada para suprir o esforço mecânico. Importância: Base para calcular a corrente de sobrecarga.} = \\frac{\\texttip{P_{mec}}{[W] Potência Mecânica Requerida.}}{\\texttip{\\eta_{mot}}{[%] Eficiência Eletromecânica.}} $$
+                            $$ P_{ele} = \\frac{${P_mec_exigida.toFixed(1)}}{${eta_m.toFixed(2)}} $$
+                            $$ P_{ele} = ${P_ele_exigida.toFixed(1)} \\text{ W} $$
+                            <hr style="border: 0; border-top: 1px dashed rgba(255,255,255,0.05); margin: 10px 0;">
+                            <p style="margin: 5px 0; font-size: 0.9em;">Corrente resultante dessa demanda forçada:</p>
+                            $$ \\require{action} \\texttip{I_{exigida}}{[A] Corrente Exigida. Definição: Amperagem real puxada sob carga pesada. Importância: Se ultrapassar o limite nominal, causa degradação térmica acelerada.} = \\frac{\\texttip{P_{ele}}{[W] Potência Elétrica Calculada.}}{\\texttip{V}{[V] Tensão da Bateria.}} $$
+                            $$ I_{exigida} = \\frac{${P_ele_exigida.toFixed(1)}}{${V}} $$
+                            $$ I_{exigida} = ${I_exigida.toFixed(1)} \\text{ A} $$
+                        </div>
+                        <div class="memorial-item">
+                            <strong title="Potência dissipada em resistência elétrica e aquecimento por corrente. Clique para referência.">
+                                <a href="https://openstax.org/books/college-physics-2e/pages/20-4-electric-power-and-energy" target="_blank" style="color: inherit; text-decoration: underline;">3. Risco de Queima (Lei de Joule) 🔗</a>
+                            </strong><br>
+                            <p style="margin-bottom: 15px; margin-top: 10px;">A energia térmica dissipada na carcaça do motor cresce de forma brutal e quadrática. Ao saltar a exigência para <strong>${I_exigida.toFixed(1)} A</strong>, o verniz protetor derrete.</p>
+                            $$ \\require{action} \\texttip{Q}{[J] Calor Gerado. Definição: Energia térmica dissipada no motor. Importância: Cresce ao quadrado com a corrente, sendo a principal causa de incêndios em motores em estol.} = \\texttip{I_{exigida}^2}{[A²] Corrente ao Quadrado. Definição: Crescimento exponencial do Efeito Joule.} \\cdot \\texttip{R}{[Ohms] Resistência interna das bobinas de cobre.} \\cdot \\texttip{t}{[s] Tempo. Definição: Tempo de exposição à sobrecarga. Importância: Define se o fusível desarmará antes da queima.} $$
+                            $$ Q = ${I_exigida.toFixed(1)}^2 \\cdot R \\cdot t $$
+                            $$ Q = ${(I_exigida * I_exigida).toFixed(1)} \\cdot R \\cdot t \\text{ Joules} $$
+                        </div>
+                    `;
+                }
+
+                dom.painelEsquerdo.innerHTML = htmlEsquerdo;
+
+                // --- DOUBLE BUFFERING AVANÇADO (DOM NODES + PROMISE QUEUE) ---
+                if (mathJaxTimer) clearTimeout(mathJaxTimer);
+                mathJaxTimer = setTimeout(function() {
+                    // Cria uma "tela fantasma" na memória
+                    const bufferInvisivel = document.createElement('div');
+                    bufferInvisivel.innerHTML = htmlDireito;
+                    
+                    if (window.MathJax && MathJax.typesetPromise) {
+                        // Cria uma fila para garantir que o MathJax não se atropele no arrasto rápido
+                        if (!window.mjPromise) window.mjPromise = Promise.resolve();
+                        
+                        window.mjPromise = window.mjPromise.then(function() {
+                            // Manda renderizar a matemática na tela fantasma primeiro
+                            return MathJax.typesetPromise([bufferInvisivel]).then(function() {
+                                // Só quando estiver 100% pronto e desenhado, esvazia o painel
+                                dom.painelDireito.innerHTML = "";
+                                // Move os blocos físicos (estilizados) para a tela real
+                                while (bufferInvisivel.firstChild) {
+                                    dom.painelDireito.appendChild(bufferInvisivel.firstChild);
+                                }
+                            });
+                        }).catch(function(err){ console.log(err); });
+                    } else {
+                        dom.painelDireito.innerHTML = htmlDireito;
+                    }
+                }, 80); // 80ms: o equilíbrio perfeito entre responsividade visual e alívio da GPU
+            }
+
+            // --- LÓGICA DO DISTRIBUIDOR DE SÓLIDOS ---
+            let mathJaxTimerDist = null;
+            function atualizarDistribuidor() {
+                const modoDistElement = document.querySelector('input[name="modo_dist"]:checked');
+                const modoDist = modoDistElement ? modoDistElement.value : "1";
+                
+                let htmlEsquerdo = "";
+                let htmlDireito = "";
+
+                if (modoDist === "1") {
+                    dom.distGrpModo1.classList.remove('hidden');
+                    dom.distGrpModo2.classList.add('hidden');
+
+                    canvasDist.style.display = 'none';
+                    ativarAnimacaoDist = false;
+
+                    const n_linhas = parseInt(dom.distLinhas.value);
+                    const n_primarios = parseInt(dom.distQtdPrimarios.value);
+                    const L_tubo_m = parseFloat(dom.distComprimento.value);
+                    const L_primario_m = parseFloat(dom.distComprimentoPrimario.value);
+                    const taxa_ha = parseFloat(dom.distTaxa.value);
+                    const v_trator = parseFloat(dom.distVelTrator.value);
+                    const largura = parseFloat(dom.distLargura.value);
+                    const geometriaRolo = calcularVolumeRolo();
+                    const espessura_disco = parseFloat(dom.distEspessura.value);
+                    const qtd_discos_uteis = parseFloat(dom.distQtdDiscos.value);
+                    const cavidades_por_disco = parseFloat(dom.distCavidades.value);
+                    const area_lateral_cavidade = parseFloat(dom.distAreaCavidade.value);
+                    const rho_s = parseFloat(dom.distDensidade.value);
+                    const V_motor = parseFloat(dom.distTensao.value);
+                    const I_max = parseFloat(dom.distCorrente.value);
+                    const eta_motor_dist = parseFloat(dom.distEficienciaMotor.value) / 100.0;
+                    const E_dosador = parseFloat(dom.distEnergiaDosador.value);
+                    const Q_turbina_m3min = parseFloat(dom.distVazaoTurbina.value);
+                    const D_mm = parseFloat(dom.distDiametro.value);
+                    const D_primario_pol = parseFloat(dom.distDiametroPrimarioPol.value);
+                    const rho_a = parseFloat(dom.distDensidadeAr.value);
+                    const fator_atrito = parseFloat(dom.distFatorAtrito.value);
+                    const pressao_turbina_max = parseFloat(dom.distPressaoTurbina.value);
+                    const k_torre = parseFloat(dom.distKTorre.value);
+
+                    const V_r_mm3 = geometriaRolo.volumeRoloMm3;
+                    const volume_por_disco_mm3 = geometriaRolo.volumePorDiscoMm3;
+                    const m_s_kgh_linha = (taxa_ha * v_trator * largura) / 10;
+                    const m_s_kgh_total = m_s_kgh_linha * n_linhas;
+                    const m_s_kgh_primario = m_s_kgh_total / Math.max(n_primarios, 1);
+                    const m_s_gs = m_s_kgh_linha * (1000 / 3600);
+                    const N_r = (m_s_kgh_linha * 1000) / (V_r_mm3 * rho_s * 60);
+
+                    const P_util_max = V_motor * I_max * eta_motor_dist;
+                    const P_mec_req = (m_s_gs * E_dosador) / EFICIENCIA_REDUTOR;
+
+                    const D_m = D_mm / 1000;
+                    const D_primario_m = D_primario_pol * 0.0254;
+                    const D_primario_mm = D_primario_m * 1000;
+                    const areaSecundaria = (Math.PI * Math.pow(D_m, 2)) / 4;
+                    const areaPrimaria = (Math.PI * Math.pow(D_primario_m, 2)) / 4;
+                    const linhas_por_primario_media = n_linhas / Math.max(n_primarios, 1);
+                    const distribuicaoInteira = Number.isInteger(linhas_por_primario_media);
+
+                    const parametrosRede = {
+                        vazaoTotalNominalM3Min: Q_turbina_m3min,
+                        quantidadePrimarios: Math.max(n_primarios, 1),
+                        quantidadeLinhas: Math.max(n_linhas, 1),
+                        comprimentoPrimarioM: L_primario_m,
+                        comprimentoSecundarioM: L_tubo_m,
+                        diametroPrimarioM: D_primario_m,
+                        diametroSecundarioM: D_m,
+                        areaPrimaria,
+                        areaSecundaria,
+                        densidadeAr: rho_a,
+                        fatorAtrito: fator_atrito,
+                        pressaoMaxPa: pressao_turbina_max,
+                        kTorre: k_torre,
+                        massaSolidoPrimarioKgh: m_s_kgh_primario,
+                        massaSolidoSecundarioKgh: m_s_kgh_linha
+                    };
+
+                    const redeDoisEstagios = simularRedePneumatica(parametrosRede);
+                    const redeDireta = simularRedeDireta(parametrosRede);
+                    const ganhoPressaoPa = redeDireta.deltaPLinha - redeDoisEstagios.deltaPTotal;
+                    const ganhoVelocidadeMs = redeDoisEstagios.velocidadeSecundaria - redeDireta.velocidadeLinha;
+                    const aproveitamentoTurbina = (redeDoisEstagios.vazaoTotalReal / Q_turbina_m3min) * 100;
+
+                    let statusEletrico = "";
+                    if (P_mec_req > P_util_max) {
+                        statusEletrico = `<div class='alert alert-error'><strong>❌ MOTOR TRAVADO (SOBRECARGA)</strong><br>O motor elétrico precisa fornecer <strong>${P_mec_req.toFixed(1)} W</strong>, mas ele queima em <strong>${P_util_max.toFixed(1)} W</strong>.</div>`;
+                    } else {
+                        statusEletrico = `<div class='alert alert-success'><strong>✅ MOTOR DIMENSIONADO</strong><br>O esforço puxará apenas <strong>${P_mec_req.toFixed(1)} W</strong> de torque seguro.</div>`;
+                    }
+
+                    let statusPneumatico = "";
+                    if (redeDoisEstagios.deltaPTotal >= pressao_turbina_max) {
+                        statusPneumatico = `<div class='alert alert-error' style="margin-top: 10px;"><strong>❌ ESTOL DA TURBINA</strong><br>A soma das perdas nos dutos primários, torre e linhas secundárias atingiu <strong>${redeDoisEstagios.deltaPTotal.toFixed(0)} Pa</strong>, acima da pressão estática disponível.</div>`;
+                    } else if (redeDoisEstagios.velocidadeSecundaria < 15) {
+                        statusPneumatico = `<div class='alert alert-error' style="margin-top: 10px;"><strong>❌ RISCO DE ENTUPIMENTO NAS LINHAS FINAIS</strong><br>A velocidade real nas linhas secundárias caiu para <strong>${redeDoisEstagios.velocidadeSecundaria.toFixed(1)} m/s</strong>. O arraste já não é suficiente para manter fase diluída robusta.</div>`;
+                    } else if (redeDoisEstagios.slrSecundario > 8) {
+                        statusPneumatico = `<div class='alert alert-error' style="margin-top: 10px;"><strong>❌ AFOGAMENTO DAS LINHAS SECUNDÁRIAS</strong><br>O SLR secundário subiu para <strong>${redeDoisEstagios.slrSecundario.toFixed(2)}</strong>. A linha final está ar/sólido demais para transporte estável.</div>`;
+                    } else {
+                        statusPneumatico = `<div class='alert alert-success' style="margin-top: 10px;"><strong>✅ REDE PRIMÁRIA APROVEITANDO MELHOR A TURBINA</strong><br>As linhas secundárias recebem <strong>${redeDoisEstagios.velocidadeSecundaria.toFixed(1)} m/s</strong> com perda total de <strong>${redeDoisEstagios.deltaPTotal.toFixed(0)} Pa</strong>. Frente à divisão direta, o ganho de velocidade é <strong>${ganhoVelocidadeMs.toFixed(1)} m/s</strong>.</div>`;
+                    }
+
+                    const avisoDistribuicao = !distribuicaoInteira
+                        ? `<div class='alert alert-warning' style="margin-top: 10px;"><strong>⚠️ DIVISÃO MÉDIA NA TORRE</strong><br>O modelo assume balanceamento médio de <strong>${linhas_por_primario_media.toFixed(2)}</strong> linhas secundárias por duto primário. Se a torre real alimentar grupos diferentes, será preciso modelar cada ramo separadamente.</div>`
+                        : '';
+
+                    htmlEsquerdo = `
+                        <h3 style="color: #fff; margin-bottom: 15px;">Dinâmica de Dosagem Agronômica</h3>
+                        <div class="metrics-row">
+                            <div class="metric-card" title="Velocidade exigida pela controladora do trator."><div class="metric-label">Rotação do Rolo</div><div class="metric-value">${N_r.toFixed(1)} RPM</div></div>
+                            <div class="metric-card" title="Massa de material despejado em uma única linha final."><div class="metric-label">Taxa Mássica por Linha</div><div class="metric-value">${m_s_kgh_linha.toFixed(1)} kg/h</div></div>
+                        </div>
+                        <div class="metrics-row">
+                            <div class="metric-card" title="Volume integral calculado por revolução a partir da geometria do rolo."><div class="metric-label">Volume Integral do Rolo</div><div class="metric-value">${V_r_mm3.toFixed(0)} mm³/rev</div></div>
+                            <div class="metric-card" title="Vazão total de sólido entregue ao conjunto das linhas finais."><div class="metric-label">Taxa Mássica Total</div><div class="metric-value">${m_s_kgh_total.toFixed(1)} kg/h</div></div>
+                        </div>
+                        <h3 style="color: #fff; margin-bottom: 15px;">Rede Pneumática em Dois Estágios</h3>
+                        <div class="metrics-row">
+                            <div class="metric-card" title="Velocidade real do ar nos dutos primários de grande diâmetro."><div class="metric-label">Velocidade no Duto Primário</div><div class="metric-value">${redeDoisEstagios.velocidadePrimaria.toFixed(1)} m/s</div></div>
+                            <div class="metric-card" title="Velocidade real do ar nas linhas secundárias de aplicação."><div class="metric-label">Velocidade na Linha Secundária</div><div class="metric-value">${redeDoisEstagios.velocidadeSecundaria.toFixed(1)} m/s</div></div>
+                        </div>
+                        <div class="metrics-row">
+                            <div class="metric-card" title="Perda total do sistema considerando duto primário, torre e linha secundária."><div class="metric-label">Perda Total</div><div class="metric-value">${redeDoisEstagios.deltaPTotal.toFixed(0)} Pa</div></div>
+                            <div class="metric-card" title="Diferença de pressão entre o arranjo com rede primária e a divisão direta nas linhas pequenas."><div class="metric-label">Ganho vs Divisão Direta</div><div class="metric-value">${ganhoPressaoPa.toFixed(0)} Pa</div></div>
+                        </div>
+                        <div class="metrics-row">
+                            <div class="metric-card" title="Pressão estática remanescente na entrada da torre após o trecho primário."><div class="metric-label">Pressão na Torre</div><div class="metric-value">${redeDoisEstagios.pressaoNaTorre.toFixed(0)} Pa</div></div>
+                            <div class="metric-card" title="Pressão estática disponível na entrada das linhas secundárias após a perda no duto primário e na torre."><div class="metric-label">Pressão nas Linhas</div><div class="metric-value">${redeDoisEstagios.pressaoNaLinha.toFixed(0)} Pa</div></div>
+                        </div>
+                        <h3 style="color: #fff; margin-bottom: 15px;">Status do Sistema</h3>
+                        ${statusEletrico}
+                        ${statusPneumatico}
+                        ${avisoDistribuicao}
+                    `;
+
+                    htmlDireito = `
+                        <h3 style="color: #fff; margin-top: 0;">📚 Memorial da Semeadura</h3>
+                        <div style="margin-bottom: 15px; font-size: 0.9em; color: var(--text-muted);">
+                            <strong>Rede Pneumática em Dois Estágios</strong><br>
+                            • Dutos primários: ${n_primarios} unidades de ${D_primario_pol.toFixed(2)} pol (${D_primario_mm.toFixed(1)} mm)<br>
+                            • Linhas secundárias totais: ${n_linhas}<br>
+                            • Média de linhas por torre: ${linhas_por_primario_media.toFixed(2)}<br>
+                            • Fator de Atrito Darcy (&lambda;): ${fator_atrito.toFixed(3)}<br>
+                            • Perda Local da Torre (K): ${k_torre.toFixed(2)}<br>
+                            • Aproveitamento de vazão da turbina: ${aproveitamentoTurbina.toFixed(0)}%
+                        </div>
+                        <div class="memorial-item">
+                            <strong title="Relação geométrica do volume do rolo com a espessura, discos e cavidades.">
+                                <a href="https://openstax.org/books/college-physics-2e/pages/12-1-flow-rate-and-its-relation-to-velocity" target="_blank" style="color: inherit; text-decoration: underline;">1. Volume Integral do Rolo por Revolução</a>
+                            </strong><br>
+                            <p style="margin: 10px 0 5px 0; font-size: 0.9em;">Composição geométrica do volume útil por rotação:</p>
+                            $$ \\require{action} \\texttip{V_r}{[mm³/rev] Volume Integral do Rolo. Definição: Capacidade volumétrica total a cada volta do eixo.} = \\texttip{${espessura_disco.toFixed(0)}}{[mm] Espessura do Disco. Impacto: Espessuras maiores aumentam o volume geométrico da fatia do rolo, permitindo reduzir a RPM do motor elétrico para atingir a mesma dose.} \\cdot \\texttip{${qtd_discos_uteis.toFixed(0)}}{[un] Quantidade de Discos Úteis. Impacto: Adicionar discos multiplica transversalmente a capacidade volumétrica final da máquina.} \\cdot \\texttip{${cavidades_por_disco.toFixed(0)}}{[un] Cavidades por Disco. Impacto: Define a quantidade de 'pulsos' de semente despejados a cada volta. Mais cavidades suavizam o fluxo contínuo na mangueira.} \\cdot \\texttip{${area_lateral_cavidade.toFixed(0)}}{[mm²] Área Lateral da Cavidade. Impacto: Funciona como o tamanho da 'colher' que pega o grão. Sementes grandes como soja/milho exigem áreas maiores para não serem esmagadas na roseta.} = \\texttip{${V_r_mm3.toFixed(0)}}{[mm³/rev] Volume Integral Calculado. Impacto: É a cilindrada matemática bruta do rotor. Dita a relação direta entre o giro do motor elétrico e a massa despejada no tubo.} \\text{ mm}^3\\text{/rev} $$
+                        </div>
+                        <div class="memorial-item">
+                            <strong title="Conversão agronômica de taxa por área para vazão mássica por linha.">
+                                <a href="https://www.nist.gov/pml/special-publication-811/nist-guide-si-chapter-5-units-outside-si" target="_blank" style="color: inherit; text-decoration: underline;">2. Taxa Mássica por Linha</a>
+                            </strong><br>
+                            <p style="margin: 10px 0 5px 0; font-size: 0.9em;">Conversão dimensional para cada linha final:</p>
+                            $$ \\require{action} \\texttip{\\dot{m}_{linha}}{[kg/h] Fluxo Mássico por Linha. Definição: Massa de insumo exigida por hora em uma única mangueira final.} = \\frac{\\texttip{${taxa_ha.toFixed(1)}}{[kg/ha] Taxa Agronômica Alvo. Impacto: É a exigência pura do produtor no campo. Taxas altas exigem giro mais rápido e empurram mais massa densa para as mangueiras, elevando a chance de entupir.} \\cdot \\texttip{${v_trator.toFixed(1)}}{[km/h] Velocidade Operacional do Trator. Impacto: Máquinas correndo rápido obrigam o dosador a disparar a RPM para compensar a distância percorrida no solo.} \\cdot \\texttip{${largura.toFixed(2)}}{[m] Largura de Trabalho por Linha (Espaçamento). Impacto: Linhas mais espaçadas forçam uma maior injeção de insumo dentro de um mesmo sulco para bater a taxa por hectare.}}{\\texttip{10}{Constante metrológica. Impacto: Fator físico obrigatório para ajustar e cruzar as unidades rurais (hectares, km/h) para as grandezas do Sistema Internacional (kg/h).}} = \\texttip{${m_s_kgh_linha.toFixed(2)}}{[kg/h] Massa Individual Exigida por Linha. Impacto: Define a carga absoluta de peso de adubo/semente que o vento da turbina será obrigado a arrastar na tubulação secundária.} \\text{ kg/h} $$
+                            $$ \\require{action} \\texttip{\\dot{m}_{total}}{[kg/h] Fluxo Mássico Total. Definição: Massa combinada exigida por todas as linhas da máquina.} = \\texttip{${m_s_kgh_linha.toFixed(2)}}{[kg/h] Massa exigida calculada no passo anterior, referente a uma única linha de plantio descendo do Air Cart.} \\cdot \\texttip{${n_linhas}}{[un] Número Total de Linhas da Máquina. Impacto: É o multiplicador extremo do implemento. 60 linhas exigem mangueiramentos massivos e turbinas F10 na exaustão térmica.} = \\texttip{${m_s_kgh_total.toFixed(2)}}{[kg/h] Massa Total Global. Impacto: Representa as centenas de quilos de insumo bruto que o reservatório superior e o ventilador terão de processar em conjunto a cada hora relógio.} \\text{ kg/h} $$
+                            $$ \\require{action} \\texttip{N_r}{[RPM] Rotação do Dosador. Definição: Rotação comandada pela ECU para atingir a taxa alvo.} = \\frac{\\texttip{${m_s_kgh_linha.toFixed(2)}}{[kg/h] Fluxo mássico caindo por cada linha acoplada ao dosador.} \\cdot \\texttip{1000}{[Conversão]. Impacto: Transforma quilos em gramas para equivaler volumetricamente.} / \\texttip{60}{[Conversão]. Impacto: Fatora as horas em minutos para obter Rotações Por Minuto (RPM).}}{\\texttip{${V_r_mm3.toFixed(0)}}{[mm³/rev] Volume (Cilindrada) do rolo acrílico ou de chapa calculado na Etapa 1.} \\cdot \\texttip{${rho_s}}{[g/mm³] Densidade do Material Sólido. Impacto: Adubos cristalizados muito pesados reduzem drasticamente a rotação mecânica para bater o alvo da balança; material ultra-leve acelera o eixo.}} = \\texttip{${N_r.toFixed(2)}}{[RPM] Rotação Alvo Controlada. Impacto: É o pulso elétrico exato que a central ISOBUS do trator enviará ao motoredutor ROJ do seu dosador para manter a prescrição.} \\text{ RPM} $$
+                        </div>
+                        <div class="memorial-item">
+                            <strong title="Potência elétrica e potência mecânica com eficiência do motor.">
+                                <a href="https://openstax.org/books/college-physics-2e/pages/20-4-electric-power-and-energy" target="_blank" style="color: inherit; text-decoration: underline;">3. Potência do Motor do Dosador</a>
+                            </strong><br>
+                            <p style="margin: 10px 0 5px 0; font-size: 0.9em;">Capacidade mecânica do motor e potência requerida no dosador:</p>
+                            $$ \\require{action} \\texttip{P_{util,max}}{[W] Potência Útil Máxima. Definição: Capacidade de trabalho mecânico limite do motor elétrico.} = \\texttip{${V_motor.toFixed(1)}}{[V] Tensão Contínua. Impacto: Diferença de potencial limitante ditada pelas baterias e alternador do trator.} \\cdot \\texttip{${I_max.toFixed(1)}}{[A] Corrente Máxima. Impacto: É a blindagem térmica da engenharia. Acima dessa amperagem, o esmalte das bobinas superaquece, trinca e gera curto-circuito em campo.} \\cdot \\texttip{${eta_motor_dist.toFixed(2)}}{[%] Eficiência Mecânica do Motor. Impacto: Parcela limpa e nobre da eletricidade que efetivamente se converte em torção mecânica no eixo; a sobra (ex: 25%) é lixo térmico.} = \\texttip{${P_util_max.toFixed(1)}}{[W] Potência Útil Teto Disponível. Impacto: É a força de emergência máxima que seu motor elétrico tem guardada para esmagar uma pedra intrusa no adubo sem desligar.} \\text{ W} $$
+                            $$ \\require{action} \\texttip{P_{req}}{[W] Potência Requerida. Definição: Trabalho mecânico exigido para dosar o material.} = \\frac{\\texttip{${m_s_gs.toFixed(3)}}{[g/s] Taxa Instantânea em Gramas. Impacto: Quantidade bruta de material mordida a cada fração de segundo pelo rotor azul estriado.} \\cdot \\texttip{${E_dosador.toFixed(2)}}{[J/g] Energia de Trabalho Mecânico do Dosador. Impacto: Se o material for úmido e muito colante (alta energia requerida), essa métrica salta violentamente e arrasta o motor para baixo.}}{\\texttip{${EFICIENCIA_REDUTOR}}{[%] Eficiência da Transmissão (Redutor Planetário/Ortogonal). Impacto: Perda natural termodinâmica devido ao atrito de aço com aço nas engrenagens redutoras que acoplam o motor no eixo.}} = \\texttip{${P_mec_req.toFixed(2)}}{[W] Potência Requerida Atual. Impacto: A força real do momento. Se esse número ultrapassar a potência útil da linha de cima, seu dosador fatalmente irá estolar (travar duro) no plantio.} \\text{ W} $$
+                        </div>
+                        <div class="memorial-item green">
+                            <strong title="Conversão exata do diâmetro primário de polegadas para SI.">
+                                <a href="https://www.nist.gov/pml/us-surveyfoot/revised-unit-conversion-factors" target="_blank" style="color: inherit; text-decoration: underline;">4. Conversão do Duto Primário para SI</a>
+                            </strong><br>
+                            <p style="margin: 10px 0 5px 0; font-size: 0.9em;">Usando 1 ft = 0,3048 m exato, então 1 in = 0,0254 m:</p>
+                            $$ \\require{action} \\texttip{D_{prim}}{[m] Diâmetro Primário. Definição: Diâmetro interno do duto primário convertido para SI.} = \\texttip{${D_primario_pol.toFixed(2)}}{[pol] Diâmetro em Polegadas (Bitola Comercial). Impacto: Medida de prateleira da mangueira corrugada primária robusta, vital para alívio da pressão da turbina.} \\cdot \\texttip{0.0254}{[Constante Universal]. Impacto: Converte perfeitamente as polegadas rurais americanas no formato métrico exigido pelas equações clássicas da mecânica dos fluidos.} = \\texttip{${D_primario_m.toFixed(4)}}{[m] Diâmetro Primário Científico. Impacto: A base métrica rigorosa para a extração algébrica da área transversal do cano.} \\text{ m} $$
+                            $$ \\require{action} \\texttip{A_{prim}}{[m²] Área Primária. Definição: Área da seção transversal do duto primário.} = \\frac{\\pi \\cdot \\texttip{${D_primario_m.toFixed(4)}^2}{O diâmetro isolado na etapa anterior, agora exposto ao quadrado para revelar o envelope bidimensional interno do tubo.}}{\\texttip{4}{Divisor base geométrico utilizado universalmente em equações circulares de caldeiraria e tubulações focadas no diâmetro (pi*D²/4).}} = \\texttip{${areaPrimaria.toFixed(4)}}{[m²] Área Transversal Interna. Impacto: Áreas muito estreitas estrangulam a saída da Punker; áreas gigantemente largas derrubam o ar a uma velocidade de brisa frouxa (entupindo fácil).} \\text{ m}^2 $$
+                        </div>
+                        <div class="memorial-item green">
+                            <strong title="Continuidade na rede primária até a torre.">
+                                <a href="https://openstax.org/books/college-physics-2e/pages/12-1-flow-rate-and-its-relation-to-velocity" target="_blank" style="color: inherit; text-decoration: underline;">5. Continuidade nos Dutos Primários</a>
+                            </strong><br>
+                            <p style="margin: 10px 0 5px 0; font-size: 0.9em;">A vazão total é dividida primeiro pelos dutos grandes:</p>
+                            $$ \\require{action} \\texttip{Q_{prim}}{[m³/min] Vazão por Duto Primário. Definição: Quantidade de ar que passa por um único duto grosso.} = \\frac{\\texttip{${redeDoisEstagios.vazaoTotalReal.toFixed(2)}}{[m³/min] Vazão Real Calculada da Máquina. Impacto: Ar total absoluto que a turbina ainda obteve coragem matemática para impelir após sentir todo o pesadelo do atrito.}}{\\texttip{${n_primarios}}{[un] Divisões do Coletor Base. Impacto: O Air Cart quebra e distribui seu tufão de vento primeiramente pelas pernas principais grossas da plantadeira.}} = \\texttip{${redeDoisEstagios.vazaoPrimariaReal.toFixed(2)}}{[m³/min] Vazão Isolada por Duto Principal. Impacto: É o pulmão exclusivo que abastecerá de vento a base estática de uma única Torre de Distribuição (cogumelo divisório) lá na frente.} \\text{ m}^3\\text{/min} $$
+                            $$ \\require{action} \\texttip{v_{prim}}{[m/s] Velocidade Primária. Definição: Velocidade média do ar no duto primário.} = \\frac{\\texttip{${redeDoisEstagios.vazaoPrimariaReal.toFixed(2)}}{A vazão isolada e dedicada apenas ao cano grosso no trecho do chassi.} / \\texttip{60}{Fator conversor de Tempo. Reduz métrica pesada de minutos para segundos SI.}}{\\texttip{${areaPrimaria.toFixed(4)}}{Seção Transversal Circular extraída no Passo 4 (m²).}} = \\texttip{${redeDoisEstagios.velocidadePrimaria.toFixed(2)}}{[m/s] Velocidade Bruta Primária. Impacto: Força frontal maciça com que o ar captura a semente que acabou de chover da boca do dosador elétrico em direção à torre.} \\text{ m/s} $$
+                            $$ \\require{action} \\texttip{SLR_{prim}}{[Adim.] Razão de Carregamento (Duto). Definição: Relação mássica Insumo/Ar no trecho primário.} = \\frac{\\texttip{${m_s_kgh_primario.toFixed(2)}}{[kg/h] Massa Individual da Tubulação. Impacto: O peso acumulado das sementes daquele cluster.}}{\\texttip{${redeDoisEstagios.massaArPrimariaKgh.toFixed(2)}}{[kg/h] Massa Transportadora Gasosa. Impacto: O peso etéreo do ar que forma o colchão fluidizado suspensor das partículas densas de adubo.}} = \\texttip{${redeDoisEstagios.slrPrimario.toFixed(2)}}{[Adim.] Fator SLR do Trecho 1. Impacto: Razão Sólido/Gás. Limiar superior a 5 aproxima o maquinário rural a zonas perigosas de estrangulamento coloidal intermitente e pulsações violentas nas torres.} $$
+                        </div>
+                        <div class="memorial-item yellow">
+                            <strong title="Perda distribuída por atrito ao longo do duto primário.">
+                                <a href="https://www.engineeringtoolbox.com/darcy-weisbach-equation-d_646.html" target="_blank" style="color: inherit; text-decoration: underline;">6. Perda no Duto Primário (Darcy-Weisbach)</a>
+                            </strong><br>
+                            <p style="margin: 10px 0 5px 0; font-size: 0.9em;">Perda distribuída com correção simplificada para sólido em suspensão:</p>
+                            $$ \\require{action} \\texttip{\\Delta P_{prim}}{[Pa] Perda Distribuída Primária. Definição: Queda de pressão por atrito na extensão do tubo primário.} = \\texttip{${fator_atrito.toFixed(3)}}{[Adim.] Atrito Friccional Darcy-Weisbach (Lambda). Impacto: Tubulações flexíveis sanfonadas raspam e frenam severamente o ar (fator sobe). Tubos PVC ou PU liso espelhado conservam imensamente a energia cinética (fator cai).} \\cdot \\frac{\\texttip{${L_primario_m.toFixed(2)}}{[m] Comprimento Físico Linear da Tubulação Primária do chassi do Air Cart. Impacto: Custo friccional quilométrico ao escoamento.}}{\\texttip{${D_primario_m.toFixed(4)}}{[m] Diâmetro Base. Impacto: Quanto mais grosso e espaçoso o túnel flexível, menos arrasto nas margens o vento sentirá.}} \\cdot \\frac{\\texttip{${rho_a.toFixed(2)}}{[kg/m³] Densidade Termodinâmica (Tensão superficial do gás nas mangueiras flexíveis do trator).} \\cdot \\texttip{${redeDoisEstagios.velocidadePrimaria.toFixed(2)}^2}{A quadratura caótica da velocidade de vento da linha grossa punindo impiedosamente a turbina se os diâmetros primários forem muito delgados e longos.}}{\\texttip{2}{Estabilizador algébrico da constante universal associada na pressão e energia cinética de empuxo dos fluidos industriais gasosos.}} \\cdot (1 + \\texttip{${redeDoisEstagios.slrPrimario.toFixed(2)}}{A somatória do arrasto pesado inerente e colisional da semente caindo pela extensão cilíndrica.}) $$
+                            $$ \\require{action} \\texttip{\\Delta P_{prim}}{[Pa] Perda Distribuída Primária. Definição: Queda de pressão por atrito na extensão do tubo primário.} = \\texttip{${redeDoisEstagios.deltaPPrimario.toFixed(0)}}{[Pa] Resistência Acumulada Primária Total. Impacto: Quantidade nítida de sucção magnética fantasma e atrito puro que se opõe passivamente à descarga exaustora originária do ventilador de hélice curva.} \\text{ Pa} $$
+                        </div>
+                        <div class="memorial-item yellow">
+                            <strong title="Perda localizada por divisão e mudança de direção na torre.">
+                                <a href="https://www.engineeringtoolbox.com/minor-loss-air-ducts-fittings-d_208.html" target="_blank" style="color: inherit; text-decoration: underline;">7. Perda Localizada da Torre</a>
+                            </strong><br>
+                            <p style="margin: 10px 0 5px 0; font-size: 0.9em;">Modelo de perda localizada com coeficiente K referido à velocidade no duto primário:</p>
+                            $$ \\require{action} \\texttip{\\Delta P_{torre}}{[Pa] Perda Localizada (Torre). Definição: Dissipação de energia cinética por turbulência no cogumelo divisor.} = \\texttip{${k_torre.toFixed(2)}}{[Adim.] Coeficiente Arquitetônico Obstrutivo Local de Torre de Choque (Fator K). Impacto: Torre cogumelo chata, reta 90° e plana no teto explode a turbulência (K altíssimo; ex: 1,8); Torre de ogiva cônica pontiaguda lisa acalma o ar com desvios em lâminas suaves (K minúsculo; ex: 0,3).} \\cdot \\frac{\\texttip{${rho_a.toFixed(2)}}{Densidade natural do balanço.} \\cdot \\texttip{${redeDoisEstagios.velocidadePrimaria.toFixed(2)}^2}{[m/s] Fatoração caótica violenta explodindo nas costelas oblíquas metálicas das aletas curvas na redoma da torre.}}{\\texttip{2}{Estabilizador de conversão fluidodinâmica termocinética de pressão.}} \\cdot (1 + \\texttip{${redeDoisEstagios.slrPrimario.toFixed(2)}}{Projeção de peso da poeira da braquiária ricocheteando brutalmente e estancando no cogumelo difusor mecânico superior.}) $$
+                            $$ \\require{action} \\texttip{\\Delta P_{torre}}{[Pa] Perda Localizada (Torre). Definição: Dissipação de energia cinética por turbulência no cogumelo divisor.} = \\texttip{${redeDoisEstagios.deltaPTorre.toFixed(0)}}{[Pa] Sangria Plena de Choque da Transição da Torre Distributiva de Escoamento. Impacto: Indica se o domo da torre virou um gargalo inaceitável. O alvo clássico de engenheiros de design industrial em arado é manter esta métrica microscópica perante o todo.} \\text{ Pa} $$
+                        </div>
+                        <div class="memorial-item green">
+                            <strong title="Continuidade nas linhas menores após a torre.">
+                                <a href="https://openstax.org/books/college-physics-2e/pages/12-1-flow-rate-and-its-relation-to-velocity" target="_blank" style="color: inherit; text-decoration: underline;">8. Continuidade nas Linhas Secundárias</a>
+                            </strong><br>
+                            <p style="margin: 10px 0 5px 0; font-size: 0.9em;">A vazão real remanescente é dividida entre as linhas finais:</p>
+                            $$ \\require{action} \\texttip{A_{sec}}{[m²] Área Secundária. Definição: Área da seção transversal da mangueira fina.} = \\frac{\\pi \\cdot \\texttip{${D_m.toFixed(4)}^2}{Diâmetro fino engasgado da tubulação fina escorrendo arame liso para a extremidade terminal em milímetros.}}{\\texttip{4}{Divisor de planificação redonda da sessão retangular.}} = \\texttip{${areaSecundaria.toFixed(4)}}{[m²] Canal Secundário Minúsculo Transversal. Impacto: Tubagens muito curtas agudamente finalizam o afunilamento de Bernoulli para tentar recuperar velocidades moribundas após a torre.} \\text{ m}^2 $$
+                            $$ \\require{action} \\texttip{Q_{sec}}{[m³/min] Vazão por Linha. Definição: Quantidade de ar que passa por uma única mangueira secundária.} = \\frac{\\texttip{${redeDoisEstagios.vazaoTotalReal.toFixed(2)}}{Vazão Integral Atuante.}}{\\texttip{${n_linhas}}{[un] Fracionamento Micro-Segmentar Oblíquo Total da Semeadora de 60 linhas paralelas. Impacto: O pulverizador do exaustor mestre de injeção original.}} = \\texttip{${redeDoisEstagios.vazaoSecundariaReal.toFixed(2)}}{[m³/min] Vazão Tênue Marginal Injetada Diretamente. Impacto: Quantidade delicadíssima real enviada gota a gota para proteger do embuchamento as ponteiras finais plantadoras de braquiária do disco duplo cortador de solo profundo.} \\text{ m}^3\\text{/min} $$
+                            $$ \\require{action} \\texttip{v_{sec}}{[m/s] Velocidade Secundária. Definição: Velocidade final de arraste na mangueira. Essencial para evitar embuchamento.} = \\frac{\\texttip{${redeDoisEstagios.vazaoSecundariaReal.toFixed(2)}}{Vazão minuciosa remanescente fluida na mangueirinha.} / \\texttip{60}{Relatório conversional de desmembramento temporal.}}{\\texttip{${areaSecundaria.toFixed(4)}}{Aperto transversal geofísico limitador das condutas finais restritivas.}} = \\texttip{${redeDoisEstagios.velocidadeSecundaria.toFixed(2)}}{[m/s] CÚPULA DE VELOCIDADE CLÍNICA FINAL (ZONA DE SALTAÇÃO EXTREMA E FATAL PARA ENTUPIMENTO). Impacto: A sentinela mestra da mecânica plantadora! Abaixo de gloriosos 15 metros cravados oscilando e rangendo a mangueira o fluxo sucumbe, o grão despenca como pedras fúteis para a gravidade trágica trancando e engasgando o terminal difusor da plantadeira mortalmente!} \\text{ m/s} $$
+                            $$ \\require{action} \\texttip{SLR_{sec}}{[Adim.] Razão de Carregamento (Mangueira). Definição: Relação mássica Insumo/Ar na mangueira fina.} = \\frac{\\texttip{${m_s_kgh_linha.toFixed(2)}}{Massa micro pulverizada isolada individual finita pendular por roseta das cavidades rurais do cilindro dentado acrílico de cor opaca.}}{\\texttip{${redeDoisEstagios.massaArSecundariaKgh.toFixed(2)}}{Respiro massivo aerodinâmico escasso em filetes de vento terminal restrito encurvado. }} = \\texttip{${redeDoisEstagios.slrSecundario.toFixed(2)}}{[Adim.] Coeficiente Pulmonar Gaseificado Mássico Friccional Secundário Mestre e de Carregamento. Impacto: Mostra o peso desproporcional do granulado para uma tubagem final extremamente restritiva de poliuretano, denunciando imediatamente o limite teto fatal do afogamento de adubo intermitente por cansaço aerodinâmico estrutural.} $$
+                        </div>
+                        <div class="memorial-item yellow">
+                            <strong title="Perda distribuída nas linhas menores até o ponto de aplicação.">
+                                <a href="https://www.engineeringtoolbox.com/darcy-weisbach-equation-d_646.html" target="_blank" style="color: inherit; text-decoration: underline;">9. Perda nas Linhas Secundárias</a>
+                            </strong><br>
+                            <p style="margin: 10px 0 5px 0; font-size: 0.9em;">Perda distribuída no trecho final, já após a torre:</p>
+                            $$ \\require{action} \\texttip{\\Delta P_{sec}}{[Pa] Perda Distribuída Secundária. Definição: Queda de pressão por atrito na extensão da mangueira fina.} = \\texttip{${fator_atrito.toFixed(3)}}{Atrito da parede do caninho flexível terminal descendo a máquina espinhosa.} \\cdot \\frac{\\texttip{${L_tubo_m.toFixed(2)}}{[m] Extensão Tormentosa Secundária Final da Mangueirinha fina enrodilhada contornando suspensões pantográficas pesadas das bandejas basculantes.}}{\\texttip{${D_m.toFixed(4)}}{Diâmetro asfixiante exato final minúsculo engolindo ar desesperadamente.}} \\cdot \\frac{\\texttip{${rho_a.toFixed(2)}}{Pesagem do vapor atmosférico.} \\cdot \\texttip{${redeDoisEstagios.velocidadeSecundaria.toFixed(2)}^2}{Impulso quadrado agressivo abrasivo rasgando o caninho internamente colidindo contra pedras minerais duras pontiagudas NPK 4-14-8 e polímeros corrugados plásticos da linha fina.}}{\\texttip{2}{Restritor Cinético Universal Base}} \\cdot (1 + \\texttip{${redeDoisEstagios.slrSecundario.toFixed(2)}}{Carga Sólida de embuchamento final na descida ao adubador pantográfico pendular oscilante.}) $$
+                            $$ \\require{action} \\texttip{\\Delta P_{sec}}{[Pa] Perda Distribuída Secundária. Definição: Queda de pressão por atrito na extensão da mangueira fina.} = \\texttip{${redeDoisEstagios.deltaPSecundario.toFixed(0)}}{[Pa] Atrito Quilométrico Estancador Passivo Final de Tubulação Finíssima do Sistema Distributivo Pêndulo Oscilador Pantográfico Paralelogrâmico Traseiro da Plantadeira Maciça de 60 Linhas de Soja! Impacto: É a drenagem e derramamento de toda e qualquer energia pressional sobressalente da pobre turbina Punker antes do ar ir morrer em exaustão e decantar estéril no arado abrindo o leito espinhoso sulcado pela roseta desencontrada!} \\text{ Pa} $$
+                        </div>
+                        <div class="memorial-item red">
+                            <strong title="Acoplamento iterativo entre a curva da turbina e as perdas do sistema.">
+                                <a href="https://www.engineeringtoolbox.com/fan-performance-characteristics-d_48.html" target="_blank" style="color: inherit; text-decoration: underline;">10. Fechamento da Rede e Comparação com Divisão Direta</a>
+                            </strong><br>
+                            <p style="margin: 10px 0 5px 0; font-size: 0.9em;">O modelo recalcula a vazão até convergir entre a contrapressão total e a capacidade do soprador:</p>
+                            $$ \\require{action} \\texttip{\\Delta P_{total}}{[Pa] Perda de Carga Total. Definição: Contrapressão macro do sistema resistindo ao fluxo da turbina.} = \\texttip{${redeDoisEstagios.deltaPPrimario.toFixed(0)}}{Pressão Friccional Morta no Custo da Transferência de Carga Bruta Frontal Pela Parede de Borracha ou Silicone Grossa Liso} + \\texttip{${redeDoisEstagios.deltaPTorre.toFixed(0)}}{Soco Impactante Dinâmico Caótico Morto Fracassado no Teto do Chapéu Divisor ou Venturi Salvação} + \\texttip{${redeDoisEstagios.deltaPSecundario.toFixed(0)}}{Arrasto Espiral Espremido Serpenteante Estiolante das Linhas Longilíneas Sibilantes Mangueiradas} = \\texttip{${redeDoisEstagios.deltaPTotal.toFixed(0)}}{[Pa] BARREIRA RESISTIVA INTEGRAL DO SISTEMA. Impacto: A força cega invisível e brutal do vento engarrafado dentro da couraça de canos ocos colidindo empedernida batendo de frente contra o olho do furacão centrífugo metálico na boca exaustora da turbina Fprime de ferro trancando e ensurdecendo a mesma violentamente em desespero restritivo aerodinâmico!} \\text{ Pa} $$
+                            $$ \\require{action} \\texttip{f}{[Adim.] Fator de Acoplamento. Definição: Fator de redução de vazão da turbina devido à contrapressão da rede.} = \\texttip{1}{Rendimento Livre Máximo Fantasia sem atrito.} - \\frac{\\texttip{${redeDoisEstagios.deltaPTotal.toFixed(0)}}{Frenagem e freio resistivo duro de trancar o vento.}}{\\texttip{${pressao_turbina_max.toFixed(0)}}{[Pa] Pressão Fechada Absoluta Trancada (Ponto Morto Estol). Impacto: A turbina uivará em 2900 RPM e nenhuma fagulha de ar escapará das suas beiradas emparedadas!}} = \\texttip{${redeDoisEstagios.fatorVazao.toFixed(3)}}{[Adim.] Ponto Cruzado de Equilíbrio Tênue Resultante de Escoamento Fluidodinâmico da Curva Plena Original Fabril de Desempenho. Impacto: A fatia matemática final gloriosa que escapou de toda a morte e restrição do sistema físico da tubagem!} $$
+                            $$ \\require{action} \\texttip{Q_{total,real}}{[m³/min] Vazão Total Real. Definição: Volume de ar real que a turbina consegue empurrar na rede.} = \\texttip{${redeDoisEstagios.fatorVazao.toFixed(3)}}{Eficiência Final Acoplada Relativa Resistida} \\cdot \\texttip{${Q_turbina_m3min.toFixed(2)}}{Vazão Virgem Absoluta de Laboratório Ideal sem canos no vento frio limpo e silencioso germânico testado na Punker.} = \\texttip{${redeDoisEstagios.vazaoTotalReal.toFixed(2)}}{[m³/min] VAZÃO MAGISTRAL DE TRABALHO EMPÍRICA REAL E VERDADEIRA! Impacto: É este pulmão matemático inegável retroativo e exato que permitiu trancar o balanço e resolver em frações as velocidades milimétricas que manterão as toneladas de adubo e soja de 60 covas perfeitamente suspensas como mágica flutuante e assopradas contra o abismo do leito arado no solo quente da fazenda!} \\text{ m}^3\\text{/min} $$
+                            <hr style="border: 0; border-top: 1px dashed rgba(255,255,255,0.05); margin: 10px 0;">
+                            <p style="margin: 5px 0; font-size: 0.9em;">Comparação com a divisão direta em ${n_linhas} linhas pequenas:</p>
+                            $$ \\require{action} \\texttip{\\Delta P_{direto}}{[Pa] Perda Direta. Definição: Perda hipotética caso a turbina soprasse direto para linhas pequenas sem torre divisora.} = \\texttip{${redeDireta.deltaPLinha.toFixed(0)}}{[Pa] Pressão Fantasia Direta. Impacto: A morte súbita se você não comprasse a torre para centralizar o ar.} \\text{ Pa}, \\quad \\texttip{v_{direto}}{[m/s] Velocidade Direta. Definição: Velocidade final hipotética no esquema de divisão direta.} = \\texttip{${redeDireta.velocidadeLinha.toFixed(2)}}{[m/s] Fuga de Ar Direto Simples Direta Simplista. Impacto: Como o vento dispararia na falha teórica simplória linear basilar de caninhos saindo direto do Air Cart sem inteligência dividida volumétrica.} \\text{ m/s} $$
+                            $$ \\text{Ganho de pressão} = \\texttip{${ganhoPressaoPa.toFixed(0)}}{[Pa] Alívio Bruto Salvífico. Impacto: Saldo termodinâmico vitorioso de Pascal provando que as duas tubagens cruzadas por torre são imensamente mais limpas (fator de ganho positivo em Pascal) ou um erro miserável (fator perdedor afogando e trancando o equipamento de fábrica e afogando o ar).} \\text{ Pa}, \\quad \\text{Ganho de velocidade} = \\texttip{${ganhoVelocidadeMs.toFixed(2)}}{[m/s] O Salto Salvação Físico do Entupimento Brutal de Decantação Crítica Final. Impacto: Os benditos metros por segundo de brisa extra ganhos de presente apenas pela mudança espetacular macro-geométrica do engenheiro!} \\text{ m/s} $$
+                        </div>
+                    `;
+
+                } else {
+                    // MODO 2: CINEMÁTICA DE ESPALHAMENTO - COM MATTER.JS
+                    dom.distGrpModo1.classList.add('hidden');
+                    dom.distGrpModo2.classList.remove('hidden');
+                    
+                    // Mostrar canvas e iniciar animação Matter.js
+                    canvasDist.style.display = 'block';
+                    ativarAnimacaoDosador = false; 
+                    ativarAnimacaoDist = true;
+                    redimensionarCanvasDist();
+                    
+                    // Inicializar Motor de Física
+                    const v0_queda = parseFloat(dom.distV0.value) || 12;
+                    const theta_angle = parseFloat(dom.distAngulo.value) || 30;
+                    const h_altura = parseFloat(dom.distAltura.value) || 0.8;
+                    const e_coef = parseFloat(dom.distCr.value) || 0.6;
+                    
+                    inicializarFisicaDistribuidor(theta_angle, v0_queda, h_altura, e_coef);
+
+                    const largura_chapa_mm = parseFloat(dom.distLargChapa.value) || 100; // Usado APENAS visualmente no canvas
+                    const diam_tubo_mm = parseFloat(dom.distDiamTubo2.value) || 40; 
+                    const raio_mm = parseFloat(dom.distRaio.value) || 100;    
+                    const v0_vertical = parseFloat(dom.distV0.value) || 12;  
+                    const theta_deg = parseFloat(dom.distAngulo.value) || 30;
+                    const h = parseFloat(dom.distAltura.value) || 0.8;        
+                    const e_rest = parseFloat(dom.distCr.value) || 0.6;       
+                    const g = GRAVIDADE_PADRAO;
+                    
+                    const diam_tubo_m = diam_tubo_mm / 1000;
+                    const raio_m = raio_mm / 1000;
+
+                    // FÍSICA DE REFLEXÃO ESPECULAR (FRONTAL XY)
+                    const theta_rad = theta_deg * (Math.PI / 180);
+                    const v_refl = v0_vertical * e_rest;
+                    const angulo_saida_rad = 2 * theta_rad - (Math.PI / 2);
+                    
+                    const v_x = v_refl * Math.cos(angulo_saida_rad); 
+                    const v_y = v_refl * Math.sin(angulo_saida_rad); 
+
+                    // CINEMÁTICA DE QUEDA DA ALTURA h (Bhaskara)
+                    const discriminante = Math.pow(v_y, 2) + 2 * g * h;
+                    const t_queda = (v_y + Math.sqrt(discriminante)) / g;
+                    const alcance_abs = Math.abs(v_x * t_queda);
+
+                    // CÁLCULO FÍSICO DO ESPALHAMENTO TRANSVERSAL (EIXO Z - LATERAL)
+                    // A largura física da chapa não afeta a matemática, exceto estruturalmente.
+                    // O desvio lateral máximo é ditado APENAS pelo diâmetro do tubo.
+                    const limite_seno = Math.min((diam_tubo_m / 2) / raio_m, 1);
+                    const gama_max_rad = Math.asin(limite_seno);
+                    const gama_max_deg = (gama_max_rad * 180) / Math.PI;
+                    
+                    const vz_max = v_refl * Math.sin(gama_max_rad);
+                    const largura_faixa = (2 * vz_max * t_queda) + diam_tubo_m; 
+                    const angulo_saida_deg = (angulo_saida_rad * 180) / Math.PI;
+
+                    let statusCinematica = "";
+                    if (alcance_abs < 0.02) {
+                        statusCinematica = `<div class='alert alert-warning'><strong>⚠️ ESPALHAMENTO VERTICAL (QUEDA LIVRE)</strong><br><br>A inclinação da chapa (${theta_deg}°) está desviando a semente quase completamente para baixo (ângulo de saída: ${angulo_saida_deg.toFixed(1)}°). O material formará uma fileira grossa e concentrada no sulco.</div>`;
+                    } else if (Math.abs(angulo_saida_deg) > 45) {
+                        statusCinematica = `<div class='alert alert-warning'><strong>⚠️ DEFLEXÃO EXCESSIVA PARA CIMA</strong><br><br>O ângulo do defletor (${theta_deg}°) está lançando a semente para cima (ângulo: ${angulo_saida_deg.toFixed(1)}°). Alto risco de deriva pelo vento do ambiente externo.</div>`;
+                    } else {
+                        statusCinematica = `<div class='alert alert-success'><strong>✅ DISTRIBUIÇÃO PARABÓLICA ATIVA</strong><br><br>Semente lançada frontalmente por <strong>${alcance_abs.toFixed(2)} m</strong> e espalhada lateralmente por causa do arco em uma faixa de <strong>${largura_faixa.toFixed(2)} m</strong>. Boa uniformidade.</div>`;
+                    }
+
+                    htmlEsquerdo = `
+                        <h3 style="color: #fff; margin-bottom: 15px;">Mecânica do Impacto (Defletor)</h3>
+                        <div class="metrics-row">
+                            <div class="metric-card" title="Velocidade vertical da semente ao atingir o defletor (após sair do tubo pneumático)."><div class="metric-label">Velocidade de Queda (V₀)</div><div class="metric-value">${v0_vertical.toFixed(1)} m/s</div></div>
+                            <div class="metric-card" title="Velocidade da semente imediatamente após bater na chapa, descontada a perda pelo coeficiente de restituição."><div class="metric-label">Velocidade Refletida (Vᵣ)</div><div class="metric-value">${v_refl.toFixed(1)} m/s</div></div>
+                        </div>
+                        <h3 style="color: #fff; margin-bottom: 15px;">Análise Vetorial</h3>
+                        <div class="metrics-row">
+                            <div class="metric-card" title="Ângulo em relação à horizontal com que a semente é lançada pelo centro da chapa."><div class="metric-label">Ângulo Saída Frontal</div><div class="metric-value">${angulo_saida_deg.toFixed(1)}°</div></div>
+                            <div class="metric-card" title="Desvio lateral tangencial na borda da chapa gerado pelo Raio de Curvatura de ${raio_mm}mm."><div class="metric-label">Ângulo Curva Máx. (&gamma;)</div><div class="metric-value">${gama_max_deg.toFixed(1)}°</div></div>
+                        </div>
+                        <h3 style="color: #fff; margin-bottom: 15px;">Projeção Cinemática no Solo</h3>
+                        <div class="metrics-row">
+                            <div class="metric-card" title="Tempo total de voo da semente."><div class="metric-label">Tempo de Queda</div><div class="metric-value">${t_queda.toFixed(3)} s</div></div>
+                            <div class="metric-card" title="Alcance longitudinal máximo gerado na linha da máquina (Eixo X)."><div class="metric-label">Alcance Longitudinal</div><div class="metric-value">${alcance_abs.toFixed(2)} m</div></div>
+                        </div>
+                        <div class="metrics-row">
+                            <div class="metric-card" style="grid-column: span 2;" title="A abertura total da faixa no solo provocada pelo espalhamento tangencial (Eixo Z)."><div class="metric-label">Largura da Faixa Distribuída (Espalhamento Z)</div><div class="metric-value">${largura_faixa.toFixed(2)} m</div></div>
+                        </div>
+                        <h3 style="color: #fff; margin-bottom: 15px;">Perfil de Distribuição</h3>
+                        ${statusCinematica}
+                    `;
+
+                    htmlDireito = `
+                        <h3 style="color: #fff; margin-top: 0;">📚 Memorial da Cinemática</h3>
+                        <div style="margin-bottom: 15px; font-size: 0.9em; color: var(--text-muted);">
+                            <strong>Física de Projéteis Assumida</strong><br>
+                            • Tubo de descida estritamente vertical.<br>
+                            • Inclinação Frontal do Defletor: ${theta_deg}°<br>
+                            • Diâmetro do Tubo (D): ${diam_tubo_mm} mm<br>
+                            • Raio de Curvatura Transversal (R): ${raio_mm} mm
+                        </div>
+                        
+                        <div class="memorial-item">
+                            <strong title="Coeficiente de restituição e elasticidade. Clique para referência.">
+                                <a href="https://scienceworld.wolfram.com/physics/CoefficientofRestitution.html" target="_blank" style="color: inherit; text-decoration: underline;">1. Reflexão no Defletor Frontal (XY) 🔗</a>
+                            </strong><br>
+                            <p style="margin: 10px 0 5px 0; font-size: 0.9em;">Desvio baseado na lei da reflexão especular:</p>
+                            $$ \\require{action} \\texttip{\\alpha}{[Graus] Ângulo de Saída. Definição: Ângulo do vetor de velocidade da semente após bater no defletor. Importância: Define a parábola de voo no eixo longitudinal.} = 2 \\cdot \\texttip{\\theta}{[Graus] Ângulo da Chapa. Definição: Inclinação do defletor. Importância: Regula se a semente vai mais para frente ou mais para baixo.} - 90^\\circ $$
+                            $$ \\alpha = 2 \\cdot ${theta_deg}^\\circ - 90^\\circ $$
+                            $$ \\alpha = ${angulo_saida_deg.toFixed(1)}^\\circ $$
+                            <hr style="border: 0; border-top: 1px dashed rgba(255,255,255,0.05); margin: 10px 0;">
+                            <p style="margin: 5px 0; font-size: 0.9em;">Velocidade de saída descontando a perda por restituição mecânica:</p>
+                            $$ \\require{action} \\texttip{V_r}{[m/s] Vel. Pós-Choque. Definição: Velocidade resultante após impacto. Importância: Vetor principal que será decomposto nos 3 eixos (X, Y, Z).} = \\texttip{V_0}{[m/s] Vel. Queda. Definição: Velocidade com que a semente desce do tubo pneumático. Importância: Dita a energia cinética inicial da colisão.} \\cdot \\texttip{e}{[Adim.] Restituição. Definição: Coeficiente elástico do impacto. Importância: Aço puro repica mais (0.7); borracha amortece e espalha menos (0.4).} $$
+                            $$ V_r = ${v0_vertical.toFixed(1)} \\cdot ${e_rest.toFixed(2)} $$
+                            $$ V_r = ${v_refl.toFixed(2)} \\text{ m/s} $$
+                        </div>
+
+                        <div class="memorial-item yellow">
+                            <strong title="Equações do movimento de projéteis com aceleração gravitacional constante. Clique para referência.">
+                                <a href="https://openstax.org/books/college-physics-2e/pages/3-4-projectile-motion" target="_blank" style="color: inherit; text-decoration: underline;">2. Equação Horária da Posição Vertical 🔗</a>
+                            </strong><br>
+                            <p style="margin: 10px 0 5px 0; font-size: 0.9em;">Componente vertical inicial da velocidade refletida:</p>
+                            $$ \\require{action} \\texttip{V_y}{[m/s] Vel. Y Inicial. Definição: Vetor vertical da semente. Importância: Impacta o tempo de voo. Se positivo, semente sobe; se negativo, desce rápido.} = \\texttip{V_r}{Vel. Refletida} \\cdot \\sin(\\alpha) $$
+                            $$ V_y = ${v_refl.toFixed(2)} \\cdot \\sin(${angulo_saida_deg.toFixed(1)}^\\circ) $$
+                            $$ V_y = ${v_y.toFixed(2)} \\text{ m/s} $$
+                            <hr style="border: 0; border-top: 1px dashed rgba(255,255,255,0.05); margin: 10px 0;">
+                            <p style="margin: 5px 0; font-size: 0.9em;">Tempo de voo obtido isolando a raiz real da função horária da posição (y = 0):</p>
+                            $$ \\require{action} \\texttip{t}{[s] Tempo de Voo. Definição: Duração da queda livre após o defletor. Importância: Quanto mais tempo no ar, maior o espalhamento e o risco de deriva pelo vento.} = \\frac{\\texttip{V_y}{Vel. Vertical} + \\sqrt{\\texttip{V_y^2}{Vel. Vertical Quadrada} + 2 \\cdot \\texttip{g}{[m/s²] Gravidade padrão. Definição: aceleração convencional de 9,80665 m/s². Unidade: metro por segundo ao quadrado. Importância: puxa a semente para o solo; se g aumentar, o tempo de voo diminui e a faixa reduz; se g diminuir, a semente fica mais tempo no ar. Exemplo: maior g reduz D_x e D_z.} \\cdot \\texttip{h}{[m] Altura da Chapa. Definição: Distância do defletor ao solo. Importância: Chapas muito altas sofrem deriva severa de vento externo.}}}{\\texttip{g}{[m/s²] Gravidade padrão usada no cálculo.}} $$
+                            $$ t = \\frac{(${v_y.toFixed(2)}) + \\sqrt{(${v_y.toFixed(2)})^2 + 2 \\cdot ${g.toFixed(5)} \\cdot ${h.toFixed(2)}}}{${g.toFixed(5)}} $$
+                            $$ t = ${t_queda.toFixed(3)} \\text{ s} $$
+                        </div>
+
+                        <div class="memorial-item green">
+                            <strong title="Cinemática bidimensional de projéteis. Clique para referência.">
+                                <a href="https://openstax.org/books/college-physics-2e/pages/3-4-projectile-motion" target="_blank" style="color: inherit; text-decoration: underline;">3. Alcance Longitudinal (Eixo X) 🔗</a>
+                            </strong><br>
+                            <p style="margin: 10px 0 5px 0; font-size: 0.9em;">Componente horizontal constante da velocidade projetada (MRU):</p>
+                            $$ \\require{action} \\texttip{V_x}{[m/s] Vel. X. Definição: Deslocamento na linha do trator. Importância: Compõe o alcance longitudinal.} = \\texttip{V_r}{Vel. Refletida} \\cdot \\cos(\\alpha) $$
+                            $$ V_x = ${v_refl.toFixed(2)} \\cdot \\cos(${angulo_saida_deg.toFixed(1)}^\\circ) $$
+                            $$ V_x = ${v_x.toFixed(2)} \\text{ m/s} $$
+                            <hr style="border: 0; border-top: 1px dashed rgba(255,255,255,0.05); margin: 10px 0;">
+                            <p style="margin: 5px 0; font-size: 0.9em;">Alcance máximo frontal percorrido no solo:</p>
+                            $$ \\require{action} \\texttip{D_x}{[m] Alcance Longitudinal. Definição: O quanto a semente vai para frente antes de cair. Importância: Atrasos longos exigem ajuste do offset no GPS do trator para não plantar fora do alvo.} = \\texttip{V_x}{Vel. Horizontal} \\cdot \\texttip{t}{Tempo de Voo} $$
+                            $$ D_x = ${v_x.toFixed(2)} \\cdot ${t_queda.toFixed(3)} $$
+                            $$ D_x = ${alcance_abs.toFixed(2)} \\text{ m} $$
+                        </div>
+
+                        <div class="memorial-item red">
+                            <strong title="Geometria de raio de curvatura aplicada à chapa curva. Clique para referência.">
+                                <a href="https://mathworld.wolfram.com/RadiusofCurvature.html" target="_blank" style="color: inherit; text-decoration: underline;">4. Espalhamento Transversal Geométrico (Eixo Z) 🔗</a>
+                            </strong><br>
+                            <p style="margin: 10px 0 5px 0; font-size: 0.9em;">Ângulo tangencial máximo de escape ditado pelas bordas do duto de ar:</p>
+                            $$ \\require{action} \\texttip{\\gamma}{[Graus] Ângulo Tangencial. Definição: Ângulo de fuga na borda da chapa curva. Importância: Dita o poder de esparramar a semente nos lados do sulco.} = \\arcsin \\left( \\frac{\\texttip{D_{tubo}/2}{[mm] Diâmetro Tubo. Definição: Abertura por onde a semente cai. Importância: Se o tubo é largo, a semente bate na extremidade curva do defletor e espalha mais.}}{\\texttip{R}{[mm] Raio de Curvatura. Definição: Grau de dobra lateral da chapa defletora. Importância: Raios fechados (ex: 80mm) geram altíssimo espalhamento lateral.}} \\right) $$
+                            $$ \\gamma = \\arcsin \\left( \\frac{${diam_tubo_mm}/2}{${raio_mm}} \\right) $$
+                            $$ \\gamma = ${gama_max_deg.toFixed(1)}^\\circ $$
+                            <hr style="border: 0; border-top: 1px dashed rgba(255,255,255,0.05); margin: 10px 0;">
+                            <p style="margin: 5px 0; font-size: 0.9em;">Componente de velocidade máxima lateral gerada no repique:</p>
+                            $$ \\require{action} \\texttip{V_z}{[m/s] Vel. Z. Definição: Vetor de velocidade transversal. Importância: Força com que a semente se afasta do centro da linha.} = \\texttip{V_r}{Velocidade Refletida} \\cdot \\sin(\\gamma) $$
+                            $$ V_z = ${v_refl.toFixed(2)} \\cdot \\sin(${gama_max_deg.toFixed(1)}^\\circ) $$
+                            $$ V_z = ${vz_max.toFixed(2)} \\text{ m/s} $$
+                            <hr style="border: 0; border-top: 1px dashed rgba(255,255,255,0.05); margin: 10px 0;">
+                            <p style="margin: 5px 0; font-size: 0.9em; padding-left: 10px; border-left: 2px solid var(--error);"><strong>A Faixa Total:</strong><br>A largura depositada no solo (Dz) é a soma da abertura bilateral (2 &times; Vel. Lateral &times; Tempo) com a largura física do duto.</p>
+                            $$ \\require{action} \\texttip{D_z}{[m] Faixa de Distribuição. Definição: Largura total coberta pela sementeira. Importância: Precisa casar (match) perfeitamente com a distância entre as linhas de plantio para não haver falha ou sobreposição.} = \\texttip{D_{tubo}}{Largura Inicial da Cortina} + 2 \\cdot ( \\texttip{V_z}{Vel. Lateral Z} \\cdot \\texttip{t}{Tempo de Queda} ) $$
+                            $$ D_z = ${diam_tubo_m.toFixed(3)} + 2 \\cdot (${vz_max.toFixed(2)} \\cdot ${t_queda.toFixed(3)}) $$
+                            $$ D_z = ${largura_faixa.toFixed(2)} \\text{ m} $$
+                        </div>
+                    `;
+                }
+                dom.painelEsqDist.innerHTML = htmlEsquerdo;
+
+                if (mathJaxTimerDist) clearTimeout(mathJaxTimerDist);
+                mathJaxTimerDist = setTimeout(function() {
+                    const buffer = document.createElement('div');
+                    buffer.innerHTML = htmlDireito;
+                    if (window.MathJax && MathJax.typesetPromise) {
+                        if (!window.mjPromiseDist) window.mjPromiseDist = Promise.resolve();
+                        window.mjPromiseDist = window.mjPromiseDist.then(function() {
+                            return MathJax.typesetPromise([buffer]).then(function() {
+                                dom.painelDirDist.innerHTML = "";
+                                while (buffer.firstChild) dom.painelDirDist.appendChild(buffer.firstChild);
+                            });
+                        }).catch(err => console.log(err));
+                    } else {
+                        dom.painelDirDist.innerHTML = htmlDireito;
+                    }
+                }, 80);
+            }
+
+            // --- LÓGICA DO CANVAS GEOMÉTRICO ---
+            function desenharRolo(x, y, raio, angulo, isEsquerdo) {
+                ctx.save();
+                ctx.translate(x, y);
+                ctx.rotate(angulo);
+
+                ctx.beginPath();
+                ctx.arc(0, 0, raio, 0, Math.PI * 2);
+                ctx.fillStyle = '#21262d';
+                ctx.fill();
+                ctx.lineWidth = 3;
+                ctx.strokeStyle = '#8b949e';
+                ctx.stroke();
+
+                const numDentes = 14;
+                ctx.fillStyle = isStalled ? '#ff7b72' : '#58a6ff'; 
+                
+                for (let i = 0; i < numDentes; i++) {
+                    ctx.save();
+                    let teta = (i * Math.PI * 2) / numDentes;
+                    if (!isEsquerdo) teta += Math.PI / numDentes; 
+                    
+                    ctx.rotate(teta);
+                    ctx.beginPath();
+                    ctx.moveTo(raio - 2, -7);
+                    ctx.lineTo(raio + 14, 0); 
+                    ctx.lineTo(raio - 2, 7);
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.stroke();
+                    ctx.restore();
+                }
+
+                ctx.beginPath();
+                ctx.arc(0, 0, 15, 0, Math.PI * 2);
+                ctx.fillStyle = '#0d1117';
+                ctx.fill();
+                ctx.stroke();
+
+                ctx.fillStyle = '#8b949e';
+                ctx.fillRect(-3, -18, 6, 8);
+
+                ctx.restore();
+            }
+            
+            function renderizar() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                let velAngular = 0;
+                if (!isStalled && rotacaoFinalGlobal > 0) {
+                    // Cálculo da velocidade real (rad/frame)
+                    velAngular = (rotacaoFinalGlobal * 2 * Math.PI) / 3600; 
+                    
+                    // Trava anti-ilusão de ótica
+                    // Garante que o dente nunca pule mais que a metade da distância até o próximo,
+                    // impedindo que o cérebro enxergue a engrenagem girando para fora.
+                    if (velAngular > 0.15) velAngular = 0.15;
+                }
+
+                // FÍSICA CORRETA DE MOAGEM (Puxando o material para o centro e para baixo)
+                anguloEsquerdo += velAngular; // Rolo esquerdo gira no sentido Horário (+)
+                anguloDireito -= velAngular;  // Rolo direito gira no sentido Anti-horário (-)
+
+                const centroX = canvas.width / 2;
+                const centroY = canvas.height / 2;
+                
+                desenharRolo(centroX - 102, centroY, 90, anguloEsquerdo, true);
+                desenharRolo(centroX + 102, centroY, 90, anguloDireito, false);
+
+                let taxaAtual = parseFloat(dom.taxaRange.value);
+                if(isNaN(taxaAtual)) taxaAtual = 0;
+
+                if (!isStalled && velAngular > 0) {
+                    const particulasPorFrame = Math.ceil(taxaAtual / 15);
+                    for(let i=0; i < particulasPorFrame; i++) {
+                        particulas.push({
+                            x: centroX - 40 + Math.random() * 80,
+                            y: 0,
+                            raio: 2 + Math.random() * 4,
+                            velY: 2 + Math.random() * 3
+                        });
+                    }
+                }
+
+                ctx.fillStyle = '#d29922'; 
+                for (let i = particulas.length - 1; i >= 0; i--) {
+                    let p = particulas[i];
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.raio, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    if(!isStalled) {
+                        p.y += p.velY;
+                        if(p.y > centroY - 50) p.velY += 1.5; 
+                    }
+
+                    if (p.y > canvas.height) {
+                        particulas.splice(i, 1);
+                    }
+                }
+
+                requestAnimationFrame(renderizar);
+            }
+
+            // --- LÓGICA DE VISUALIZAÇÃO DO DISTRIBUIDOR (COM MATTER.JS) ---
+            function inicializarFisicaDistribuidor(theta_deg, v0, h_chapa, e_rest) {
+                // Verificar se Matter.js está pronto e disponível
+                if (!Engine || !World || !Bodies || !Body) {
+                    console.warn('Matter.js não disponível. Renderização manual será usada.');
+                    ativarAnimacaoDist = false;
+                    return false;
+                }
+                
+                try {
+                    // Destruir engine anterior se existir
+                    if (engineDist) {
+                        Engine.clear(engineDist);
+                    }
+                
+                // Criar novo engine
+                engineDist = Engine.create();
+                worldDist = engineDist.world;
+                worldDist.gravity.y = GRAVIDADE_PADRAO;
+                
+                particulasBodyDist = [];
+                tempoGeracaoSemente = 0;
+                
+                const centroX = canvasDist.width / 4;
+                const centroY = canvasDist.height * 0.7;
+                const theta_rad = theta_deg * (Math.PI / 180);
+                
+                // === CRIAR DEFLETOR (Body Estático Inclinado) ===
+                const comprimento = 200;
+                defletorBody = Bodies.rectangle(
+                    centroX, 
+                    centroY, 
+                    comprimento, 
+                    60, // ESPESSURA AUMENTADA PARA 60px para evitar tunelamento visual
+                    {
+                        isStatic: true,
+                        angle: theta_rad,
+                        friction: 0.5,
+                        restitution: e_rest,
+                        label: 'defletor',
+                        // Como a renderização customizada usa os vértices exatos, a chapa 
+                        // vai desenhar mais grossa no fundo, impedindo o fantasma.
+                    }
+                );
+                World.add(worldDist, defletorBody);
+                
+                // === CRIAR SOLO (Body Estático Horizontal no Fundo) ===
+                const soloY = centroY + (h_chapa * 120);
+                const solo = Bodies.rectangle(
+                    canvasDist.width / 2,
+                    soloY + 50,
+                    canvasDist.width * 2,
+                    100,
+                    {
+                        isStatic: true,
+                        friction: 1.0,
+                        restitution: 0.2,
+                        label: 'solo'
+                    }
+                );
+                World.add(worldDist, solo);
+                
+                // === CRIAR PAREDES LATERAIS E TETO (para não perder semente voando) ===
+                const paredeEsquerda = Bodies.rectangle(
+                    -50, 
+                    canvasDist.height / 2, 
+                    100, 
+                    canvasDist.height * 2,
+                    { isStatic: true }
+                );
+                const paredeDireita = Bodies.rectangle(
+                    canvasDist.width + 50, 
+                    canvasDist.height / 2, 
+                    100, 
+                    canvasDist.height * 2,
+                    { isStatic: true }
+                );
+                const teto = Bodies.rectangle(
+                    canvasDist.width / 2, 
+                    -500, 
+                    canvasDist.width * 2, 
+                    100,
+                    { isStatic: true }
+                );
+                World.add(worldDist, [paredeEsquerda, paredeDireita, teto]);
+                
+                ativarAnimacaoDist = true;  // Ativar renderização
+                console.log('Física do Distribuidor inicializada com Proteção de Tunelamento!');
+                return true;
+                } catch(err) {
+                    console.error('Erro ao inicializar física:', err);
+                    return false;
+                }
+            }
+
+            function criarSementeDistribuidor(v0, theta_deg) {
+                const centroX = canvasDist.width / 4;
+                const centroY = canvasDist.height * 0.7;
+                
+                // A semente tem liberdade de cair em qualquer parte "vazada" do tubo.
+                // Na nossa escala visual, 1 pixel = 1 milímetro. Fica perfeito.
+                const diam_tubo_mm = parseFloat(dom.distDiamTubo2.value) || 40;
+                
+                // Espalhamento em X (Frontal)
+                const x = centroX + (Math.random() - 0.5) * diam_tubo_mm; 
+                const y = centroY - 120;
+                
+                const semente = Bodies.circle(x, y, 5, {
+                    friction: 0.05, 
+                    frictionAir: 0.01, 
+                    restitution: 0.6,  
+                    density: 0.05, 
+                    slop: 0.05,
+                    label: 'semente'
+                });
+                
+                Body.setVelocity(semente, { x: 0, y: v0 * 0.8 }); 
+                World.add(worldDist, semente);
+                
+                particulasBodyDist.push({
+                    body: semente,
+                    raio: 5,
+                    // Espalhamento em Z (Lateral): semente cai aleatoriamente pelo diâmetro do tubo
+                    z: (Math.random() - 0.5) * diam_tubo_mm, 
+                    vz: 0, 
+                    hit: false, 
+                    criado: Date.now()
+                });
+            }
+
+            function renderizarDosador() {
+                if (!ativarAnimacaoDosador) {
+                    requestAnimationFrame(renderizarDosador);
+                    return;
+                }
+                
+                ctxDist.clearRect(0, 0, canvasDist.width, canvasDist.height);
+                
+                const centroX = canvasDist.width / 2;
+                const centroY = canvasDist.height / 2 - 20;
+                const rpm = parseFloat(dom.distRpm?.value) || 45;
+                const velAr = parseFloat(dom.distVelar?.value) || 25;
+                
+                // Limite óptico (Efeito Estroboscópico)
+                let rpmVisual = rpm;
+                if (rpmVisual > 60) rpmVisual = 60;
+                let velAngular = (rpmVisual * 2 * Math.PI) / 3600;
+                anguloDosador += velAngular;
+                
+                // === TUBO DE AR (Inferior) ===
+                ctxDist.fillStyle = '#161b22';
+                ctxDist.fillRect(centroX - 200, centroY + 50, canvasDist.width, 50);
+                ctxDist.strokeStyle = '#30363d';
+                ctxDist.lineWidth = 2;
+                ctxDist.strokeRect(centroX - 200, centroY + 50, canvasDist.width, 50);
+                
+                // Efeito de vento dinâmico
+                ctxDist.fillStyle = 'rgba(88, 166, 255, 0.3)';
+                ctxDist.font = '16px monospace';
+                ctxDist.fillText('💨 Ar (' + velAr + ' m/s) ➔', centroX - 180, centroY + 80);
+
+                // === TREMONHA (Funil Superior) ===
+                ctxDist.fillStyle = 'rgba(88, 166, 255, 0.05)';
+                ctxDist.beginPath();
+                ctxDist.moveTo(centroX - 80, centroY - 120);
+                ctxDist.lineTo(centroX + 80, centroY - 120);
+                ctxDist.lineTo(centroX + 48, centroY);
+                ctxDist.lineTo(centroX - 48, centroY);
+                ctxDist.closePath();
+                ctxDist.fill();
+                ctxDist.strokeStyle = '#58a6ff';
+                ctxDist.lineWidth = 3;
+                ctxDist.stroke();
+                
+                // === GERAR SEMENTES ===
+                const volume = calcularVolumeRolo().volumeRoloMm3 || 150;
+                // Taxa visual proporcional à matemática da máquina
+                const taxaVisual = (volume * rpm) / 5000; 
+                const particulasPorFrame = Math.ceil(taxaVisual);
+                
+                if (rpm > 0) {
+                    for(let i = 0; i < particulasPorFrame; i++) {
+                        particulasDosador.push({
+                            x: centroX + (Math.random() - 0.5) * 100, // Nasce no topo largo do funil
+                            y: centroY - 110 + Math.random() * 20,
+                            raio: 3 + Math.random() * 2,
+                            velY: 1 + Math.random() * 2,
+                            velX: 0,
+                            estado: 'funil' // estados físicos: funil, rolo, tubo
+                        });
+                    }
+                }
+                
+                // === ATUALIZAR E DESENHAR PARTÍCULAS ===
+                ctxDist.fillStyle = '#3fb950'; // Coroa verde clássica de semente tratada
+                for (let i = particulasDosador.length - 1; i >= 0; i--) {
+                    let p = particulasDosador[i];
+                    ctxDist.beginPath();
+                    ctxDist.arc(p.x, p.y, p.raio, 0, Math.PI * 2);
+                    ctxDist.fill();
+                    
+                    if (p.estado === 'funil') {
+                        p.y += p.velY;
+                        // Afunilamento físico da chapa de metal
+                        if (p.y < centroY - 20) {
+                            if (p.x < centroX - 40) p.x += 1.5;
+                            if (p.x > centroX + 40) p.x -= 1.5;
+                        } else {
+                            // Semente encostou no rolo dosador
+                            p.estado = 'rolo';
+                        }
+                    } 
+                    else if (p.estado === 'rolo') {
+                        // Semente viaja na estria (sulco) e cai por gravidade na ponta
+                        p.y += (rpmVisual / 30);
+                        if (p.y > centroY + 45) {
+                            p.estado = 'tubo';
+                        }
+                    } 
+                    else if (p.estado === 'tubo') {
+                        p.y += p.velY;
+                        // Semente cai na tubulação pneumática
+                        if (p.y > centroY + 90) {
+                            p.y = centroY + 90 - Math.random() * 5; // Piso do tubo
+                            p.velX = (velAr * 0.3) + Math.random() * 3; // O arrasto carrega para a direita
+                        }
+                        p.x += p.velX;
+                    }
+                    
+                    // Limpar sementes que saíram da tela
+                    if (p.x > canvasDist.width || p.y > canvasDist.height) {
+                        particulasDosador.splice(i, 1);
+                    }
+                }
+
+                // === DESENHAR ROLO DOSADOR (Peça Azul Estriada) ===
+                ctxDist.save();
+                ctxDist.translate(centroX, centroY);
+                ctxDist.rotate(anguloDosador);
+                
+                // Corpo maciço do rolo azul
+                ctxDist.beginPath();
+                ctxDist.arc(0, 0, 45, 0, Math.PI * 2);
+                ctxDist.fillStyle = '#1f6feb'; // Azul idêntico à imagem de projeto
+                ctxDist.fill();
+                ctxDist.lineWidth = 2;
+                ctxDist.strokeStyle = '#58a6ff';
+                ctxDist.stroke();
+                
+                // Desenhar as estrias (recortes semi-circulares)
+                const numDentes = 12;
+                ctxDist.fillStyle = '#0d1117'; // Máscara vazada (mesma cor do fundo do Canvas)
+                for (let i = 0; i < numDentes; i++) {
+                    ctxDist.save();
+                    ctxDist.rotate((i * Math.PI * 2) / numDentes);
+                    ctxDist.beginPath();
+                    ctxDist.arc(45, 0, 12, 0, Math.PI * 2); 
+                    ctxDist.fill();
+                    ctxDist.restore();
+                }
+                
+                // Desenhar Eixo Central (Acoplamento Hexagonal)
+                ctxDist.beginPath();
+                for (let i=0; i<6; i++) {
+                    ctxDist.lineTo(10 * Math.cos(i * Math.PI/3), 10 * Math.sin(i * Math.PI/3));
+                }
+                ctxDist.closePath();
+                ctxDist.fillStyle = '#8b949e';
+                ctxDist.fill();
+                
+                ctxDist.restore();
+
+                requestAnimationFrame(renderizarDosador);
+            }
+
+            function renderizarDistribuidorMatterJS() {
+                if (!ativarAnimacaoDist) {
+                    requestAnimationFrame(renderizarDistribuidorMatterJS);
+                    return;
+                }
+                
+                try {
+                    // Verificar se Matter.js está disponível
+                    if (!engineDist || !Engine) {
+                        requestAnimationFrame(renderizarDistribuidorMatterJS);
+                        return;
+                    }
+
+                    // Atualizar física
+                    Engine.update(engineDist, 1000 / 60);
+                
+                // Limpar canvas
+                ctxDist.clearRect(0, 0, canvasDist.width, canvasDist.height);
+                
+                const meioTela = canvasDist.width / 2;
+
+                // Fundo com grid suave
+                ctxDist.strokeStyle = 'rgba(139, 148, 158, 0.1)';
+                ctxDist.lineWidth = 1;
+                for (let i = 0; i < canvasDist.width; i += 50) {
+                    ctxDist.beginPath();
+                    ctxDist.moveTo(i, 0);
+                    ctxDist.lineTo(i, canvasDist.height);
+                    ctxDist.stroke();
+                }
+
+                // Divisória Central
+                ctxDist.beginPath();
+                ctxDist.moveTo(meioTela, 0);
+                ctxDist.lineTo(meioTela, canvasDist.height);
+                ctxDist.strokeStyle = 'rgba(139, 148, 158, 0.4)';
+                ctxDist.lineWidth = 2;
+                ctxDist.setLineDash([5, 5]);
+                ctxDist.stroke();
+                ctxDist.setLineDash([]);
+
+                // Labels de Vista
+                ctxDist.fillStyle = '#c9d1d9';
+                ctxDist.font = 'bold 14px monospace';
+                ctxDist.fillText('VISTA FRONTAL (Corte XY)', 15, 25);
+                ctxDist.fillText('VISTA LATERAL (Espalhamento)', meioTela + 15, 25);
+                
+                const v0 = parseFloat(dom.distV0.value) || 12;
+                const theta_deg = parseFloat(dom.distAngulo.value) || 30;
+                const raio_mm = parseFloat(dom.distRaio.value) || 100;
+                const diam_tubo_mm = parseFloat(dom.distDiamTubo2.value) || 40; // CAPTURA O TUBO
+                const largura_chapa_mm = parseFloat(dom.distLargChapa.value) || 100; 
+                const h_chapa = parseFloat(dom.distAltura.value) || 0.8;
+                const e_rest = parseFloat(dom.distCr.value) || 0.6;
+                const centroY = canvasDist.height * 0.7;
+                const centroX = meioTela / 2; 
+                const centroXLateral = meioTela + (meioTela / 2); 
+                const soloY = centroY + (h_chapa * 120);
+                
+                // === DESENHAR TUBO DE ENTRADA (VISTA FRONTAL) ===
+                const raioTuboVisual = diam_tubo_mm / 2; // 1px = 1mm
+                ctxDist.fillStyle = '#30363d';
+                // Desenha o tubo como um retângulo (projeção ortogonal)
+                ctxDist.fillRect(centroX - raioTuboVisual, centroY - 120, diam_tubo_mm, 40);
+                ctxDist.strokeStyle = '#8b949e';
+                ctxDist.lineWidth = 2;
+                ctxDist.strokeRect(centroX - raioTuboVisual, centroY - 120, diam_tubo_mm, 40);
+                
+                // Linha de queda vertical do tubo (Frontal)
+                ctxDist.strokeStyle = '#8b949e';
+                ctxDist.lineWidth = 3;
+                ctxDist.setLineDash([3, 3]);
+                ctxDist.beginPath();
+                ctxDist.moveTo(centroX, centroY - 80); // Inicia exatamente na base do tubo
+                ctxDist.lineTo(centroX, centroY + 30);
+                ctxDist.stroke();
+                ctxDist.setLineDash([]);
+                ctxDist.fillStyle = '#8b949e';
+                ctxDist.font = '11px monospace';
+                ctxDist.fillText('TUBO', centroX - 15, centroY - 130);
+
+                // === DESENHAR TUBO DE ENTRADA (VISTA LATERAL) ===
+                ctxDist.fillStyle = '#30363d';
+                ctxDist.fillRect(centroXLateral - raioTuboVisual, centroY - 120, diam_tubo_mm, 40); 
+                ctxDist.strokeStyle = '#8b949e';
+                ctxDist.lineWidth = 2;
+                ctxDist.strokeRect(centroXLateral - raioTuboVisual, centroY - 120, diam_tubo_mm, 40);
+                ctxDist.fillStyle = '#8b949e';
+                ctxDist.font = '11px monospace';
+                ctxDist.fillText('TUBO', centroXLateral - 15, centroY - 130);
+                
+                // Gerar novas sementes periodicamente (limite aumentado para criar volume visual)
+                tempoGeracaoSemente++;
+                if (tempoGeracaoSemente > 6 && particulasBodyDist.length < 15) { 
+                    criarSementeDistribuidor(v0, theta_deg);
+                    tempoGeracaoSemente = 0;
+                }
+                
+                // === DESENHAR DEFLETOR (VISTA FRONTAL) ===
+                // Renderização volumétrica sólida do retângulo inclinado gerado pelo Matter.js
+                const defletorVertices = defletorBody.vertices;
+                
+                // Sombra projetada do corpo rígido
+                ctxDist.fillStyle = 'rgba(0, 0, 0, 0.3)';
+                ctxDist.beginPath();
+                ctxDist.moveTo(defletorVertices[0].x + 3, defletorVertices[0].y + 3);
+                for (let i = 1; i < defletorVertices.length; i++) {
+                    ctxDist.lineTo(defletorVertices[i].x + 3, defletorVertices[i].y + 3);
+                }
+                ctxDist.closePath();
+                ctxDist.fill();
+
+                // Desenho do corpo preenchido e bordas externas do bloco
+                ctxDist.fillStyle = 'rgba(255, 107, 91, 0.15)';
+                ctxDist.strokeStyle = '#ff6b5b';
+                ctxDist.lineWidth = 4;
+                ctxDist.lineJoin = 'round';
+                ctxDist.beginPath();
+                ctxDist.moveTo(defletorVertices[0].x, defletorVertices[0].y);
+                for (let i = 1; i < defletorVertices.length; i++) {
+                    ctxDist.lineTo(defletorVertices[i].x, defletorVertices[i].y);
+                }
+                ctxDist.closePath();
+                ctxDist.fill();
+                ctxDist.stroke();
+                
+                // Label ângulo (Frontal)
+                ctxDist.fillStyle = '#8b949e';
+                ctxDist.font = 'bold 13px monospace';
+                ctxDist.fillText(`${theta_deg}°`, centroX + 50, centroY - 35);
+
+                // === DESENHAR DEFLETOR (VISTA LATERAL) ===
+                // Renderização da chapa baseada na equação da "Flecha" (Sagitta) de um arco.
+                const theta_rad = theta_deg * (Math.PI / 180);
+                const larguraChapa_Vlat = largura_chapa_mm; // Largura visual responde à barra diretamente (1px = 1mm para simplificar)
+                const comprimentoFisico = 150; // Comprimento da chapa inclinada
+                const h_projetada = comprimentoFisico * Math.sin(theta_rad);
+                
+                // Cálculo visual da curvatura geométrica (Sagitta = R - sqrt(R^2 - (L/2)^2))
+                let curvatura = 0;
+                if (raio_mm > (larguraChapa_Vlat / 2)) {
+                    const sagitta_arco = raio_mm - Math.sqrt(Math.pow(raio_mm, 2) - Math.pow(larguraChapa_Vlat / 2, 2));
+                    curvatura = sagitta_arco * Math.cos(theta_rad); 
+                } else {
+                    // Impede o colapso visual se o usuário colocar R menor que L/2 (chapa vira um semi-círculo completo)
+                    curvatura = (larguraChapa_Vlat / 2) * Math.cos(theta_rad);
+                }
+                
+                ctxDist.fillStyle = 'rgba(255, 107, 91, 0.2)';
+                ctxDist.strokeStyle = '#ff6b5b';
+                ctxDist.lineWidth = 5;
+                ctxDist.lineJoin = 'round';
+                
+                ctxDist.beginPath();
+                // Curva do topo da chapa (Convexa, sobe em direção ao centro)
+                ctxDist.moveTo(centroXLateral - larguraChapa_Vlat / 2, centroY - h_projetada / 2 + curvatura);
+                ctxDist.quadraticCurveTo(centroXLateral, centroY - h_projetada / 2 - curvatura, centroXLateral + larguraChapa_Vlat / 2, centroY - h_projetada / 2 + curvatura);
+                
+                // Lateral direita da chapa
+                ctxDist.lineTo(centroXLateral + larguraChapa_Vlat / 2, centroY + h_projetada / 2 + curvatura);
+                
+                // Curva da base da chapa (Acompanha o perfil superior)
+                ctxDist.quadraticCurveTo(centroXLateral, centroY + h_projetada / 2 - curvatura, centroXLateral - larguraChapa_Vlat / 2, centroY + h_projetada / 2 + curvatura);
+                
+                ctxDist.closePath();
+                ctxDist.fill();
+                ctxDist.stroke();
+                
+                // === DESENHAR SEMENTES E FÍSICA LATERAL ===
+                for (let i = particulasBodyDist.length - 1; i >= 0; i--) {
+                    const p = particulasBodyDist[i];
+                    const body = p.body;
+                    
+                    if (body.position.y > centroY - 15 && body.velocity.y > 0 && !p.hit) {
+                        p.hit = true;
+                        
+                        // FÍSICA CORRIGIDA: A semente cai deslocada do centro puramente com base 
+                        // na sua posição dentro do Tubo (p.z). A LARGURA DA CHAPA NÃO INFLUENCIA.
+                        // Caso a semente caia FORA da largura estrutural da chapa, ela não é defletida:
+                        if (Math.abs(p.z) > largura_chapa_mm / 2) {
+                            p.vz = 0; // A semente não encosta na chapa, cai reto (vazamento)
+                        } else {
+                            // Bateu na chapa! Calculamos o desvio baseado na curvatura
+                            const posicaoQueda_mm = p.z; 
+                            const senoTangente = Math.max(-1, Math.min(posicaoQueda_mm / raio_mm, 1)); // Trava de segurança trigonométrica
+                            const angulo_lateral_rad = Math.asin(senoTangente); 
+                            
+                            const v_refl = v0 * e_rest;
+                            p.vz = v_refl * Math.sin(angulo_lateral_rad) + (Math.random() - 0.5) * 0.5;
+                        }
+                    }
+                    
+                    if (p.hit) {
+                        p.z += p.vz; // Propaga no tempo
+                    }
+
+                    // Remover sementes que caíram do solo ou escaparam muito pela lateral
+                    if (body.position.y > canvasDist.height + 100 || Math.abs(p.z) > 300) {
+                        World.remove(worldDist, body);
+                        particulasBodyDist.splice(i, 1);
+                        continue;
+                    }
+                    
+                    // --- RENDERIZAÇÃO: VISTA FRONTAL (XY) ---
+                    ctxDist.shadowColor = '#d29922';
+                    ctxDist.shadowBlur = 5;
+                    ctxDist.fillStyle = '#d29922';
+                    ctxDist.beginPath();
+                    ctxDist.arc(body.position.x, body.position.y, p.raio, 0, Math.PI * 2);
+                    ctxDist.fill();
+                    
+                    ctxDist.shadowColor = 'transparent';
+                    ctxDist.fillStyle = '#ffc107';
+                    ctxDist.beginPath();
+                    ctxDist.arc(body.position.x - 1, body.position.y - 1, p.raio * 0.4, 0, Math.PI * 2);
+                    ctxDist.fill();
+
+                    // --- RENDERIZAÇÃO: VISTA LATERAL (ZY) ---
+                    const z_screen = centroXLateral + p.z; 
+                    
+                    // Impede o desenho de vazar para a visão do quadro esquerdo
+                    if (z_screen > meioTela + 10 && z_screen < canvasDist.width - 10) {
+                        ctxDist.shadowColor = '#d29922';
+                        ctxDist.shadowBlur = 5;
+                        ctxDist.fillStyle = '#d29922';
+                        ctxDist.beginPath();
+                        ctxDist.arc(z_screen, body.position.y, p.raio, 0, Math.PI * 2);
+                        ctxDist.fill();
+                        
+                        ctxDist.shadowColor = 'transparent';
+                        ctxDist.fillStyle = '#ffc107';
+                        ctxDist.beginPath();
+                        ctxDist.arc(z_screen - 1, body.position.y - 1, p.raio * 0.4, 0, Math.PI * 2);
+                        ctxDist.fill();
+                    }
+                }
+                
+                // === DESENHAR SOLO (AMBAS AS VISTAS) ===
+                ctxDist.fillStyle = '#3d2817';
+                ctxDist.fillRect(0, soloY, canvasDist.width, canvasDist.height - soloY);
+                
+                ctxDist.shadowColor = 'transparent';
+                ctxDist.strokeStyle = '#8b949e';
+                ctxDist.lineWidth = 3;
+                ctxDist.beginPath();
+                ctxDist.moveTo(0, soloY);
+                ctxDist.lineTo(canvasDist.width, soloY);
+                ctxDist.stroke();
+                
+                // Label do solo
+                ctxDist.fillStyle = '#8b949e';
+                ctxDist.font = 'bold 14px monospace';
+                ctxDist.fillText('SOLO', 15, soloY + 25);
+                ctxDist.fillText('SOLO', meioTela + 15, soloY + 25);
+                
+                // Informação de altura
+                ctxDist.fillStyle = '#8b949e';
+                ctxDist.font = '11px monospace';
+                ctxDist.fillText(`h = ${h_chapa.toFixed(1)}m`, meioTela - 60, soloY - 10);
+                
+                } catch(err) {
+                    console.error('Erro na renderização:', err);
+                }
+                
+                requestAnimationFrame(renderizarDistribuidorMatterJS);
+            }
+
+            // Ativa o sistema
+            console.log('✅ Ativando sistema...');
+            atualizarDashboard();    // Pré-renderiza o Destorroador
+            atualizarDistribuidor(); // Pré-renderiza o Distribuidor (corrige o bug do MathJax vazio na 1ª abertura)
+            console.log('✅ Dashboards atualizados');
+            renderizar();
+            console.log('✅ Renderizadores iniciados');
+            renderizarDistribuidorMatterJS();
+            renderizarDosador(); // Inicia o laço 2D do dosador pneumático
+            console.log('✅ ===== APLICAÇÃO INICIADA COM SUCESSO! =====');
+        }  // Fecha iniciarAplicacao
