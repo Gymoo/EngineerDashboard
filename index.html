@@ -42,6 +42,14 @@
                 <div class="tool-status">Em desenvolvimento</div>
             </div>
         </div>
+
+        <footer class="dashboard-footer" aria-label="Rodapé do portal">
+            <span>© 2026 Guilherme Silva de Oliveira</span>
+            <span class="dashboard-footer-sep">|</span>
+            <a href="https://oliveiraengineer.vercel.app" target="_blank" rel="noopener noreferrer">Visitar Portfólio</a>
+            <span class="dashboard-footer-sep">|</span>
+            <a href="https://www.linkedin.com/in/guilhermeasdo/" target="_blank" rel="noopener noreferrer">LinkedIn</a>
+        </footer>
     </div>
 
     <div id="sidebar" class="hidden">
@@ -53,8 +61,22 @@
         </div>
         <div class="btn-voltar" id="btn-voltar">⬅ Voltar ao Portal</div>
         <div class="state-toggle" data-dashboard-state="destorroador">
-            <button type="button" class="state-btn active" data-dashboard="destorroador" data-profile="minimo">↓ Mínimo</button>
-            <button type="button" class="state-btn" data-dashboard="destorroador" data-profile="maximo">↑ Máximo</button>
+            <div class="state-group">
+                <button type="button" class="state-btn active" data-dashboard="destorroador" data-profile="minimo">↓ Mínimo</button>
+                <div class="state-subgrid">
+                    <button type="button" class="state-btn state-subbtn" data-dashboard="destorroador" data-profile="minimo_a">A</button>
+                    <button type="button" class="state-btn state-subbtn" data-dashboard="destorroador" data-profile="minimo_b">B</button>
+                    <button type="button" class="state-btn state-subbtn" data-dashboard="destorroador" data-profile="minimo_c">C</button>
+                </div>
+            </div>
+            <div class="state-group">
+                <button type="button" class="state-btn" data-dashboard="destorroador" data-profile="maximo">↑ Máximo</button>
+                <div class="state-subgrid">
+                    <button type="button" class="state-btn state-subbtn" data-dashboard="destorroador" data-profile="maximo_a">A</button>
+                    <button type="button" class="state-btn state-subbtn" data-dashboard="destorroador" data-profile="maximo_b">B</button>
+                    <button type="button" class="state-btn state-subbtn" data-dashboard="destorroador" data-profile="maximo_c">C</button>
+                </div>
+            </div>
             <button type="button" class="state-btn" data-dashboard-reset="destorroador">Resetar</button>
         </div>
         
@@ -134,6 +156,14 @@
         <div style="border-top: 1px solid var(--border); padding-top: 15px; margin-top: 10px; color: var(--text-muted); font-size: 0.85em;">
             Física aplicada: Conservação de Energia (V x A), resistência de materiais e Lei de Joule.
         </div>
+
+        <footer class="dashboard-footer" aria-label="Rodapé do dashboard">
+            <span>© 2026 Guilherme Silva de Oliveira</span>
+            <span class="dashboard-footer-sep">|</span>
+            <a href="https://oliveiraengineer.vercel.app" target="_blank" rel="noopener noreferrer">Visitar Portfólio</a>
+            <span class="dashboard-footer-sep">|</span>
+            <a href="https://www.linkedin.com/in/guilhermeasdo/" target="_blank" rel="noopener noreferrer">LinkedIn</a>
+        </footer>
     </div>
 
     <div id="sidebar-distribuidor" class="hidden">
@@ -145,8 +175,22 @@
         </div>
         <div class="btn-voltar" id="btn-voltar-dist">⬅ Voltar ao Portal</div>
         <div class="state-toggle" data-dashboard-state="distribuidor">
-            <button type="button" class="state-btn active" data-dashboard="distribuidor" data-profile="minimo">↓ Mínimo</button>
-            <button type="button" class="state-btn" data-dashboard="distribuidor" data-profile="maximo">↑ Máximo</button>
+            <div class="state-group">
+                <button type="button" class="state-btn active" data-dashboard="distribuidor" data-profile="minimo">↓ Mínimo</button>
+                <div class="state-subgrid">
+                    <button type="button" class="state-btn state-subbtn" data-dashboard="distribuidor" data-profile="minimo_a">A</button>
+                    <button type="button" class="state-btn state-subbtn" data-dashboard="distribuidor" data-profile="minimo_b">B</button>
+                    <button type="button" class="state-btn state-subbtn" data-dashboard="distribuidor" data-profile="minimo_c">C</button>
+                </div>
+            </div>
+            <div class="state-group">
+                <button type="button" class="state-btn" data-dashboard="distribuidor" data-profile="maximo">↑ Máximo</button>
+                <div class="state-subgrid">
+                    <button type="button" class="state-btn state-subbtn" data-dashboard="distribuidor" data-profile="maximo_a">A</button>
+                    <button type="button" class="state-btn state-subbtn" data-dashboard="distribuidor" data-profile="maximo_b">B</button>
+                    <button type="button" class="state-btn state-subbtn" data-dashboard="distribuidor" data-profile="maximo_c">C</button>
+                </div>
+            </div>
             <button type="button" class="state-btn" data-dashboard-reset="distribuidor">Resetar</button>
         </div>
 
@@ -400,6 +444,14 @@
         <div style="border-top: 1px solid var(--border); padding-top: 15px; margin-top: 10px; color: var(--text-muted); font-size: 0.85em;">
             Física aplicada: Escoamento de fluidos compressíveis, vazão volumétrica e razão de carregamento bifásico.
         </div>
+
+        <footer class="dashboard-footer" aria-label="Rodapé do dashboard">
+            <span>© 2026 Guilherme Silva de Oliveira</span>
+            <span class="dashboard-footer-sep">|</span>
+            <a href="https://oliveiraengineer.vercel.app" target="_blank" rel="noopener noreferrer">Visitar Portfólio</a>
+            <span class="dashboard-footer-sep">|</span>
+            <a href="https://www.linkedin.com/in/guilhermeasdo/" target="_blank" rel="noopener noreferrer">LinkedIn</a>
+        </footer>
     </div>
 
     <div id="reset-confirmation-modal" class="reset-confirmation-modal hidden" role="dialog" aria-modal="true" aria-labelledby="reset-confirmation-title" aria-describedby="reset-confirmation-text">
