@@ -409,7 +409,7 @@ console.log('ðŸ”§ Script iniciando...');
                 '📚 Memorial da Semeadura': '📚 Seeding Calculation Report',
                 'Mecânica do Impacto (Defletor)': 'Impact Mechanics (Deflector)',
                 'Velocidade de Queda (V₀)': 'Fall Velocity (V₀)',
-                'Velocidade Refletida (Váµ£)': 'Reflected Velocity (Váµ£)',
+                'Velocidade Refletida (Vᵣ)': 'Reflected Velocity (Vᵣ)',
                 'Análise Vetorial': 'Vector Analysis',
                 'Ângulo Saída Frontal': 'Front Exit Angle',
                 'Ângulo Curva Máx. (Î³)': 'Maximum Curve Angle (Î³)',
@@ -2252,7 +2252,7 @@ console.log('ðŸ”§ Script iniciando...');
                         <h3 style="color: #fff; margin-bottom: 15px;">${textoIdioma('Mecânica do Impacto (Defletor)', 'Impact Mechanics (Deflector)')}</h3>
                         <div class="metrics-row">
                             <div class="metric-card" title="${textoIdioma('Velocidade vertical da semente ao atingir o defletor (após sair do tubo pneumático).', 'Vertical seed speed when reaching the deflector (after leaving the pneumatic tube).')}"><div class="metric-label">${textoIdioma('Velocidade de Queda (V₀)', 'Fall Velocity (V₀)')}</div><div class="metric-value">${v0_vertical.toFixed(1)} m/s</div></div>
-                            <div class="metric-card" title="${textoIdioma('Velocidade da semente imediatamente após bater na chapa, descontada a perda pelo coeficiente de restituição.', 'Seed speed immediately after striking the plate, discounting the loss from the restitution coefficient.')}"><div class="metric-label">${textoIdioma('Velocidade Refletida (Váµ£)', 'Reflected Velocity (Váµ£)')}</div><div class="metric-value">${v_refl.toFixed(1)} m/s</div></div>
+                            <div class="metric-card" title="${textoIdioma('Velocidade da semente imediatamente após bater na chapa, descontada a perda pelo coeficiente de restituição.', 'Seed speed immediately after striking the plate, discounting the loss from the restitution coefficient.')}"><div class="metric-label">${textoIdioma('Velocidade Refletida (Vᵣ)', 'Reflected Velocity (Vᵣ)')}</div><div class="metric-value">${v_refl.toFixed(1)} m/s</div></div>
                         </div>
                         <h3 style="color: #fff; margin-bottom: 15px;">${textoIdioma('Análise Vetorial', 'Vector Analysis')}</h3>
                         <div class="metrics-row">
