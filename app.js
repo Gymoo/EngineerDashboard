@@ -266,6 +266,25 @@ console.log('ðŸ”§ Script iniciando...');
                 'Fator de Atrito Darcy (λ)': 'Darcy Friction Factor (λ)',
                 'Pressão Estática Máx. (Pa)': 'Maximum Static Pressure (Pa)',
                 'Coeficiente Restituição (e)': 'Restitution Coefficient (e)',
+                '🌪️ Sistema Pneumático': '🌪️ Pneumatic System',
+                'Sistema Pneumático': 'Pneumatic System',
+                'Linhas Secundárias': 'Secondary Rows',
+                'Trecho Primário': 'Primary Section',
+                'Rede Pneumática em Dois Estágios': 'Two-Stage Pneumatic Network',
+                'Energia total circulando no sistema no limite da corrente estipulada.': 'Total energy circulating in the system at the specified current limit.',
+                'Potência mecânica máxima que o motor consegue entregar antes de queimar.': 'Maximum mechanical power the motor can deliver before thermal damage.',
+                'Como o motor DC tenta manter o torque variando a corrente, esta é a Amperagem real que a pedra exige do sistema para quebrar. Se for maior que a Etiqueta, o motor queima.': 'Because the DC motor varies current to maintain torque, this is the actual current required to fracture the material. Exceeding the nameplate limit creates thermal-damage risk.',
+                'Limite térmico do fabricante (Amperes de placa).': 'Manufacturer thermal limit (nameplate amperes).',
+                'Torque de Estol referencial. Acima deste torque, a amperagem ultrapassa o limite térmico.': 'Reference stall torque. Above this torque, current exceeds the thermal limit.',
+                'Velocidade cinemática na ponta do eixo triturador.': 'Kinematic speed at the crusher shaft end.',
+                'Potência elétrica, tensão, corrente e conversão de energia. Clique para referência.': 'Electrical power, voltage, current, and energy conversion. Click for the reference.',
+                'Potência dissipada em resistência elétrica e aquecimento por corrente. Clique para referência.': 'Power dissipated in electrical resistance and current-induced heating. Click for the reference.',
+                'Potência elétrica e potência mecânica com eficiência do motor.': 'Electrical and mechanical power including motor efficiency.',
+                'Conversão exata do diâmetro primário de polegadas para SI.': 'Exact conversion of primary diameter from inches to SI.',
+                'Continuidade na rede primária até a torre.': 'Continuity through the primary network to the tower.',
+                'Perda distribuída por atrito ao longo do duto primário.': 'Distributed friction loss along the primary duct.',
+                'Perda localizada por divisão e mudança de direção na torre.': 'Local loss caused by flow splitting and direction changes in the tower.',
+                'Continuidade nas linhas menores após a torre.': 'Continuity through the smaller rows downstream of the tower.',
                 'Recolher barra lateral': 'Collapse sidebar',
                 'Desafixar barra lateral': 'Unpin sidebar',
                 'Expandir barra lateral': 'Expand sidebar',
@@ -449,6 +468,9 @@ console.log('ðŸ”§ Script iniciando...');
                 document.body.dataset.language = inglesAtivo ? 'en' : 'pt';
                 traduzirElemento(document.body, inglesAtivo ? 'en' : 'pt');
                 traduzirAtributos(document.body, inglesAtivo ? 'en' : 'pt');
+                document.querySelectorAll('[data-tooltip-original]').forEach((elemento) => {
+                    elemento.dataset.tooltip = traduzirTexto(elemento.dataset.tooltipOriginal, inglesAtivo ? 'en' : 'pt');
+                });
                 dom.languageToggleButtons.forEach((button) => {
                     button.textContent = inglesAtivo ? 'BR' : 'EN';
                     const acao = inglesAtivo ? 'Switch language to Portuguese' : 'Mudar idioma para inglês';
@@ -993,6 +1015,277 @@ console.log('ðŸ”§ Script iniciando...');
                 return portugues;
             }
 
+            const catalogoVariaveisFormula = {
+                espessuraDisco: {
+                    pt: '[mm] Espessura do disco. Descrição: dimensão axial útil de cada disco dosador. Impacto: aumentar a espessura eleva proporcionalmente o volume deslocado por revolução e reduz a rotação necessária para a mesma dose.',
+                    en: '[mm] Disc thickness. Description: usable axial dimension of each metering disc. Impact: increasing thickness proportionally raises displaced volume per revolution and reduces the speed required for the same dose.'
+                },
+                discosAtivos: {
+                    pt: '[un] Quantidade de discos ativos. Descrição: número de discos que contribuem para o volume dosado. Impacto: adicionar discos aumenta proporcionalmente o volume por revolução e a capacidade de dosagem.',
+                    en: '[count] Number of active discs. Description: number of discs contributing to metered volume. Impact: adding discs proportionally increases volume per revolution and metering capacity.'
+                },
+                cavidadesDisco: {
+                    pt: '[un] Cavidades por disco. Descrição: número de bolsões dosadores em cada disco. Impacto: aumentar a quantidade eleva o volume por volta e reduz a pulsação entre descargas.',
+                    en: '[count] Cavities per disc. Description: number of metering pockets in each disc. Impact: increasing the count raises volume per turn and reduces pulsation between discharges.'
+                },
+                areaCavidade: {
+                    pt: '[mm²] Área lateral da cavidade. Descrição: seção útil de cada bolsão que captura material. Impacto: aumentar a área eleva o volume deslocado por revolução; reduzir a área exige maior rotação para a mesma dose.',
+                    en: '[mm²] Lateral cavity area. Description: usable cross-section of each material-capturing pocket. Impact: increasing area raises displaced volume per revolution; reducing it requires higher speed for the same dose.'
+                },
+                massaLinha: {
+                    pt: '[kg/h] Vazão mássica por linha. Descrição: massa de insumo requerida por hora em uma linha. Impacto: aumentar a taxa por hectare, a velocidade do trator ou o espaçamento eleva esta vazão e exige maior capacidade do dosador e do transporte pneumático.',
+                    en: '[kg/h] Mass flow per row. Description: material mass required per hour in one row. Impact: increasing the application rate, tractor speed, or row spacing raises this flow and requires greater metering and pneumatic-conveying capacity.'
+                },
+                taxaHectare: {
+                    pt: '[kg/ha] Taxa de aplicação por hectare. Descrição: dose agronômica definida para a área. Impacto: aumentar a dose eleva proporcionalmente a vazão mássica e a rotação requerida do dosador.',
+                    en: '[kg/ha] Application rate per hectare. Description: agronomic dose specified for the field. Impact: increasing the dose proportionally raises mass flow and required meter speed.'
+                },
+                velocidadeTrator: {
+                    pt: '[km/h] Velocidade do trator. Descrição: velocidade de avanço da máquina no campo. Impacto: aumentar a velocidade eleva proporcionalmente a massa que deve ser dosada por hora.',
+                    en: '[km/h] Tractor speed. Description: machine travel speed in the field. Impact: increasing speed proportionally raises the mass that must be metered per hour.'
+                },
+                larguraLinha: {
+                    pt: '[m] Largura de trabalho por linha. Descrição: faixa de terreno atendida por uma linha. Impacto: aumentar a largura eleva proporcionalmente a vazão mássica exigida nessa linha.',
+                    en: '[m] Working width per row. Description: field width served by one row. Impact: increasing width proportionally raises the mass flow required in that row.'
+                },
+                conversaoAgronomica: {
+                    pt: '[adimensional] Fator de conversão agronômica. Descrição: compatibiliza kg/ha, km/h e metros para obter kg/h. Impacto: é fixo para essas unidades; alterá-lo tornaria a conversão dimensional incorreta.',
+                    en: '[dimensionless] Agronomic conversion factor. Description: reconciles kg/ha, km/h, and metres to obtain kg/h. Impact: it is fixed for these units; changing it would make the dimensional conversion incorrect.'
+                },
+                massaTotal: {
+                    pt: '[kg/h] Vazão mássica total. Descrição: soma da massa requerida por todas as linhas. Impacto: cresce com a vazão por linha e com o número de linhas, aumentando a carga global do reservatório e da turbina.',
+                    en: '[kg/h] Total mass flow. Description: combined mass required by all rows. Impact: it grows with row flow and row count, increasing the total load on the hopper and blower.'
+                },
+                numeroLinhas: {
+                    pt: '[un] Número de linhas secundárias. Descrição: quantidade de ramais finais alimentados pela rede. Impacto: aumentar o número de linhas eleva a massa total e divide a vazão de ar entre mais ramais.',
+                    en: '[count] Number of secondary rows. Description: number of final branches supplied by the network. Impact: increasing row count raises total material flow and divides airflow among more branches.'
+                },
+                rotacaoDosador: {
+                    pt: '[RPM] Rotação do dosador. Descrição: velocidade necessária do rolo para entregar a dose por linha. Impacto: aumenta com a vazão mássica e diminui quando o volume por volta ou a densidade do material aumentam.',
+                    en: '[RPM] Meter speed. Description: roller speed required to deliver the row dose. Impact: it rises with mass flow and falls when displaced volume per revolution or material density increases.'
+                },
+                volumeRolo: {
+                    pt: '[mm³/rev] Volume útil do rolo por revolução. Descrição: volume deslocado em uma volta. Impacto: aumentar o volume reduz a rotação necessária para a mesma vazão mássica.',
+                    en: '[mm³/rev] Useful roller volume per revolution. Description: volume displaced in one turn. Impact: increasing volume reduces the speed required for the same mass flow.'
+                },
+                densidadeSolido: {
+                    pt: '[g/mm³] Densidade do sólido. Descrição: massa do material por unidade de volume. Impacto: aumentar a densidade eleva a massa entregue por volta e reduz a rotação necessária para a mesma dose.',
+                    en: '[g/mm³] Solid density. Description: material mass per unit volume. Impact: increasing density raises mass delivered per revolution and reduces the speed required for the same dose.'
+                },
+                vazaoTotal: {
+                    pt: '[m³/min] Vazão volumétrica total real. Descrição: volume de ar efetivamente fornecido pela turbina após as perdas. Impacto: aumentar esta vazão eleva as velocidades nos dutos e também as perdas de carga.',
+                    en: '[m³/min] Actual total volumetric flow. Description: air volume effectively supplied by the blower after losses. Impact: increasing this flow raises duct velocities and pressure losses.'
+                },
+                numeroPrimarios: {
+                    pt: '[un] Número de dutos primários. Descrição: quantidade de ramais grandes antes das torres. Impacto: aumentar a quantidade divide a vazão total, reduzindo a velocidade e a perda por duto primário.',
+                    en: '[count] Number of primary ducts. Description: number of large branches upstream of the towers. Impact: increasing the count splits total flow, reducing velocity and loss in each primary duct.'
+                },
+                vazaoPrimaria: {
+                    pt: '[m³/min] Vazão por duto primário. Descrição: parcela da vazão total que atravessa um duto grande. Impacto: aumentar esta vazão eleva a velocidade e a perda de carga no trecho primário.',
+                    en: '[m³/min] Flow per primary duct. Description: share of total flow crossing one large duct. Impact: increasing this flow raises velocity and pressure loss in the primary section.'
+                },
+                areaPrimaria: {
+                    pt: '[m²] Área interna do duto primário. Descrição: seção transversal disponível ao escoamento. Impacto: aumentar a área reduz a velocidade e a perda de carga para a mesma vazão.',
+                    en: '[m²] Primary-duct internal area. Description: cross-sectional area available to the flow. Impact: increasing area reduces velocity and pressure loss at the same flow rate.'
+                },
+                velocidadePrimaria: {
+                    pt: '[m/s] Velocidade média no duto primário. Descrição: rapidez do ar no trecho de maior diâmetro. Impacto: maior velocidade favorece o arraste, mas aumenta aproximadamente com o quadrado a parcela dinâmica da perda.',
+                    en: '[m/s] Mean primary-duct velocity. Description: air speed in the larger-diameter section. Impact: higher velocity promotes conveying but raises the dynamic loss term approximately with its square.'
+                },
+                slrPrimario: {
+                    pt: '[adimensional] Razão de carregamento sólido/ar no primário. Descrição: massa de sólido dividida pela massa de ar. Impacto: aumentar a razão eleva a correção de perda e o risco de instabilidade do transporte.',
+                    en: '[dimensionless] Primary solids loading ratio. Description: solid mass divided by air mass. Impact: increasing the ratio raises the corrected loss and the risk of unstable conveying.'
+                },
+                massaSolidoPrimario: {
+                    pt: '[kg/h] Vazão mássica de sólido no duto primário. Descrição: massa de material conduzida por um ramal grande. Impacto: aumentar esta massa eleva a razão de carregamento e a perda corrigida.',
+                    en: '[kg/h] Solid mass flow in a primary duct. Description: material mass conveyed by one large branch. Impact: increasing this mass raises the loading ratio and corrected pressure loss.'
+                },
+                massaArPrimario: {
+                    pt: '[kg/h] Vazão mássica de ar no duto primário. Descrição: massa de ar disponível para transportar o sólido. Impacto: aumentar esta massa reduz a razão de carregamento para a mesma vazão de sólido.',
+                    en: '[kg/h] Air mass flow in a primary duct. Description: air mass available to convey solids. Impact: increasing this mass reduces the loading ratio for the same solid flow.'
+                },
+                perdaPrimaria: {
+                    pt: '[Pa] Perda de pressão no duto primário. Descrição: queda de pressão distribuída por atrito. Impacto: cresce com atrito, comprimento, densidade, carregamento e velocidade ao quadrado; reduz a pressão disponível na torre.',
+                    en: '[Pa] Primary-duct pressure loss. Description: distributed pressure drop caused by friction. Impact: it grows with friction, length, density, loading, and squared velocity, reducing pressure available at the tower.'
+                },
+                fatorAtrito: {
+                    pt: '[adimensional] Fator de atrito de Darcy. Descrição: representa a resistência da parede ao escoamento. Impacto: dobrar o fator dobra a parcela de perda distribuída, mantendo as demais variáveis.',
+                    en: '[dimensionless] Darcy friction factor. Description: represents wall resistance to flow. Impact: doubling the factor doubles the distributed-loss term when all other variables remain unchanged.'
+                },
+                comprimentoPrimario: {
+                    pt: '[m] Comprimento do duto primário. Descrição: distância de escoamento até a torre. Impacto: dobrar o comprimento dobra a perda distribuída nas mesmas condições.',
+                    en: '[m] Primary-duct length. Description: flow distance to the tower. Impact: doubling length doubles distributed loss under the same conditions.'
+                },
+                diametroPrimario: {
+                    pt: '[m] Diâmetro interno do duto primário. Descrição: bitola útil do ramal grande. Impacto: aumentar o diâmetro amplia a área, reduz a velocidade e diminui fortemente a perda de carga.',
+                    en: '[m] Primary-duct internal diameter. Description: usable bore of the large branch. Impact: increasing diameter enlarges area, reduces velocity, and strongly decreases pressure loss.'
+                },
+                densidadeAr: {
+                    pt: '[kg/m³] Densidade do ar. Descrição: massa de ar por volume usada na pressão dinâmica. Impacto: aumentar a densidade eleva a pressão dinâmica na mesma velocidade e altera a razão sólido/ar.',
+                    en: '[kg/m³] Air density. Description: air mass per volume used in dynamic pressure. Impact: increasing density raises dynamic pressure at the same velocity and changes the solids-to-air ratio.'
+                },
+                perdaTorre: {
+                    pt: '[Pa] Perda localizada na torre. Descrição: queda de pressão causada por divisão, mudança de direção e turbulência. Impacto: reduz a pressão disponível nas linhas secundárias.',
+                    en: '[Pa] Tower local pressure loss. Description: pressure drop caused by splitting, direction changes, and turbulence. Impact: it reduces pressure available to the secondary rows.'
+                },
+                coeficienteTorre: {
+                    pt: '[adimensional] Coeficiente de perda local K da torre. Descrição: caracteriza a resistência geométrica da torre. Impacto: aumentar K eleva proporcionalmente a perda localizada.',
+                    en: '[dimensionless] Tower local-loss coefficient K. Description: characterises the tower geometric resistance. Impact: increasing K proportionally raises the local pressure loss.'
+                },
+                areaSecundaria: {
+                    pt: '[m²] Área interna da linha secundária. Descrição: seção transversal da mangueira final. Impacto: aumentar a área reduz a velocidade para a mesma vazão por linha.',
+                    en: '[m²] Secondary-line internal area. Description: cross-sectional area of the final hose. Impact: increasing area reduces velocity for the same row flow.'
+                },
+                diametroSecundario: {
+                    pt: '[m] Diâmetro interno da linha secundária. Descrição: bitola útil da mangueira final. Impacto: aumentar o diâmetro amplia a área e reduz velocidade e perda de carga.',
+                    en: '[m] Secondary-line internal diameter. Description: usable bore of the final hose. Impact: increasing diameter enlarges area and reduces velocity and pressure loss.'
+                },
+                vazaoSecundaria: {
+                    pt: '[m³/min] Vazão por linha secundária. Descrição: parcela de ar destinada a uma linha final. Impacto: aumentar esta vazão eleva a velocidade de transporte e a perda de carga.',
+                    en: '[m³/min] Flow per secondary row. Description: share of airflow assigned to one final row. Impact: increasing this flow raises conveying velocity and pressure loss.'
+                },
+                velocidadeSecundaria: {
+                    pt: '[m/s] Velocidade na linha secundária. Descrição: rapidez final do ar que transporta o material. Impacto: aumentar a velocidade melhora a suspensão, mas eleva a perda aproximadamente com seu quadrado.',
+                    en: '[m/s] Secondary-line velocity. Description: final air speed conveying the material. Impact: increasing velocity improves suspension but raises pressure loss approximately with its square.'
+                },
+                slrSecundario: {
+                    pt: '[adimensional] Razão de carregamento sólido/ar na linha secundária. Descrição: massa de sólido por massa de ar no ramal final. Impacto: aumentar a razão eleva a perda corrigida e o risco de entupimento.',
+                    en: '[dimensionless] Secondary-line solids loading ratio. Description: solid mass per air mass in the final branch. Impact: increasing the ratio raises corrected loss and clogging risk.'
+                },
+                massaArSecundario: {
+                    pt: '[kg/h] Vazão mássica de ar na linha secundária. Descrição: massa de ar disponível no ramal final. Impacto: aumentar esta massa reduz a razão de carregamento para a mesma massa de sólido.',
+                    en: '[kg/h] Air mass flow in a secondary row. Description: air mass available in the final branch. Impact: increasing this mass reduces the loading ratio for the same solid mass.'
+                },
+                perdaSecundaria: {
+                    pt: '[Pa] Perda de pressão na linha secundária. Descrição: queda distribuída por atrito na mangueira final. Impacto: cresce com comprimento, atrito, densidade, carregamento e velocidade ao quadrado.',
+                    en: '[Pa] Secondary-line pressure loss. Description: distributed friction drop in the final hose. Impact: it grows with length, friction, density, loading, and squared velocity.'
+                },
+                comprimentoSecundario: {
+                    pt: '[m] Comprimento da linha secundária. Descrição: extensão da mangueira após a torre. Impacto: dobrar o comprimento dobra a perda distribuída nas mesmas condições.',
+                    en: '[m] Secondary-line length. Description: hose length downstream of the tower. Impact: doubling length doubles distributed loss under the same conditions.'
+                },
+                perdaTotal: {
+                    pt: '[Pa] Perda de pressão total. Descrição: soma das perdas primária, da torre e secundária. Impacto: aumentar qualquer parcela reduz a vazão efetiva entregue pela turbina.',
+                    en: '[Pa] Total pressure loss. Description: sum of primary, tower, and secondary losses. Impact: increasing any component reduces the effective flow delivered by the blower.'
+                },
+                fatorAcoplamento: {
+                    pt: '[adimensional] Fator de acoplamento da turbina. Descrição: fração da vazão nominal restante após a contrapressão. Impacto: aumenta quando as perdas caem e diminui quando a rede oferece maior resistência.',
+                    en: '[dimensionless] Blower coupling factor. Description: fraction of nominal flow remaining after backpressure. Impact: it increases when losses fall and decreases when network resistance rises.'
+                },
+                pressaoMaxima: {
+                    pt: '[Pa] Pressão estática máxima da turbina. Descrição: limite de contrapressão no modelo simplificado. Impacto: aumentar este limite preserva maior fator de vazão para a mesma perda total.',
+                    en: '[Pa] Maximum blower static pressure. Description: backpressure limit in the simplified model. Impact: increasing this limit preserves a higher flow factor for the same total loss.'
+                },
+                vazaoTurbina: {
+                    pt: '[m³/min] Vazão nominal da turbina. Descrição: capacidade de ar em condição de referência. Impacto: aumentar a vazão nominal eleva a vazão real, as velocidades e as perdas da rede.',
+                    en: '[m³/min] Nominal blower flow. Description: airflow capacity under the reference condition. Impact: increasing nominal flow raises actual flow, velocities, and network losses.'
+                },
+                pi: {
+                    pt: '[adimensional] Constante π. Descrição: razão entre circunferência e diâmetro. Impacto: constante geométrica fixa usada para calcular áreas circulares; não é um parâmetro ajustável.',
+                    en: '[dimensionless] Constant π. Description: ratio of circumference to diameter. Impact: fixed geometric constant used to calculate circular areas; it is not an adjustable parameter.'
+                },
+                divisorArea: {
+                    pt: '[adimensional] Divisor geométrico 4. Descrição: resulta do uso do raio D/2 na área πr². Impacto: constante fixa; alterá-la produziria área circular incorreta.',
+                    en: '[dimensionless] Geometric divisor 4. Description: results from using radius D/2 in area πr². Impact: fixed constant; changing it would produce an incorrect circular area.'
+                },
+                conversaoMinuto: {
+                    pt: '[s/min] Conversão de minuto para segundo. Descrição: 60 segundos por minuto. Impacto: constante fixa que compatibiliza vazão por minuto com velocidade em m/s.',
+                    en: '[s/min] Minute-to-second conversion. Description: 60 seconds per minute. Impact: fixed constant reconciling per-minute flow with velocity in m/s.'
+                },
+                anguloSaida: {
+                    pt: '[graus] Ângulo de saída. Descrição: direção do vetor de velocidade refletida em relação à horizontal. Impacto: aumentar o ângulo eleva a componente vertical e altera o alcance longitudinal e o tempo de voo.',
+                    en: '[degrees] Exit angle. Description: direction of the reflected velocity vector relative to horizontal. Impact: increasing the angle raises the vertical component and changes longitudinal range and flight time.'
+                },
+                anguloTangencial: {
+                    pt: '[graus] Ângulo tangencial. Descrição: direção lateral de escape na borda curva do defletor. Impacto: aumentar o ângulo eleva a componente lateral da velocidade e amplia a faixa distribuída.',
+                    en: '[degrees] Tangential angle. Description: lateral escape direction at the curved deflector edge. Impact: increasing the angle raises lateral velocity and widens the distributed swath.'
+                }
+            };
+
+            function variavelFormula(latex, chave) {
+                const item = catalogoVariaveisFormula[chave];
+                if (!item) {
+                    console.warn(`[formula] Variável sem descrição: ${chave}`);
+                    return latex;
+                }
+                return `\\texttip{${latex}}{${document.body.dataset.language === 'en' ? item.en : item.pt}}`;
+            }
+
+            function configurarTooltipsInstantaneos() {
+                const tooltip = document.createElement('div');
+                tooltip.className = 'app-tooltip';
+                tooltip.setAttribute('role', 'tooltip');
+                document.body.appendChild(tooltip);
+                let alvoAtual = null;
+
+                const preparar = (raiz) => {
+                    if (!(raiz instanceof Element)) return;
+                    const elementos = raiz.matches('[title]') ? [raiz] : [];
+                    elementos.push(...raiz.querySelectorAll('[title]'));
+                    elementos.forEach((elemento) => {
+                        const titulo = elemento.getAttribute('title');
+                        if (!titulo) return;
+                        if (!elemento.dataset.tooltipOriginal) {
+                            elemento.dataset.tooltipOriginal = elemento.dataset.i18nOriginalTitle || titulo;
+                        }
+                        elemento.dataset.tooltip = traduzirTexto(
+                            elemento.dataset.tooltipOriginal,
+                            document.body.dataset.language === 'en' ? 'en' : 'pt'
+                        );
+                        elemento.removeAttribute('title');
+                    });
+                };
+
+                const posicionar = (event) => {
+                    if (!alvoAtual) return;
+                    const margem = 14;
+                    const largura = tooltip.offsetWidth;
+                    const altura = tooltip.offsetHeight;
+                    let left = event.clientX + margem;
+                    let top = event.clientY + margem;
+                    if (left + largura > window.innerWidth - 8) left = event.clientX - largura - margem;
+                    if (top + altura > window.innerHeight - 8) top = event.clientY - altura - margem;
+                    tooltip.style.left = `${Math.max(8, left)}px`;
+                    tooltip.style.top = `${Math.max(8, top)}px`;
+                };
+
+                document.addEventListener('pointerover', (event) => {
+                    const alvo = event.target.closest?.('[data-tooltip]');
+                    if (!alvo || !alvo.dataset.tooltip) return;
+                    alvoAtual = alvo;
+                    tooltip.textContent = alvo.dataset.tooltip;
+                    tooltip.classList.add('visible');
+                    posicionar(event);
+                });
+                document.addEventListener('pointermove', posicionar);
+                document.addEventListener('pointerout', (event) => {
+                    if (!alvoAtual || event.relatedTarget?.closest?.('[data-tooltip]') === alvoAtual) return;
+                    alvoAtual = null;
+                    tooltip.classList.remove('visible');
+                });
+                document.addEventListener('focusin', (event) => {
+                    const alvo = event.target.closest?.('[data-tooltip]');
+                    if (!alvo || !alvo.dataset.tooltip) return;
+                    alvoAtual = alvo;
+                    tooltip.textContent = alvo.dataset.tooltip;
+                    const rect = alvo.getBoundingClientRect();
+                    tooltip.classList.add('visible');
+                    posicionar({ clientX: rect.left + rect.width / 2, clientY: rect.bottom });
+                });
+                document.addEventListener('focusout', () => {
+                    alvoAtual = null;
+                    tooltip.classList.remove('visible');
+                });
+
+                preparar(document.body);
+                new MutationObserver((mutations) => {
+                    mutations.forEach((mutation) => {
+                        mutation.addedNodes.forEach(preparar);
+                        if (mutation.type === 'attributes') preparar(mutation.target);
+                    });
+                }).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['title'] });
+            }
+
             function traduzirTextosDeFormula(html) {
                 if (document.body.dataset.language !== 'en') return html;
                 const traducoesFormula = {
@@ -1345,6 +1638,7 @@ console.log('ðŸ”§ Script iniciando...');
             configurarTema();
             configurarIdioma();
             configurarSidebars();
+            configurarTooltipsInstantaneos();
 
             // --- NAVEGAÇÃO ENTRE TELAS ---
             function irParaHome() {
@@ -1786,7 +2080,7 @@ console.log('ðŸ”§ Script iniciando...');
                                 <a href="https://openstax.org/books/college-physics-2e/pages/12-1-flow-rate-and-its-relation-to-velocity" target="_blank" style="color: inherit; text-decoration: underline;">${textoIdioma('1. Volume Integral do Rolo por Revolução', '1. Integral Roller Volume per Revolution')}</a>
                             </strong><br>
                             <p style="margin: 10px 0 5px 0; font-size: 0.9em;">${textoIdioma('Composição geométrica do volume útil por rotação:', 'Geometric composition of the useful volume per rotation:')}</p>
-                            $$ \\require{action} \\texttip{V_r}{${textoIdioma('[mm³/rev] Volume Integral do Rolo. Definição: capacidade volumétrica total a cada volta do eixo.', '[mm³/rev] Integral Roller Volume. Definition: total volumetric capacity per shaft revolution.')}} = \\texttip{\\mathrm{${textoIdioma('espessura', 'thickness')}}}{${textoIdioma('[mm] Espessura do disco.', '[mm] Disc thickness.')}} \\cdot \\texttip{\\mathrm{${textoIdioma('discos', 'discs')}}}{${textoIdioma('[un] Quantidade de discos úteis.', '[unit] Number of active discs.')}} \\cdot \\texttip{\\mathrm{${textoIdioma('cavidades', 'cavities')}}}{${textoIdioma('[un] Cavidades por disco.', '[unit] Cavities per disc.')}} \\cdot \\texttip{\\mathrm{${textoIdioma('área', 'area')}}}{${textoIdioma('[mm²] Área lateral da cavidade.', '[mm²] Lateral cavity area.')}} $$
+                            $$ \\require{action} ${variavelFormula('V_r', 'volumeRolo')} = ${variavelFormula('\\mathrm{' + textoIdioma('espessura', 'thickness') + '}', 'espessuraDisco')} \\cdot ${variavelFormula('\\mathrm{' + textoIdioma('discos', 'discs') + '}', 'discosAtivos')} \\cdot ${variavelFormula('\\mathrm{' + textoIdioma('cavidades', 'cavities') + '}', 'cavidadesDisco')} \\cdot ${variavelFormula('\\mathrm{' + textoIdioma('área', 'area') + '}', 'areaCavidade')} $$
                             $$ \\require{action} \\texttip{V_r}{[mm³/rev] Volume Integral do Rolo. Definição: Capacidade volumétrica total a cada volta do eixo.} = \\texttip{${espessura_disco.toFixed(0)}}{[mm] Espessura do Disco. Impacto: Espessuras maiores aumentam o volume geométrico da fatia do rolo, permitindo reduzir a RPM do motor elétrico para atingir a mesma dose.} \\cdot \\texttip{${qtd_discos_uteis.toFixed(0)}}{[un] Quantidade de Discos Úteis. Impacto: Adicionar discos multiplica transversalmente a capacidade volumétrica final da máquina.} \\cdot \\texttip{${cavidades_por_disco.toFixed(0)}}{[un] Cavidades por Disco. Impacto: Define a quantidade de 'pulsos' de semente despejados a cada volta. Mais cavidades suavizam o fluxo contínuo na mangueira.} \\cdot \\texttip{${area_lateral_cavidade.toFixed(0)}}{[mm²] Área Lateral da Cavidade. Impacto: Funciona como o tamanho da 'colher' que pega o grão. Sementes grandes como soja/milho exigem áreas maiores para não serem esmagadas na roseta.} = \\texttip{${V_r_mm3.toFixed(0)}}{[mm³/rev] Volume Integral Calculado. Impacto: É a cilindrada matemática bruta do rotor. Dita a relação direta entre o giro do motor elétrico e a massa despejada no tubo.} \\text{ mm}^3\\text{/rev} $$
                         </div>
                         <div class="memorial-item">
@@ -1794,9 +2088,9 @@ console.log('ðŸ”§ Script iniciando...');
                                 <a href="https://www.nist.gov/pml/special-publication-811/nist-guide-si-chapter-5-units-outside-si" target="_blank" style="color: inherit; text-decoration: underline;">${textoIdioma('2. Taxa Mássica por Linha', '2. Mass Flow per Row')}</a>
                             </strong><br>
                             <p style="margin: 10px 0 5px 0; font-size: 0.9em;">${textoIdioma('Conversão dimensional para cada linha final:', 'Dimensional conversion for each final row:')}</p>
-                            $$ \\dot{m}_{linha} = \\frac{T_{ha} \\cdot v_{trator} \\cdot L_{linha}}{10} $$
-                            $$ \\dot{m}_{total} = \\dot{m}_{linha} \\cdot n_{linhas} $$
-                            $$ N_r = \\frac{\\dot{m}_{linha} \\cdot 1000 / 60}{V_r \\cdot \\rho_s} $$
+                            $$ \\require{action} ${variavelFormula('\\dot{m}_{linha}', 'massaLinha')} = \\frac{${variavelFormula('T_{ha}', 'taxaHectare')} \\cdot ${variavelFormula('v_{trator}', 'velocidadeTrator')} \\cdot ${variavelFormula('L_{linha}', 'larguraLinha')}}{${variavelFormula('10', 'conversaoAgronomica')}} $$
+                            $$ \\require{action} ${variavelFormula('\\dot{m}_{total}', 'massaTotal')} = ${variavelFormula('\\dot{m}_{linha}', 'massaLinha')} \\cdot ${variavelFormula('n_{linhas}', 'numeroLinhas')} $$
+                            $$ \\require{action} ${variavelFormula('N_r', 'rotacaoDosador')} = \\frac{${variavelFormula('\\dot{m}_{linha}', 'massaLinha')} \\cdot ${variavelFormula('1000', 'conversaoAgronomica')} / ${variavelFormula('60', 'conversaoMinuto')}}{${variavelFormula('V_r', 'volumeRolo')} \\cdot ${variavelFormula('\\rho_s', 'densidadeSolido')}} $$
                             $$ \\require{action} \\texttip{\\dot{m}_{linha}}{[kg/h] Fluxo Mássico por Linha. Definição: Massa de insumo exigida por hora em uma única mangueira final.} = \\frac{\\texttip{${taxa_ha.toFixed(1)}}{[kg/ha] Taxa Agronômica Alvo. Impacto: É a exigência pura do produtor no campo. Taxas altas exigem giro mais rápido e empurram mais massa densa para as mangueiras, elevando a chance de entupir.} \\cdot \\texttip{${v_trator.toFixed(1)}}{[km/h] Velocidade Operacional do Trator. Impacto: Máquinas correndo rápido obrigam o dosador a disparar a RPM para compensar a distância percorrida no solo.} \\cdot \\texttip{${largura.toFixed(2)}}{[m] Largura de Trabalho por Linha (Espaçamento). Impacto: Linhas mais espaçadas forçam uma maior injeção de insumo dentro de um mesmo sulco para bater a taxa por hectare.}}{\\texttip{10}{Constante metrológica. Impacto: Fator físico obrigatório para ajustar e cruzar as unidades rurais (hectares, km/h) para as grandezas do Sistema Internacional (kg/h).}} = \\texttip{${m_s_kgh_linha.toFixed(2)}}{[kg/h] Massa Individual Exigida por Linha. Impacto: Define a carga absoluta de peso de adubo/semente que o vento da turbina será obrigado a arrastar na tubulação secundária.} \\text{ kg/h} $$
                             $$ \\require{action} \\texttip{\\dot{m}_{total}}{[kg/h] Fluxo Mássico Total. Definição: Massa combinada exigida por todas as linhas da máquina.} = \\texttip{${m_s_kgh_linha.toFixed(2)}}{[kg/h] Massa exigida calculada no passo anterior, referente a uma única linha de plantio descendo do Air Cart.} \\cdot \\texttip{${n_linhas}}{[un] Número Total de Linhas da Máquina. Impacto: É o multiplicador extremo do implemento. 60 linhas exigem mangueiramentos massivos e turbinas F10 na exaustão térmica.} = \\texttip{${m_s_kgh_total.toFixed(2)}}{[kg/h] Massa Total Global. Impacto: Representa as centenas de quilos de insumo bruto que o reservatório superior e o ventilador terão de processar em conjunto a cada hora relógio.} \\text{ kg/h} $$
                             $$ \\require{action} \\texttip{N_r}{[RPM] Rotação do Dosador. Definição: Rotação comandada pela ECU para atingir a taxa alvo.} = \\frac{\\texttip{${m_s_kgh_linha.toFixed(2)}}{[kg/h] Fluxo mássico caindo por cada linha acoplada ao dosador.} \\cdot \\texttip{1000}{[Conversão]. Impacto: Transforma quilos em gramas para equivaler volumetricamente.} / \\texttip{60}{[Conversão]. Impacto: Fatora as horas em minutos para obter Rotações Por Minuto (RPM).}}{\\texttip{${V_r_mm3.toFixed(0)}}{[mm³/rev] Volume (Cilindrada) do rolo acrílico ou de chapa calculado na Etapa 1.} \\cdot \\texttip{${rho_s}}{[g/mm³] Densidade do Material Sólido. Impacto: Adubos cristalizados muito pesados reduzem drasticamente a rotação mecânica para bater o alvo da balança; material ultra-leve acelera o eixo.}} = \\texttip{${N_r.toFixed(2)}}{[RPM] Rotação Alvo Controlada. Impacto: É o pulso elétrico exato que a central ISOBUS do trator enviará ao motoredutor ROJ do seu dosador para manter a prescrição.} \\text{ RPM} $$
@@ -1824,9 +2118,9 @@ console.log('ðŸ”§ Script iniciando...');
                                 <a href="https://openstax.org/books/college-physics-2e/pages/12-1-flow-rate-and-its-relation-to-velocity" target="_blank" style="color: inherit; text-decoration: underline;">${textoIdioma('5. Continuidade nos Dutos Primários', '5. Continuity in Primary Ducts')}</a>
                             </strong><br>
                             <p style="margin: 10px 0 5px 0; font-size: 0.9em;">${textoIdioma('A vazão total é dividida primeiro pelos dutos grandes:', 'The total flow is first split by the large ducts:')}</p>
-                            $$ Q_{prim} = \\frac{Q_{total,real}}{n_{prim}} $$
-                            $$ v_{prim} = \\frac{Q_{prim}/60}{A_{prim}} $$
-                            $$ SLR_{prim} = \\frac{\\dot{m}_{s,prim}}{\\dot{m}_{ar,prim}} $$
+                            $$ \\require{action} ${variavelFormula('Q_{prim}', 'vazaoPrimaria')} = \\frac{${variavelFormula('Q_{total,real}', 'vazaoTotal')}}{${variavelFormula('n_{prim}', 'numeroPrimarios')}} $$
+                            $$ \\require{action} ${variavelFormula('v_{prim}', 'velocidadePrimaria')} = \\frac{${variavelFormula('Q_{prim}', 'vazaoPrimaria')} / ${variavelFormula('60', 'conversaoMinuto')}}{${variavelFormula('A_{prim}', 'areaPrimaria')}} $$
+                            $$ \\require{action} ${variavelFormula('SLR_{prim}', 'slrPrimario')} = \\frac{${variavelFormula('\\dot{m}_{s,prim}', 'massaSolidoPrimario')}}{${variavelFormula('\\dot{m}_{ar,prim}', 'massaArPrimario')}} $$
                             $$ \\require{action} \\texttip{Q_{prim}}{[m³/min] Vazão por Duto Primário. Definição: Quantidade de ar que passa por um único duto grosso.} = \\frac{\\texttip{${redeDoisEstagios.vazaoTotalReal.toFixed(2)}}{[m³/min] Vazão Real Calculada da Máquina. Impacto: Ar total absoluto que a turbina ainda obteve coragem matemática para impelir após sentir todo o pesadelo do atrito.}}{\\texttip{${n_primarios}}{[un] Divisões do Coletor Base. Impacto: O Air Cart quebra e distribui seu tufão de vento primeiramente pelas pernas principais grossas da plantadeira.}} = \\texttip{${redeDoisEstagios.vazaoPrimariaReal.toFixed(2)}}{[m³/min] Vazão Isolada por Duto Principal. Impacto: É o pulmão exclusivo que abastecerá de vento a base estática de uma única Torre de Distribuição (cogumelo divisório) lá na frente.} \\text{ m}^3\\text{/min} $$
                             $$ \\require{action} \\texttip{v_{prim}}{[m/s] Velocidade Primária. Definição: Velocidade média do ar no duto primário.} = \\frac{\\texttip{${redeDoisEstagios.vazaoPrimariaReal.toFixed(2)}}{A vazão isolada e dedicada apenas ao cano grosso no trecho do chassi.} / \\texttip{60}{Fator conversor de Tempo. Reduz métrica pesada de minutos para segundos SI.}}{\\texttip{${areaPrimaria.toFixed(4)}}{Seção Transversal Circular extraída no Passo 4 (m²).}} = \\texttip{${redeDoisEstagios.velocidadePrimaria.toFixed(2)}}{[m/s] Velocidade Bruta Primária. Impacto: Força frontal maciça com que o ar captura a semente que acabou de chover da boca do dosador elétrico em direção à torre.} \\text{ m/s} $$
                             $$ \\require{action} \\texttip{SLR_{prim}}{[Adim.] Razão de Carregamento (Duto). Definição: Relação mássica Insumo/Ar no trecho primário.} = \\frac{\\texttip{${m_s_kgh_primario.toFixed(2)}}{[kg/h] Massa Individual da Tubulação. Impacto: O peso acumulado das sementes daquele cluster.}}{\\texttip{${redeDoisEstagios.massaArPrimariaKgh.toFixed(2)}}{[kg/h] Massa Transportadora Gasosa. Impacto: O peso etéreo do ar que forma o colchão fluidizado suspensor das partículas densas de adubo.}} = \\texttip{${redeDoisEstagios.slrPrimario.toFixed(2)}}{[Adim.] Fator SLR do Trecho 1. Impacto: Razão Sólido/Gás. Limiar superior a 5 aproxima o maquinário rural a zonas perigosas de estrangulamento coloidal intermitente e pulsações violentas nas torres.} $$
@@ -1836,7 +2130,7 @@ console.log('ðŸ”§ Script iniciando...');
                                 <a href="https://www.engineeringtoolbox.com/darcy-weisbach-equation-d_646.html" target="_blank" style="color: inherit; text-decoration: underline;">${textoIdioma('6. Perda no Duto Primário (Darcy-Weisbach)', '6. Primary Duct Loss (Darcy-Weisbach)')}</a>
                             </strong><br>
                             <p style="margin: 10px 0 5px 0; font-size: 0.9em;">${textoIdioma('Perda distribuída com correção simplificada para sólido em suspensão:', 'Distributed loss with simplified correction for solid suspension:')}</p>
-                            $$ \\Delta P_{prim} = \\lambda \\cdot \\frac{L_{prim}}{D_{prim}} \\cdot \\frac{\\rho_a \\cdot v_{prim}^{2}}{2} \\cdot (1 + SLR_{prim}) $$
+                            $$ \\require{action} ${variavelFormula('\\Delta P_{prim}', 'perdaPrimaria')} = ${variavelFormula('\\lambda', 'fatorAtrito')} \\cdot \\frac{${variavelFormula('L_{prim}', 'comprimentoPrimario')}}{${variavelFormula('D_{prim}', 'diametroPrimario')}} \\cdot \\frac{${variavelFormula('\\rho_a', 'densidadeAr')} \\cdot ${variavelFormula('v_{prim}^{2}', 'velocidadePrimaria')}}{${variavelFormula('2', 'divisorArea')}} \\cdot (1 + ${variavelFormula('SLR_{prim}', 'slrPrimario')}) $$
                             $$ \\require{action} \\texttip{\\Delta P_{prim}}{[Pa] Perda Distribuída Primária. Definição: Queda de pressão por atrito na extensão do tubo primário.} = \\texttip{${fator_atrito.toFixed(3)}}{[Adim.] Atrito Friccional Darcy-Weisbach (Lambda). Impacto: Tubulações flexíveis sanfonadas raspam e frenam severamente o ar (fator sobe). Tubos PVC ou PU liso espelhado conservam imensamente a energia cinética (fator cai).} \\cdot \\frac{\\texttip{${L_primario_m.toFixed(2)}}{[m] Comprimento Físico Linear da Tubulação Primária do chassi do Air Cart. Impacto: Custo friccional quilométrico ao escoamento.}}{\\texttip{${D_primario_m.toFixed(4)}}{[m] Diâmetro Base. Impacto: Quanto mais grosso e espaçoso o túnel flexível, menos arrasto nas margens o vento sentirá.}} \\cdot \\frac{\\texttip{${rho_a.toFixed(2)}}{[kg/m³] Densidade Termodinâmica (Tensão superficial do gás nas mangueiras flexíveis do trator).} \\cdot \\texttip{${redeDoisEstagios.velocidadePrimaria.toFixed(2)}^2}{A quadratura caótica da velocidade de vento da linha grossa punindo impiedosamente a turbina se os diâmetros primários forem muito delgados e longos.}}{\\texttip{2}{Estabilizador algébrico da constante universal associada na pressão e energia cinética de empuxo dos fluidos industriais gasosos.}} \\cdot (1 + \\texttip{${redeDoisEstagios.slrPrimario.toFixed(2)}}{A somatória do arrasto pesado inerente e colisional da semente caindo pela extensão cilíndrica.}) $$
                             $$ \\require{action} \\texttip{\\Delta P_{prim}}{[Pa] Perda Distribuída Primária. Definição: Queda de pressão por atrito na extensão do tubo primário.} = \\texttip{${redeDoisEstagios.deltaPPrimario.toFixed(0)}}{[Pa] Resistência Acumulada Primária Total. Impacto: Quantidade nítida de sucção magnética fantasma e atrito puro que se opõe passivamente à descarga exaustora originária do ventilador de hélice curva.} \\text{ Pa} $$
                         </div>
@@ -1845,7 +2139,7 @@ console.log('ðŸ”§ Script iniciando...');
                                 <a href="https://www.engineeringtoolbox.com/minor-loss-air-ducts-fittings-d_208.html" target="_blank" style="color: inherit; text-decoration: underline;">${textoIdioma('7. Perda Localizada da Torre', '7. Tower Local Loss')}</a>
                             </strong><br>
                             <p style="margin: 10px 0 5px 0; font-size: 0.9em;">${textoIdioma('Modelo de perda localizada com coeficiente K referido à velocidade no duto primário:', 'Local loss model with K coefficient referenced to primary duct velocity:')}</p>
-                            $$ \\Delta P_{torre} = K_{torre} \\cdot \\frac{\\rho_a \\cdot v_{prim}^{2}}{2} \\cdot (1 + SLR_{prim}) $$
+                            $$ \\require{action} ${variavelFormula('\\Delta P_{torre}', 'perdaTorre')} = ${variavelFormula('K_{torre}', 'coeficienteTorre')} \\cdot \\frac{${variavelFormula('\\rho_a', 'densidadeAr')} \\cdot ${variavelFormula('v_{prim}^{2}', 'velocidadePrimaria')}}{${variavelFormula('2', 'divisorArea')}} \\cdot (1 + ${variavelFormula('SLR_{prim}', 'slrPrimario')}) $$
                             $$ \\require{action} \\texttip{\\Delta P_{torre}}{[Pa] Perda Localizada (Torre). Definição: Dissipação de energia cinética por turbulência no cogumelo divisor.} = \\texttip{${k_torre.toFixed(2)}}{[Adim.] Coeficiente Arquitetônico Obstrutivo Local de Torre de Choque (Fator K). Impacto: Torre cogumelo chata, reta 90° e plana no teto explode a turbulência (K altíssimo; ex: 1,8); Torre de ogiva cônica pontiaguda lisa acalma o ar com desvios em lâminas suaves (K minúsculo; ex: 0,3).} \\cdot \\frac{\\texttip{${rho_a.toFixed(2)}}{Densidade natural do balanço.} \\cdot \\texttip{${redeDoisEstagios.velocidadePrimaria.toFixed(2)}^2}{[m/s] Fatoração caótica violenta explodindo nas costelas oblíquas metálicas das aletas curvas na redoma da torre.}}{\\texttip{2}{Estabilizador de conversão fluidodinâmica termocinética de pressão.}} \\cdot (1 + \\texttip{${redeDoisEstagios.slrPrimario.toFixed(2)}}{Projeção de peso da poeira da braquiária ricocheteando brutalmente e estancando no cogumelo difusor mecânico superior.}) $$
                             $$ \\require{action} \\texttip{\\Delta P_{torre}}{[Pa] Perda Localizada (Torre). Definição: Dissipação de energia cinética por turbulência no cogumelo divisor.} = \\texttip{${redeDoisEstagios.deltaPTorre.toFixed(0)}}{[Pa] Sangria Plena de Choque da Transição da Torre Distributiva de Escoamento. Impacto: Indica se o domo da torre virou um gargalo inaceitável. O alvo clássico de engenheiros de design industrial em arado é manter esta métrica microscópica perante o todo.} \\text{ Pa} $$
                         </div>
@@ -1854,10 +2148,10 @@ console.log('ðŸ”§ Script iniciando...');
                                 <a href="https://openstax.org/books/college-physics-2e/pages/12-1-flow-rate-and-its-relation-to-velocity" target="_blank" style="color: inherit; text-decoration: underline;">${textoIdioma('8. Continuidade nas Linhas Secundárias', '8. Continuity in Secondary Lines')}</a>
                             </strong><br>
                             <p style="margin: 10px 0 5px 0; font-size: 0.9em;">${textoIdioma('A vazão real remanescente é dividida entre as linhas finais:', 'The remaining real flow is divided among the final rows:')}</p>
-                            $$ A_{sec} = \\frac{\\pi \\cdot D_{sec}^{2}}{4} $$
-                            $$ Q_{sec} = \\frac{Q_{total,real}}{n_{linhas}} $$
-                            $$ v_{sec} = \\frac{Q_{sec}/60}{A_{sec}} $$
-                            $$ SLR_{sec} = \\frac{\\dot{m}_{s,linha}}{\\dot{m}_{ar,sec}} $$
+                            $$ \\require{action} ${variavelFormula('A_{sec}', 'areaSecundaria')} = \\frac{${variavelFormula('\\pi', 'pi')} \\cdot ${variavelFormula('D_{sec}^{2}', 'diametroSecundario')}}{${variavelFormula('4', 'divisorArea')}} $$
+                            $$ \\require{action} ${variavelFormula('Q_{sec}', 'vazaoSecundaria')} = \\frac{${variavelFormula('Q_{total,real}', 'vazaoTotal')}}{${variavelFormula('n_{linhas}', 'numeroLinhas')}} $$
+                            $$ \\require{action} ${variavelFormula('v_{sec}', 'velocidadeSecundaria')} = \\frac{${variavelFormula('Q_{sec}', 'vazaoSecundaria')} / ${variavelFormula('60', 'conversaoMinuto')}}{${variavelFormula('A_{sec}', 'areaSecundaria')}} $$
+                            $$ \\require{action} ${variavelFormula('SLR_{sec}', 'slrSecundario')} = \\frac{${variavelFormula('\\dot{m}_{s,linha}', 'massaLinha')}}{${variavelFormula('\\dot{m}_{ar,sec}', 'massaArSecundario')}} $$
                             $$ \\require{action} \\texttip{A_{sec}}{[m²] Área Secundária. Definição: Área da seção transversal da mangueira fina.} = \\frac{\\pi \\cdot \\texttip{${D_m.toFixed(4)}^2}{Diâmetro fino engasgado da tubulação fina escorrendo arame liso para a extremidade terminal em milímetros.}}{\\texttip{4}{Divisor de planificação redonda da sessão retangular.}} = \\texttip{${areaSecundaria.toFixed(4)}}{[m²] Canal Secundário Minúsculo Transversal. Impacto: Tubagens muito curtas agudamente finalizam o afunilamento de Bernoulli para tentar recuperar velocidades moribundas após a torre.} \\text{ m}^2 $$
                             $$ \\require{action} \\texttip{Q_{sec}}{[m³/min] Vazão por Linha. Definição: Quantidade de ar que passa por uma única mangueira secundária.} = \\frac{\\texttip{${redeDoisEstagios.vazaoTotalReal.toFixed(2)}}{Vazão Integral Atuante.}}{\\texttip{${n_linhas}}{[un] Fracionamento Micro-Segmentar Oblíquo Total da Semeadora de 60 linhas paralelas. Impacto: O pulverizador do exaustor mestre de injeção original.}} = \\texttip{${redeDoisEstagios.vazaoSecundariaReal.toFixed(2)}}{[m³/min] Vazão Tênue Marginal Injetada Diretamente. Impacto: Quantidade delicadíssima real enviada gota a gota para proteger do embuchamento as ponteiras finais plantadoras de braquiária do disco duplo cortador de solo profundo.} \\text{ m}^3\\text{/min} $$
                             $$ \\require{action} \\texttip{v_{sec}}{[m/s] Velocidade Secundária. Definição: Velocidade final de arraste na mangueira. Essencial para evitar embuchamento.} = \\frac{\\texttip{${redeDoisEstagios.vazaoSecundariaReal.toFixed(2)}}{Vazão minuciosa remanescente fluida na mangueirinha.} / \\texttip{60}{Relatório conversional de desmembramento temporal.}}{\\texttip{${areaSecundaria.toFixed(4)}}{Aperto transversal geofísico limitador das condutas finais restritivas.}} = \\texttip{${redeDoisEstagios.velocidadeSecundaria.toFixed(2)}}{[m/s] CÚPULA DE VELOCIDADE CLÍNICA FINAL (ZONA DE SALTAÇÃO EXTREMA E FATAL PARA ENTUPIMENTO). Impacto: A sentinela mestra da mecânica plantadora! Abaixo de gloriosos 15 metros cravados oscilando e rangendo a mangueira o fluxo sucumbe, o grão despenca como pedras fúteis para a gravidade trágica trancando e engasgando o terminal difusor da plantadeira mortalmente!} \\text{ m/s} $$
@@ -1868,7 +2162,7 @@ console.log('ðŸ”§ Script iniciando...');
                                 <a href="https://www.engineeringtoolbox.com/darcy-weisbach-equation-d_646.html" target="_blank" style="color: inherit; text-decoration: underline;">${textoIdioma('9. Perda nas Linhas Secundárias', '9. Loss in Secondary Lines')}</a>
                             </strong><br>
                             <p style="margin: 10px 0 5px 0; font-size: 0.9em;">${textoIdioma('Perda distribuída no trecho final, já após a torre:', 'Distributed loss in the final section, after the tower:')}</p>
-                            $$ \\Delta P_{sec} = \\lambda \\cdot \\frac{L_{sec}}{D_{sec}} \\cdot \\frac{\\rho_a \\cdot v_{sec}^{2}}{2} \\cdot (1 + SLR_{sec}) $$
+                            $$ \\require{action} ${variavelFormula('\\Delta P_{sec}', 'perdaSecundaria')} = ${variavelFormula('\\lambda', 'fatorAtrito')} \\cdot \\frac{${variavelFormula('L_{sec}', 'comprimentoSecundario')}}{${variavelFormula('D_{sec}', 'diametroSecundario')}} \\cdot \\frac{${variavelFormula('\\rho_a', 'densidadeAr')} \\cdot ${variavelFormula('v_{sec}^{2}', 'velocidadeSecundaria')}}{${variavelFormula('2', 'divisorArea')}} \\cdot (1 + ${variavelFormula('SLR_{sec}', 'slrSecundario')}) $$
                             $$ \\require{action} \\texttip{\\Delta P_{sec}}{[Pa] Perda Distribuída Secundária. Definição: Queda de pressão por atrito na extensão da mangueira fina.} = \\texttip{${fator_atrito.toFixed(3)}}{Atrito da parede do caninho flexível terminal descendo a máquina espinhosa.} \\cdot \\frac{\\texttip{${L_tubo_m.toFixed(2)}}{[m] Extensão Tormentosa Secundária Final da Mangueirinha fina enrodilhada contornando suspensões pantográficas pesadas das bandejas basculantes.}}{\\texttip{${D_m.toFixed(4)}}{Diâmetro asfixiante exato final minúsculo engolindo ar desesperadamente.}} \\cdot \\frac{\\texttip{${rho_a.toFixed(2)}}{Pesagem do vapor atmosférico.} \\cdot \\texttip{${redeDoisEstagios.velocidadeSecundaria.toFixed(2)}^2}{Impulso quadrado agressivo abrasivo rasgando o caninho internamente colidindo contra pedras minerais duras pontiagudas NPK 4-14-8 e polímeros corrugados plásticos da linha fina.}}{\\texttip{2}{Restritor Cinético Universal Base}} \\cdot (1 + \\texttip{${redeDoisEstagios.slrSecundario.toFixed(2)}}{Carga Sólida de embuchamento final na descida ao adubador pantográfico pendular oscilante.}) $$
                             $$ \\require{action} \\texttip{\\Delta P_{sec}}{[Pa] Perda Distribuída Secundária. Definição: Queda de pressão por atrito na extensão da mangueira fina.} = \\texttip{${redeDoisEstagios.deltaPSecundario.toFixed(0)}}{[Pa] Atrito Quilométrico Estancador Passivo Final de Tubulação Finíssima do Sistema Distributivo Pêndulo Oscilador Pantográfico Paralelogrâmico Traseiro da Plantadeira Maciça de 60 Linhas de Soja! Impacto: É a drenagem e derramamento de toda e qualquer energia pressional sobressalente da pobre turbina Punker antes do ar ir morrer em exaustão e decantar estéril no arado abrindo o leito espinhoso sulcado pela roseta desencontrada!} \\text{ Pa} $$
                         </div>
@@ -1877,9 +2171,9 @@ console.log('ðŸ”§ Script iniciando...');
                                 <a href="https://www.engineeringtoolbox.com/fan-performance-characteristics-d_48.html" target="_blank" style="color: inherit; text-decoration: underline;">${textoIdioma('10. Fechamento da Rede e Comparação com Divisão Direta', '10. Network Closure and Direct Split Comparison')}</a>
                             </strong><br>
                             <p style="margin: 10px 0 5px 0; font-size: 0.9em;">${textoIdioma('O modelo recalcula a vazão até convergir entre a contrapressão total e a capacidade do soprador:', 'The model recalculates flow until it converges between total backpressure and blower capacity:')}</p>
-                            $$ \\Delta P_{total} = \\Delta P_{prim} + \\Delta P_{torre} + \\Delta P_{sec} $$
-                            $$ f = 1 - \\frac{\\Delta P_{total}}{P_{max}} $$
-                            $$ Q_{total,real} = f \\cdot Q_{turbina} $$
+                            $$ \\require{action} ${variavelFormula('\\Delta P_{total}', 'perdaTotal')} = ${variavelFormula('\\Delta P_{prim}', 'perdaPrimaria')} + ${variavelFormula('\\Delta P_{torre}', 'perdaTorre')} + ${variavelFormula('\\Delta P_{sec}', 'perdaSecundaria')} $$
+                            $$ \\require{action} ${variavelFormula('f', 'fatorAcoplamento')} = 1 - \\frac{${variavelFormula('\\Delta P_{total}', 'perdaTotal')}}{${variavelFormula('P_{max}', 'pressaoMaxima')}} $$
+                            $$ \\require{action} ${variavelFormula('Q_{total,real}', 'vazaoTotal')} = ${variavelFormula('f', 'fatorAcoplamento')} \\cdot ${variavelFormula('Q_{turbina}', 'vazaoTurbina')} $$
                             $$ \\require{action} \\texttip{\\Delta P_{total}}{[Pa] Perda de Carga Total. Definição: Contrapressão macro do sistema resistindo ao fluxo da turbina.} = \\texttip{${redeDoisEstagios.deltaPPrimario.toFixed(0)}}{Pressão Friccional Morta no Custo da Transferência de Carga Bruta Frontal Pela Parede de Borracha ou Silicone Grossa Liso} + \\texttip{${redeDoisEstagios.deltaPTorre.toFixed(0)}}{Soco Impactante Dinâmico Caótico Morto Fracassado no Teto do Chapéu Divisor ou Venturi Salvação} + \\texttip{${redeDoisEstagios.deltaPSecundario.toFixed(0)}}{Arrasto Espiral Espremido Serpenteante Estiolante das Linhas Longilíneas Sibilantes Mangueiradas} = \\texttip{${redeDoisEstagios.deltaPTotal.toFixed(0)}}{[Pa] BARREIRA RESISTIVA INTEGRAL DO SISTEMA. Impacto: A força cega invisível e brutal do vento engarrafado dentro da couraça de canos ocos colidindo empedernida batendo de frente contra o olho do furacão centrífugo metálico na boca exaustora da turbina Fprime de ferro trancando e ensurdecendo a mesma violentamente em desespero restritivo aerodinâmico!} \\text{ Pa} $$
                             $$ \\require{action} \\texttip{f}{[Adim.] Fator de Acoplamento. Definição: Fator de redução de vazão da turbina devido à contrapressão da rede.} = \\texttip{1}{Rendimento Livre Máximo Fantasia sem atrito.} - \\frac{\\texttip{${redeDoisEstagios.deltaPTotal.toFixed(0)}}{Frenagem e freio resistivo duro de trancar o vento.}}{\\texttip{${pressao_turbina_max.toFixed(0)}}{[Pa] Pressão Fechada Absoluta Trancada (Ponto Morto Estol). Impacto: A turbina uivará em 2900 RPM e nenhuma fagulha de ar escapará das suas beiradas emparedadas!}} = \\texttip{${redeDoisEstagios.fatorVazao.toFixed(3)}}{[Adim.] Ponto Cruzado de Equilíbrio Tênue Resultante de Escoamento Fluidodinâmico da Curva Plena Original Fabril de Desempenho. Impacto: A fatia matemática final gloriosa que escapou de toda a morte e restrição do sistema físico da tubagem!} $$
                             $$ \\require{action} \\texttip{Q_{total,real}}{[m³/min] Vazão Total Real. Definição: Volume de ar real que a turbina consegue empurrar na rede.} = \\texttip{${redeDoisEstagios.fatorVazao.toFixed(3)}}{Eficiência Final Acoplada Relativa Resistida} \\cdot \\texttip{${Q_turbina_m3min.toFixed(2)}}{Vazão Virgem Absoluta de Laboratório Ideal sem canos no vento frio limpo e silencioso germânico testado na Punker.} = \\texttip{${redeDoisEstagios.vazaoTotalReal.toFixed(2)}}{[m³/min] VAZÃO MAGISTRAL DE TRABALHO EMPÍRICA REAL E VERDADEIRA! Impacto: É este pulmão matemático inegável retroativo e exato que permitiu trancar o balanço e resolver em frações as velocidades milimétricas que manterão as toneladas de adubo e soja de 60 covas perfeitamente suspensas como mágica flutuante e assopradas contra o abismo do leito arado no solo quente da fazenda!} \\text{ m}^3\\text{/min} $$
@@ -2007,7 +2301,7 @@ console.log('ðŸ”§ Script iniciando...');
                                 <a href="https://openstax.org/books/college-physics-2e/pages/3-4-projectile-motion" target="_blank" style="color: inherit; text-decoration: underline;">${textoIdioma('2. Equação Horária da Posição Vertical 🔗', '2. Vertical Position Time Equation 🔗')}</a>
                             </strong><br>
                             <p style="margin: 10px 0 5px 0; font-size: 0.9em;">${textoIdioma('Componente vertical inicial da velocidade refletida:', 'Initial vertical component of the reflected velocity:')}</p>
-                            $$ \\require{action} \\texttip{V_y}{${textoIdioma('[m/s] Vel. Y Inicial. Definição: Vetor vertical da semente. Importância: Impacta o tempo de voo. Se positivo, semente sobe; se negativo, desce rápido.', '[m/s] Initial Y velocity. Definition: Seed vertical vector. Importance: Affects flight time. If positive, the seed rises; if negative, it drops quickly.')}} = \\texttip{V_r}{${textoIdioma('Vel. Refletida', 'Reflected velocity')}} \\cdot \\sin(\\alpha) $$
+                            $$ \\require{action} \\texttip{V_y}{${textoIdioma('[m/s] Vel. Y Inicial. Definição: Vetor vertical da semente. Importância: Impacta o tempo de voo. Se positivo, semente sobe; se negativo, desce rápido.', '[m/s] Initial Y velocity. Definition: Seed vertical vector. Importance: Affects flight time. If positive, the seed rises; if negative, it drops quickly.')}} = \\texttip{V_r}{${textoIdioma('Vel. Refletida', 'Reflected velocity')}} \\cdot \\sin(${variavelFormula('\\alpha', 'anguloSaida')}) $$
                             $$ V_y = ${v_refl.toFixed(2)} \\cdot \\sin(${angulo_saida_deg.toFixed(1)}^\\circ) $$
                             $$ V_y = ${v_y.toFixed(2)} \\text{ m/s} $$
                             <hr style="border: 0; border-top: 1px dashed rgba(255,255,255,0.05); margin: 10px 0;">
@@ -2022,7 +2316,7 @@ console.log('ðŸ”§ Script iniciando...');
                                 <a href="https://openstax.org/books/college-physics-2e/pages/3-4-projectile-motion" target="_blank" style="color: inherit; text-decoration: underline;">${textoIdioma('3. Alcance Longitudinal (Eixo X) 🔗', '3. Longitudinal Range (X Axis) 🔗')}</a>
                             </strong><br>
                             <p style="margin: 10px 0 5px 0; font-size: 0.9em;">${textoIdioma('Componente horizontal constante da velocidade projetada (MRU):', 'Constant horizontal component of the projected velocity (uniform motion):')}</p>
-                            $$ \\require{action} \\texttip{V_x}{${textoIdioma('[m/s] Vel. X. Definição: Deslocamento na linha do trator. Importância: Compõe o alcance longitudinal.', '[m/s] X velocity. Definition: Displacement along the tractor line. Importance: Forms the longitudinal range.')}} = \\texttip{V_r}{${textoIdioma('Vel. Refletida', 'Reflected velocity')}} \\cdot \\cos(\\alpha) $$
+                            $$ \\require{action} \\texttip{V_x}{${textoIdioma('[m/s] Vel. X. Definição: Deslocamento na linha do trator. Importância: Compõe o alcance longitudinal.', '[m/s] X velocity. Definition: Displacement along the tractor line. Importance: Forms the longitudinal range.')}} = \\texttip{V_r}{${textoIdioma('Vel. Refletida', 'Reflected velocity')}} \\cdot \\cos(${variavelFormula('\\alpha', 'anguloSaida')}) $$
                             $$ V_x = ${v_refl.toFixed(2)} \\cdot \\cos(${angulo_saida_deg.toFixed(1)}^\\circ) $$
                             $$ V_x = ${v_x.toFixed(2)} \\text{ m/s} $$
                             <hr style="border: 0; border-top: 1px dashed rgba(255,255,255,0.05); margin: 10px 0;">
@@ -2042,7 +2336,7 @@ console.log('ðŸ”§ Script iniciando...');
                             $$ \\gamma = ${gama_max_deg.toFixed(1)}^\\circ $$
                             <hr style="border: 0; border-top: 1px dashed rgba(255,255,255,0.05); margin: 10px 0;">
                             <p style="margin: 5px 0; font-size: 0.9em;">${textoIdioma('Componente de velocidade máxima lateral gerada no repique:', 'Maximum lateral velocity component generated by the bounce:')}</p>
-                            $$ \\require{action} \\texttip{V_z}{${textoIdioma('[m/s] Vel. Z. Definição: Vetor de velocidade transversal. Importância: Força com que a semente se afasta do centro da linha.', '[m/s] Z velocity. Definition: Transverse velocity vector. Importance: Force with which the seed moves away from the line center.')}} = \\texttip{V_r}{${textoIdioma('Velocidade Refletida', 'Reflected velocity')}} \\cdot \\sin(\\gamma) $$
+                            $$ \\require{action} \\texttip{V_z}{${textoIdioma('[m/s] Vel. Z. Definição: Vetor de velocidade transversal. Importância: Força com que a semente se afasta do centro da linha.', '[m/s] Z velocity. Definition: Transverse velocity vector. Importance: Force with which the seed moves away from the line center.')}} = \\texttip{V_r}{${textoIdioma('Velocidade Refletida', 'Reflected velocity')}} \\cdot \\sin(${variavelFormula('\\gamma', 'anguloTangencial')}) $$
                             $$ V_z = ${v_refl.toFixed(2)} \\cdot \\sin(${gama_max_deg.toFixed(1)}^\\circ) $$
                             $$ V_z = ${vz_max.toFixed(2)} \\text{ m/s} $$
                             <hr style="border: 0; border-top: 1px dashed rgba(255,255,255,0.05); margin: 10px 0;">
