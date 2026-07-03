@@ -212,15 +212,16 @@ console.log('ðŸ”§ Script iniciando...');
                 destorroador: {
                     container: dom.sidebar,
                     activeProfile: 'minimo',
-                    profiles: { minimo: {}, maximo: {} }
+                    profiles: {}
                 },
                 distribuidor: {
                     container: dom.sidebarDist,
                     activeProfile: 'minimo',
-                    profiles: { minimo: {}, maximo: {} }
+                    profiles: {}
                 }
             };
             const dashboardDefaults = {};
+            const dashboardProfileKeys = ['minimo', 'minimo_a', 'minimo_b', 'minimo_c', 'maximo', 'maximo_a', 'maximo_b', 'maximo_c'];
             const sidebarConfigs = {
                 destorroador: { element: dom.sidebar, pinned: true, collapsed: false },
                 distribuidor: { element: dom.sidebarDist, pinned: true, collapsed: false }
@@ -421,7 +422,17 @@ console.log('ðŸ”§ Script iniciando...');
                 '📚 Memorial da Cinemática': '📚 Kinematics Calculation Report',
                 'Física de Projéteis Assumida': 'Assumed Projectile Physics',
                 'Física aplicada: Conservação de Energia (V x A), resistência de materiais e Lei de Joule.': 'Applied physics: Energy conservation (V x A), material strength, and Joule\'s law.',
-                'Física aplicada: Escoamento de fluidos compressíveis, vazão volumétrica e razão de carregamento bifásico.': 'Applied physics: Compressible fluid flow, volumetric flow rate, and two-phase loading ratio.'
+                'Física aplicada: Escoamento de fluidos compressíveis, vazão volumétrica e razão de carregamento bifásico.': 'Applied physics: Compressible fluid flow, volumetric flow rate, and two-phase loading ratio.',
+                '© 2026 Guilherme Silva de Oliveira': '© 2026 Guilherme Silva de Oliveira',
+                'Visitar Portfólio': 'Visit Portfolio',
+                'LinkedIn': 'LinkedIn',
+                'VISTA SUPERIOR - DOSAGEM E ARRASTE PNEUMÁTICO': 'TOP VIEW - METERING AND PNEUMATIC CONVEYING',
+                'LINHA PRINCIPAL': 'PRIMARY LINE',
+                'TORRE DE DISTRIBUIÇÃO': 'DISTRIBUTION TOWER',
+                'LINHAS SECUNDÁRIAS': 'SECONDARY LINES',
+                'DEPÓSITO': 'HOPPER',
+                'ENTRADA DA MÁQUINA': 'MACHINE INLET',
+                'Linha grossa = principal | linhas finas = secundárias': 'Thick line = primary | thin lines = secondary'
             };
 
             function traduzirTexto(texto, idioma) {
@@ -799,13 +810,12 @@ console.log('ðŸ”§ Script iniciando...');
                     const salvo = estadoSalvo.dashboards?.[dashboardKey];
                     if (!salvo) return;
 
-                    if (salvo.profiles?.minimo) {
-                        dashboardProfiles[dashboardKey].profiles.minimo = clonarEstrutura(salvo.profiles.minimo);
-                    }
-                    if (salvo.profiles?.maximo) {
-                        dashboardProfiles[dashboardKey].profiles.maximo = clonarEstrutura(salvo.profiles.maximo);
-                    }
-                    if (salvo.activeProfile === 'minimo' || salvo.activeProfile === 'maximo') {
+                    dashboardProfileKeys.forEach((profileKey) => {
+                        if (salvo.profiles?.[profileKey]) {
+                            dashboardProfiles[dashboardKey].profiles[profileKey] = clonarEstrutura(salvo.profiles[profileKey]);
+                        }
+                    });
+                    if (dashboardProfileKeys.includes(salvo.activeProfile)) {
                         dashboardProfiles[dashboardKey].activeProfile = salvo.activeProfile;
                     }
 
@@ -822,8 +832,9 @@ console.log('ðŸ”§ Script iniciando...');
                 if (!padrao) return;
 
                 dashboardProfiles[dashboardKey].activeProfile = padrao.activeProfile;
-                dashboardProfiles[dashboardKey].profiles.minimo = clonarEstrutura(padrao.profiles.minimo);
-                dashboardProfiles[dashboardKey].profiles.maximo = clonarEstrutura(padrao.profiles.maximo);
+                dashboardProfileKeys.forEach((profileKey) => {
+                    dashboardProfiles[dashboardKey].profiles[profileKey] = clonarEstrutura(padrao.profiles[profileKey]);
+                });
 
                 if (dashboardKey === 'destorroador') {
                     aplicarModoSelecionado('modo', '1');
@@ -848,13 +859,13 @@ console.log('ðŸ”§ Script iniciando...');
                 return idiomaAtual === 'en'
                     ? {
                         title: 'Confirm reset',
-                        text: `Reset ${nomeDashboard} to the default values? This will discard the current minimum and maximum profiles.`,
+                        text: `Reset ${nomeDashboard} to the default values? This will discard the current saved states.`,
                         cancel: 'Cancel',
                         confirm: 'Reset'
                     }
                     : {
                         title: 'Confirmar redefinição',
-                        text: `Redefinir ${nomeDashboard} para os valores padrão? Isso vai descartar os perfis de mínimo e máximo atuais.`,
+                        text: `Redefinir ${nomeDashboard} para os valores padrão? Isso vai descartar os estados salvos atuais.`,
                         cancel: 'Cancelar',
                         confirm: 'Redefinir'
                     };
@@ -1217,6 +1228,21 @@ console.log('ðŸ”§ Script iniciando...');
                 tooltip.setAttribute('role', 'tooltip');
                 document.body.appendChild(tooltip);
                 let alvoAtual = null;
+                let tooltipFixo = false;
+
+                const mostrarTooltip = (alvo, event) => {
+                    if (!alvo || !alvo.dataset.tooltip) return;
+                    alvoAtual = alvo;
+                    tooltip.textContent = alvo.dataset.tooltip;
+                    tooltip.classList.add('visible');
+                    if (event) posicionar(event);
+                };
+
+                const ocultarTooltip = () => {
+                    alvoAtual = null;
+                    tooltipFixo = false;
+                    tooltip.classList.remove('visible');
+                };
 
                 const preparar = (raiz) => {
                     if (!(raiz instanceof Element)) return;
@@ -1238,6 +1264,19 @@ console.log('ðŸ”§ Script iniciando...');
 
                 const posicionar = (event) => {
                     if (!alvoAtual) return;
+                    if (tooltipFixo && !event?.clientX && !event?.clientY) {
+                        const rect = alvoAtual.getBoundingClientRect();
+                        const margem = 14;
+                        let left = rect.left + rect.width / 2 + window.scrollX;
+                        let top = rect.bottom + window.scrollY + margem;
+                        const largura = tooltip.offsetWidth;
+                        const altura = tooltip.offsetHeight;
+                        if (left + largura > window.innerWidth - 8) left = window.innerWidth - largura - 8;
+                        if (top + altura > window.innerHeight - 8) top = rect.top + window.scrollY - altura - margem;
+                        tooltip.style.left = `${Math.max(8, left)}px`;
+                        tooltip.style.top = `${Math.max(8, top)}px`;
+                        return;
+                    }
                     const margem = 14;
                     const largura = tooltip.offsetWidth;
                     const altura = tooltip.offsetHeight;
@@ -1252,20 +1291,25 @@ console.log('ðŸ”§ Script iniciando...');
                 document.addEventListener('pointerover', (event) => {
                     const alvo = event.target.closest?.('[data-tooltip]');
                     if (!alvo || !alvo.dataset.tooltip) return;
+                    if (tooltipFixo && alvo !== alvoAtual) return;
                     alvoAtual = alvo;
                     tooltip.textContent = alvo.dataset.tooltip;
                     tooltip.classList.add('visible');
                     posicionar(event);
                 });
-                document.addEventListener('pointermove', posicionar);
+                document.addEventListener('pointermove', (event) => {
+                    if (tooltipFixo) return;
+                    posicionar(event);
+                });
                 document.addEventListener('pointerout', (event) => {
+                    if (tooltipFixo) return;
                     if (!alvoAtual || event.relatedTarget?.closest?.('[data-tooltip]') === alvoAtual) return;
-                    alvoAtual = null;
-                    tooltip.classList.remove('visible');
+                    ocultarTooltip();
                 });
                 document.addEventListener('focusin', (event) => {
                     const alvo = event.target.closest?.('[data-tooltip]');
                     if (!alvo || !alvo.dataset.tooltip) return;
+                    if (tooltipFixo && alvo !== alvoAtual) return;
                     alvoAtual = alvo;
                     tooltip.textContent = alvo.dataset.tooltip;
                     const rect = alvo.getBoundingClientRect();
@@ -1273,8 +1317,27 @@ console.log('ðŸ”§ Script iniciando...');
                     posicionar({ clientX: rect.left + rect.width / 2, clientY: rect.bottom });
                 });
                 document.addEventListener('focusout', () => {
-                    alvoAtual = null;
-                    tooltip.classList.remove('visible');
+                    if (tooltipFixo) return;
+                    ocultarTooltip();
+                });
+                document.addEventListener('click', (event) => {
+                    const alvo = event.target.closest?.('[data-tooltip]');
+                    if (alvo && alvo.dataset.tooltip) {
+                        if (alvoAtual === alvo && tooltipFixo) {
+                            ocultarTooltip();
+                            return;
+                        }
+                        tooltipFixo = true;
+                        mostrarTooltip(alvo, {
+                            clientX: alvo.getBoundingClientRect().left + alvo.getBoundingClientRect().width / 2,
+                            clientY: alvo.getBoundingClientRect().bottom
+                        });
+                        return;
+                    }
+
+                    if (tooltipFixo) {
+                        ocultarTooltip();
+                    }
                 });
 
                 preparar(document.body);
@@ -1622,14 +1685,15 @@ console.log('ðŸ”§ Script iniciando...');
 
             Object.keys(dashboardProfiles).forEach((dashboardKey) => {
                 const snapshotInicial = capturarEstadoDashboard(dashboardProfiles[dashboardKey].container);
-                dashboardProfiles[dashboardKey].profiles.minimo = clonarEstrutura(snapshotInicial);
-                dashboardProfiles[dashboardKey].profiles.maximo = clonarEstrutura(snapshotInicial);
+                dashboardProfileKeys.forEach((profileKey) => {
+                    dashboardProfiles[dashboardKey].profiles[profileKey] = clonarEstrutura(snapshotInicial);
+                });
                 dashboardDefaults[dashboardKey] = {
                     activeProfile: 'minimo',
-                    profiles: {
-                        minimo: clonarEstrutura(snapshotInicial),
-                        maximo: clonarEstrutura(snapshotInicial)
-                    }
+                    profiles: dashboardProfileKeys.reduce((acc, profileKey) => {
+                        acc[profileKey] = clonarEstrutura(snapshotInicial);
+                        return acc;
+                    }, {})
                 };
                 atualizarBotoesDashboard(dashboardKey);
             });
@@ -1942,7 +2006,7 @@ console.log('ðŸ”§ Script iniciando...');
                     dom.distGrpModo1.classList.remove('hidden');
                     dom.distGrpModo2.classList.add('hidden');
 
-                    canvasDist.style.display = 'none';
+                    canvasDist.style.display = 'block';
                     ativarAnimacaoDist = false;
 
                     const n_linhas = parseInt(dom.distLinhas.value);
@@ -2746,8 +2810,147 @@ console.log('ðŸ”§ Script iniciando...');
                 requestAnimationFrame(renderizarDosador);
             }
 
+            function distribuirLinhasPorTorre(totalLinhas, totalTorres) {
+                const base = Math.floor(totalLinhas / Math.max(totalTorres, 1));
+                let resto = totalLinhas % Math.max(totalTorres, 1);
+                return Array.from({ length: Math.max(totalTorres, 1) }, () => base + (resto-- > 0 ? 1 : 0));
+            }
+
+            function desenharVistaSuperiorDistribuidor() {
+                ctxDist.clearRect(0, 0, canvasDist.width, canvasDist.height);
+
+                const estilos = getComputedStyle(document.body);
+                const corTexto = estilos.getPropertyValue('--text-main').trim() || '#c9d1d9';
+                const corMutado = estilos.getPropertyValue('--text-muted').trim() || '#8b949e';
+                const corBorda = estilos.getPropertyValue('--border').trim() || '#30363d';
+                const corAccent = estilos.getPropertyValue('--accent').trim() || '#58a6ff';
+                const corSucesso = estilos.getPropertyValue('--success').trim() || '#3fb950';
+                const corFundo = estilos.getPropertyValue('--canvas-bg').trim() || '#0d1117';
+
+                ctxDist.fillStyle = corFundo;
+                ctxDist.fillRect(0, 0, canvasDist.width, canvasDist.height);
+
+                const margemX = 28;
+                const margemY = 34;
+                const nPrimarios = Math.max(parseInt(dom.distQtdPrimarios.value) || 1, 1);
+                const nLinhas = Math.max(parseInt(dom.distLinhas.value) || 1, 1);
+                const LPrimario = Math.max(parseFloat(dom.distComprimentoPrimario.value) || 1, 0.1);
+                const LSecundario = Math.max(parseFloat(dom.distComprimento.value) || 1, 0.1);
+                const DPrimarioMm = Math.max((parseFloat(dom.distDiametroPrimarioPol.value) || 1) * 25.4, 18);
+                const DSecundarioMm = Math.max(parseFloat(dom.distDiametro.value) || 1, 10);
+                const escala = Math.min((canvasDist.height - 180) / Math.max(LPrimario + LSecundario, 1), 135);
+                const compPrimario = Math.max(90, LPrimario * escala);
+                const compSecundario = Math.max(90, LSecundario * escala);
+                const topoDepositoY = 58;
+                const depositoRaio = 22;
+                const yInicioPrimario = topoDepositoY + depositoRaio + 22;
+                const yTorre = yInicioPrimario + compPrimario;
+                const linhasPorTorre = distribuirLinhasPorTorre(nLinhas, nPrimarios);
+                const colunasUtil = Math.max(canvasDist.width - 2 * margemX, 1);
+                const espacamentoX = colunasUtil / Math.max(nPrimarios, 1);
+                const offsetSec = Math.min(16, Math.max(8, espacamentoX / 4));
+
+                for (let x = 60; x < canvasDist.width; x += 60) {
+                    ctxDist.strokeStyle = 'rgba(139, 148, 158, 0.08)';
+                    ctxDist.lineWidth = 1;
+                    ctxDist.beginPath();
+                    ctxDist.moveTo(x, margemY);
+                    ctxDist.lineTo(x, canvasDist.height - 40);
+                    ctxDist.stroke();
+                }
+
+                ctxDist.strokeStyle = 'rgba(139, 148, 158, 0.12)';
+                ctxDist.lineWidth = 1;
+                for (let y = margemY; y < canvasDist.height - 40; y += 50) {
+                    ctxDist.beginPath();
+                    ctxDist.moveTo(20, y);
+                    ctxDist.lineTo(canvasDist.width - 20, y);
+                    ctxDist.stroke();
+                }
+
+                ctxDist.fillStyle = corTexto;
+                ctxDist.font = 'bold 16px monospace';
+                ctxDist.fillText(textoIdioma('VISTA SUPERIOR - DOSAGEM E ARRASTE PNEUMÁTICO', 'TOP VIEW - METERING AND PNEUMATIC CONVEYING'), 18, 24);
+                ctxDist.font = '11px monospace';
+                ctxDist.fillStyle = corMutado;
+                ctxDist.fillText(textoIdioma('Linha grossa = principal | linhas finas = secundárias', 'Thick line = primary | thin lines = secondary'), 18, 42);
+
+                ctxDist.fillStyle = corAccent;
+                ctxDist.fillRect(18, canvasDist.height - 28, 26, 4);
+                ctxDist.fillStyle = corTexto;
+                ctxDist.font = '10px monospace';
+                ctxDist.fillText(textoIdioma('LINHA PRINCIPAL', 'PRIMARY LINE'), 52, canvasDist.height - 20);
+                ctxDist.fillStyle = corSucesso;
+                ctxDist.fillRect(210, canvasDist.height - 28, 26, 2);
+                ctxDist.fillStyle = corTexto;
+                ctxDist.fillText(textoIdioma('LINHAS SECUNDÁRIAS', 'SECONDARY LINES'), 246, canvasDist.height - 20);
+
+                ctxDist.fillStyle = 'rgba(88, 166, 255, 0.12)';
+                ctxDist.strokeStyle = corAccent;
+                ctxDist.lineWidth = 2;
+                ctxDist.beginPath();
+                ctxDist.arc(canvasDist.width / 2, topoDepositoY, depositoRaio, 0, Math.PI * 2);
+                ctxDist.fill();
+                ctxDist.stroke();
+                ctxDist.fillStyle = corMutado;
+                ctxDist.font = '10px monospace';
+                ctxDist.fillText(textoIdioma('DEPÓSITO', 'HOPPER'), canvasDist.width / 2 - 18, topoDepositoY + 4);
+
+                linhasPorTorre.forEach((linhasNaTorre, indice) => {
+                    const x = margemX + espacamentoX * (indice + 0.5);
+                    const torreRaio = Math.min(18, Math.max(12, linhasNaTorre * 2));
+                    const xSecBase = x - ((linhasNaTorre - 1) * offsetSec) / 2;
+
+                    ctxDist.strokeStyle = corAccent;
+                    ctxDist.lineWidth = Math.max(4, DPrimarioMm / 10);
+                    ctxDist.lineCap = 'round';
+                    ctxDist.beginPath();
+                    ctxDist.moveTo(x, yInicioPrimario);
+                    ctxDist.lineTo(x, yTorre);
+                    ctxDist.stroke();
+
+                    ctxDist.fillStyle = 'rgba(88, 166, 255, 0.12)';
+                    ctxDist.strokeStyle = corAccent;
+                    ctxDist.lineWidth = 2;
+                    ctxDist.beginPath();
+                    ctxDist.arc(x, yTorre, torreRaio, 0, Math.PI * 2);
+                    ctxDist.fill();
+                    ctxDist.stroke();
+
+                    ctxDist.fillStyle = corTexto;
+                    ctxDist.font = '10px monospace';
+                    ctxDist.fillText(`${textoIdioma('TORRE DE DISTRIBUIÇÃO', 'DISTRIBUTION TOWER')} ${indice + 1}`, x - 44, yTorre - torreRaio - 6);
+
+                    const comprimentoSaida = Math.min(compSecundario, canvasDist.height - yTorre - 56);
+                    const passoSecundario = Math.max(8, Math.min(16, offsetSec + 2));
+
+                    for (let j = 0; j < linhasNaTorre; j++) {
+                        const xSec = xSecBase + j * passoSecundario;
+
+                        ctxDist.strokeStyle = corSucesso;
+                        ctxDist.lineWidth = Math.max(2, DSecundarioMm / 16);
+                        ctxDist.lineCap = 'round';
+                        ctxDist.beginPath();
+                        ctxDist.moveTo(xSec, yTorre + torreRaio + 10);
+                        ctxDist.lineTo(xSec, yTorre + torreRaio + 10 + comprimentoSaida);
+                        ctxDist.stroke();
+
+                        ctxDist.fillStyle = corSucesso;
+                        ctxDist.fillRect(xSec - 2, yTorre + torreRaio + 10 + comprimentoSaida - 3, 4, 6);
+                    }
+                });
+
+                ctxDist.strokeStyle = 'rgba(139, 148, 158, 0.16)';
+                ctxDist.lineWidth = 2;
+                ctxDist.beginPath();
+                ctxDist.moveTo(canvasDist.width / 2, topoDepositoY + depositoRaio);
+                ctxDist.lineTo(canvasDist.width / 2, yInicioPrimario - 10);
+                ctxDist.stroke();
+            }
+
             function renderizarDistribuidorMatterJS() {
                 if (!ativarAnimacaoDist) {
+                    desenharVistaSuperiorDistribuidor();
                     requestAnimationFrame(renderizarDistribuidorMatterJS);
                     return;
                 }
