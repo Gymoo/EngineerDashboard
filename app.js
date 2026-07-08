@@ -85,6 +85,7 @@ console.log('ðŸ”§ Script iniciando...');
             let ativarAnimacaoDosador = false;
             let anguloDosador = 0;
             let mathJaxTimer = null;
+            let controlePh = criarEstadoControlePh();
             console.log('✅ Canvas destorroador inicializado');
             
             // Inicializar Matter.js
@@ -120,16 +121,26 @@ console.log('ðŸ”§ Script iniciando...');
                 canvasDist.width = canvasDist.clientWidth;
                 canvasDist.height = canvasDist.clientHeight;
             }
+            function redimensionarCanvasPh() {
+                const canvasPh = document.getElementById('phCanvas');
+                if (!canvasPh) return;
+                canvasPh.width = canvasPh.clientWidth;
+                canvasPh.height = canvasPh.clientHeight;
+                if (dom?.mainPh && !dom.mainPh.classList.contains('hidden')) atualizarPh();
+            }
 
             function redimensionarCanvasDoDashboard(dashboardKey) {
                 if (dashboardKey === 'destorroador' && !dom?.mainContent?.classList.contains('hidden')) {
                     redimensionarCanvas();
                 } else if (dashboardKey === 'distribuidor' && !dom?.mainDist?.classList.contains('hidden')) {
                     redimensionarCanvasDist();
+                } else if (dashboardKey === 'ph' && !dom?.mainPh?.classList.contains('hidden')) {
+                    redimensionarCanvasPh();
                 }
             }
             window.addEventListener('resize', redimensionarCanvas);
             window.addEventListener('resize', redimensionarCanvasDist);
+            window.addEventListener('resize', redimensionarCanvasPh);
             redimensionarCanvas();
             redimensionarCanvasDist();
 
@@ -140,11 +151,15 @@ console.log('ðŸ”§ Script iniciando...');
                 mainContent: document.getElementById('main-content'),
                 sidebarDist: document.getElementById('sidebar-distribuidor'),
                 mainDist: document.getElementById('main-distribuidor'),
+                sidebarPh: document.getElementById('sidebar-ph'),
+                mainPh: document.getElementById('main-ph'),
                 
                 btnDestorroador: document.getElementById('btn-destorroador'),
                 btnDistribuidor: document.getElementById('btn-distribuidor'),
+                btnPh: document.getElementById('btn-ph'),
                 btnVoltar: document.getElementById('btn-voltar'),
                 btnVoltarDist: document.getElementById('btn-voltar-dist'),
+                btnVoltarPh: document.getElementById('btn-voltar-ph'),
                 stateButtons: document.querySelectorAll('.state-btn'),
                 resetButtons: document.querySelectorAll('[data-dashboard-reset]'),
                 resetModal: document.getElementById('reset-confirmation-modal'),
@@ -205,18 +220,26 @@ console.log('ðŸ”§ Script iniciando...');
                 distAltura: document.getElementById('in_dist_altura'),
                 distCr: document.getElementById('in_dist_cr'),
                 painelEsqDist: document.getElementById('painel_esq_dist'),
-                painelDirDist: document.getElementById('painel_dir_dist')
+                painelDirDist: document.getElementById('painel_dir_dist'),
+
+                painelEsqPh: document.getElementById('painel_esq_ph'),
+                painelDirPh: document.getElementById('painel_dir_ph')
             };
 
             const dashboardProfiles = {
                 destorroador: {
                     container: dom.sidebar,
-                    activeProfile: 'minimo',
+                    activeProfile: 'minimo_a',
                     profiles: {}
                 },
                 distribuidor: {
                     container: dom.sidebarDist,
-                    activeProfile: 'minimo',
+                    activeProfile: 'minimo_a',
+                    profiles: {}
+                },
+                ph: {
+                    container: dom.sidebarPh,
+                    activeProfile: 'minimo_a',
                     profiles: {}
                 }
             };
@@ -224,7 +247,8 @@ console.log('ðŸ”§ Script iniciando...');
             const dashboardProfileKeys = ['minimo', 'minimo_a', 'minimo_b', 'minimo_c', 'maximo', 'maximo_a', 'maximo_b', 'maximo_c'];
             const sidebarConfigs = {
                 destorroador: { element: dom.sidebar, pinned: true, collapsed: false },
-                distribuidor: { element: dom.sidebarDist, pinned: true, collapsed: false }
+                distribuidor: { element: dom.sidebarDist, pinned: true, collapsed: false },
+                ph: { element: dom.sidebarPh, pinned: true, collapsed: false }
             };
             const textosOriginais = new WeakMap();
             const traducoesIngles = {
@@ -232,10 +256,200 @@ console.log('ðŸ”§ Script iniciando...');
                 'Selecione a ferramenta de simulação desejada.': 'Select the desired simulation tool.',
                 'Destorroador NPK': 'NPK Lump Breaker',
                 'Distribuidor de Sólidos': 'Solid Material Distributor',
+                'Regulação de Ph': 'pH Regulation',
+                'Em construção · Acessar ferramenta': 'Under construction · Open tool',
+                '🧪 Tanque e meta de pH': '🧪 Tank and pH target',
+                '🧪 Tanque e alvo de pH': '🧪 Tank and target pH',
+                'pH desejado e condição medida no depósito.': 'Desired pH and measured tank condition.',
+                'Etapas da regulação de pH': 'pH regulation steps',
+                'Tanque': 'Tank',
+                'Aplicação': 'Application',
+                'Ciclos': 'Cycles',
+                'Resultado': 'Result',
+                'Etapa 1 de 4': 'Step 1 of 4',
+                'Etapa 2 de 4': 'Step 2 of 4',
+                'Etapa 3 de 4': 'Step 3 of 4',
+                'Etapa 4 de 4': 'Step 4 of 4',
+                '🧪 Tanque e reagentes': '🧪 Tank and reagents',
+                'pH inicial medido': 'Measured initial pH',
+                'Informe a condição inicial do tanque e os reagentes realmente disponíveis.': 'Enter the initial tank condition and the reagents actually available.',
+                'Valor medido antes do primeiro pulso deste processo.': 'Value measured before the first pulse of this process.',
+                'Valor de pH que o controle deve atingir.': 'pH value the control must reach.',
+                'Diferença máxima aceita entre o pH medido e o alvo.': 'Maximum accepted difference between measured and target pH.',
+                'Temperatura medida da água usada na avaliação hidráulica.': 'Measured water temperature used in hydraulic assessment.',
+                'Selecione uma solução padronizada ou informe os dados reais do produto.': 'Select a standardized solution or enter actual product data.',
+                'pH medido ou declarado da solução ácida disponível.': 'Measured or declared pH of the available acid solution.',
+                'pH medido ou declarado da solução básica disponível.': 'Measured or declared pH of the available base solution.',
+                'Quantidade de equivalentes neutralizantes por mol do ácido.': 'Neutralizing equivalents per mole of acid.',
+                'Quantidade de equivalentes neutralizantes por mol da base.': 'Neutralizing equivalents per mole of base.',
+                'Volume efetivamente disponível para os ciclos.': 'Volume actually available for the cycles.',
+                '🌊 Método de aplicação': '🌊 Application method',
+                'Defina como cada pulso será transferido ao tanque.': 'Define how each pulse will be transferred to the tank.',
+                'Controle incremental avançado': 'Advanced incremental control',
+                'Hidráulica avançada': 'Advanced hydraulics',
+                'Volume utilizado no primeiro ciclo, antes de existir resposta medida.': 'Volume used in the first cycle before a measured response exists.',
+                'Menor volume permitido em um ciclo.': 'Smallest volume allowed in a cycle.',
+                'Maior volume permitido em um ciclo.': 'Largest volume allowed in a cycle.',
+                'Fração da dose estimada aplicada no próximo ciclo.': 'Fraction of the estimated dose applied in the next cycle.',
+                'Tempo reservado para homogeneizar o tanque depois da aplicação.': 'Time reserved to homogenize the tank after application.',
+                'Tempo aguardado após a mistura antes da nova leitura.': 'Time waited after mixing before the new reading.',
+                'Menor alteração considerada uma resposta mensurável.': 'Smallest change considered a measurable response.',
+                'Ciclos consecutivos sem resposta antes da interrupção.': 'Consecutive no-response cycles before stopping.',
+                'Volume total máximo antes da interrupção.': 'Maximum total volume before stopping.',
+                'Quantidade máxima de ciclos permitida.': 'Maximum number of cycles allowed.',
+                'Pressão manométrica imediatamente antes do Venturi.': 'Gauge pressure immediately before the Venturi.',
+                'Desnível positivo quando o reservatório está abaixo da garganta.': 'Positive elevation when the reservoir is below the throat.',
+                'Comprimento total da mangueira do produto.': 'Total product hose length.',
+                'Fator de atrito de Darcy da mangueira e do produto.': 'Darcy friction factor of the hose and product.',
+                'Densidade medida do produto dosado.': 'Measured density of the dosed product.',
+                'Viscosidade dinâmica medida do produto.': 'Measured dynamic viscosity of the product.',
+                'Ângulo total do cone convergente.': 'Total convergent cone angle.',
+                'Ângulo total do difusor.': 'Total diffuser angle.',
+                'Comprimento cilíndrico em múltiplos do diâmetro da garganta.': 'Cylindrical length in multiples of throat diameter.',
+                '▶ Executar ciclos': '▶ Run cycles',
+                'Use o cartão operacional no painel principal. A nova leitura de pH aparecerá junto ao botão correto depois da mistura.': 'Use the operating card in the main panel. The new pH reading will appear next to the correct button after mixing.',
+                '📊 Resultado e histórico': '📊 Result and history',
+                'Consulte o histórico, o gráfico de aproximação e o memorial completo no painel principal.': 'View history, the approach chart, and the complete report in the main panel.',
+                'pH mínimo ideal': 'Ideal minimum pH',
+                'pH máximo ideal': 'Ideal maximum pH',
+                'pH alvo': 'Target pH',
+                'pH atual do tanque': 'Current tank pH',
+                '🔁 Controle incremental': '🔁 Incremental control',
+                'Tolerância do pH (±pH)': 'pH tolerance (±pH)',
+                'Pulso inicial (L)': 'Initial pulse (L)',
+                'Pulso mínimo (L)': 'Minimum pulse (L)',
+                'Pulso máximo (L)': 'Maximum pulse (L)',
+                'Fator de aproximação (%)': 'Approach factor (%)',
+                'Tempo de mistura (s)': 'Mixing time (s)',
+                'Tempo de estabilização (s)': 'Stabilization time (s)',
+                'Variação mínima detectável (pH)': 'Minimum detectable change (pH)',
+                'Limite de ciclos sem resposta': 'No-response cycle limit',
+                'Dose acumulada máxima (L)': 'Maximum cumulative dose (L)',
+                'Número máximo de ciclos': 'Maximum number of cycles',
+                'Tempo de aplicação por pulso (min)': 'Application time per pulse (min)',
+                'Controle incremental por realimentação de pH e dimensionamento hidráulico.': 'Incremental pH feedback control and hydraulic sizing.',
+                'Física aplicada: realimentação de pH, continuidade, equação de Bernoulli e Darcy-Weisbach.': 'Applied physics: pH feedback, continuity, Bernoulli equation, and Darcy-Weisbach.',
+                'Configura a dosagem em pequenos pulsos, seguida por mistura, estabilização e nova leitura real de pH.': 'Configures dosing in small pulses followed by mixing, stabilization, and a new real pH reading.',
+                'Diferença máxima aceita entre o pH medido e o alvo. Dentro desse intervalo, o processo é encerrado.': 'Maximum accepted difference between measured and target pH. The process ends inside this interval.',
+                'Volume utilizado no primeiro ciclo, antes de existir uma resposta medida da água.': 'Volume used in the first cycle before a measured water response exists.',
+                'Menor volume permitido em um ciclo. Limita o cálculo adaptativo perto do pH alvo.': 'Smallest volume allowed in a cycle. Limits adaptive calculation near target pH.',
+                'Maior volume permitido em um ciclo. Limita a ação após uma resposta pequena da água.': 'Largest volume allowed in a cycle. Limits action after a small water response.',
+                'Fração da dose estimada aplicada no próximo ciclo. Valores menores tornam a aproximação mais conservadora.': 'Fraction of the estimated dose applied in the next cycle. Lower values make the approach more conservative.',
+                'Tempo reservado para homogeneizar o tanque depois de cada aplicação.': 'Time reserved to homogenize the tank after each application.',
+                'Tempo adicional aguardado após a mistura antes de registrar a nova leitura do sensor.': 'Additional time after mixing before recording the new sensor reading.',
+                'Menor alteração de pH considerada resposta mensurável após um pulso.': 'Smallest pH change considered a measurable response after a pulse.',
+                'Quantidade de ciclos consecutivos sem alteração mensurável antes de interromper o processo.': 'Number of consecutive cycles without measurable change before stopping the process.',
+                'Volume total máximo de ácido e base que pode ser registrado antes de interromper o processo.': 'Maximum total acid and base volume that may be recorded before stopping the process.',
+                'Quantidade máxima de ciclos permitida antes de interromper o controlador.': 'Maximum number of cycles allowed before stopping the controller.',
+                'Tempo disponível para transferir cada pulso calculado.': 'Time available to transfer each calculated pulse.',
+                'Volume do tanque (L)': 'Tank volume (L)',
+                'Temperatura da água (°C)': 'Water temperature (°C)',
+                'Alcalinidade (mg/L como CaCO₃)': 'Alkalinity (mg/L as CaCO₃)',
+                '📐 Método químico': '📐 Chemical method',
+                'Titulação experimental': 'Experimental titration',
+                'Capacidade tampão medida': 'Measured buffer capacity',
+                'Volume da amostra (mL)': 'Sample volume (mL)',
+                'Titulante consumido (mL)': 'Titrant consumed (mL)',
+                'Capacidade tampão (mmol/L/pH)': 'Buffer capacity (mmol/L/pH)',
+                '⚗️ Ácido disponível': '⚗️ Available acid',
+                'Pré-seleção de ácido': 'Acid preset',
+                'Pré-seleção de base': 'Base preset',
+                'Solução personalizada': 'Custom solution',
+                'Ácido clorídrico 0,100 mol/L': 'Hydrochloric acid 0.100 mol/L',
+                'Ácido nítrico 0,100 mol/L': 'Nitric acid 0.100 mol/L',
+                'Ácido sulfúrico 0,100 mol/L': 'Sulfuric acid 0.100 mol/L',
+                'Hidróxido de sódio 0,100 mol/L': 'Sodium hydroxide 0.100 mol/L',
+                'Hidróxido de potássio 0,100 mol/L': 'Potassium hydroxide 0.100 mol/L',
+                'Nome ou composição do ácido': 'Acid name or composition',
+                'pH do ácido': 'Acid pH',
+                'Concentração do ácido (mol/L)': 'Acid concentration (mol/L)',
+                'Equivalentes do ácido (eq/mol)': 'Acid equivalents (eq/mol)',
+                'Pureza do ácido (%)': 'Acid purity (%)',
+                'Volume de ácido disponível (L)': 'Available acid volume (L)',
+                '⚗️ Base disponível': '⚗️ Available base',
+                'Nome ou composição da base': 'Base name or composition',
+                'pH da base': 'Base pH',
+                'Concentração da base (mol/L)': 'Base concentration (mol/L)',
+                'Equivalentes da base (eq/mol)': 'Base equivalents (eq/mol)',
+                'Pureza da base (%)': 'Base purity (%)',
+                'Volume de base disponível (L)': 'Available base volume (L)',
+                '🌊 Aplicação e Venturi': '🌊 Application and Venturi',
+                'Venturi dosador': 'Dosing Venturi',
+                'Bomba peristáltica': 'Peristaltic pump',
+                'Material em contato com o produto': 'Material in contact with product',
+                'Compatibilidade química confirmada pelo fabricante': 'Chemical compatibility confirmed by manufacturer',
+                'Calibração da bomba (mL/rev)': 'Pump calibration (mL/rev)',
+                'Vazão da linha (L/min)': 'Line flow rate (L/min)',
+                'Diâmetro interno da linha (mm)': 'Line internal diameter (mm)',
+                'Pressão antes do Venturi (bar g)': 'Pressure before Venturi (bar g)',
+                'Pressão depois do Venturi (bar g)': 'Pressure after Venturi (bar g)',
+                'Tempo de aplicação (min)': 'Application time (min)',
+                'Altura de sucção (m)': 'Suction height (m)',
+                'Comprimento da mangueira (m)': 'Hose length (m)',
+                'Diâmetro da mangueira (mm)': 'Hose diameter (mm)',
+                'Fator de atrito da mangueira': 'Hose friction factor',
+                'Densidade do produto (kg/m³)': 'Product density (kg/m³)',
+                'Viscosidade do produto (mPa·s)': 'Product viscosity (mPa·s)',
+                'Ângulo do convergente (°)': 'Convergent angle (°)',
+                'Ângulo do difusor (°)': 'Diffuser angle (°)',
+                'Comprimento relativo da garganta (L/d)': 'Relative throat length (L/d)',
+                '⚗️ Dashboard: Regulação de pH': '⚗️ Dashboard: pH Regulation',
+                'Dimensionamento químico da dose e hidráulico do tubo de Venturi.': 'Chemical dose and Venturi tube hydraulic sizing.',
+                'Física aplicada: equilíbrio ácido-base, continuidade, equação de Bernoulli e Darcy-Weisbach.': 'Applied physics: acid-base equilibrium, continuity, Bernoulli equation, and Darcy-Weisbach.',
+                'Informar produto e composição': 'Enter product and composition',
+                'Informar material da mangueira, bomba e Venturi': 'Enter hose, pump, and Venturi material',
+                'Faixa operacional desejada e condição medida no depósito.': 'Desired operating range and measured tank condition.',
+                'Limite inferior da faixa de pH aceita pelo processo.': 'Lower pH limit accepted by the process.',
+                'Limite superior da faixa de pH aceita pelo processo.': 'Upper pH limit accepted by the process.',
+                'Valor de pH que a dosagem deve atingir dentro da faixa ideal.': 'pH value that dosing must reach within the ideal range.',
+                'Valor de pH que a dosagem deve atingir.': 'pH value that dosing must reach.',
+                'pH medido atualmente no tanque.': 'pH currently measured in the tank.',
+                'Volume real de solução que será corrigido.': 'Actual solution volume to be corrected.',
+                'Temperatura medida da água, usada para avaliar a margem até a pressão de vapor.': 'Measured water temperature used to assess margin above vapor pressure.',
+                'Capacidade da água de neutralizar ácidos, informada pelo laudo em mg/L como CaCO3. Não substitui a titulação até o pH alvo.': 'Water acid-neutralizing capacity reported as mg/L CaCO3. It does not replace titration to target pH.',
+                'A dose exata exige uma titulação ou uma capacidade tampão medida no intervalo de interesse.': 'An exact dose requires titration or buffer capacity measured over the relevant interval.',
+                'Titulação experimental: retire uma amostra conhecida da água, adicione aos poucos exatamente o mesmo ácido ou base que será usado no tanque e meça quanto foi necessário para alcançar o pH alvo. O sistema amplia essa proporção da amostra para o volume total do tanque. Exemplo: se 1 mL corrige uma amostra de 100 mL, serão necessários 10 L para corrigir 1000 L nas mesmas condições. É o método recomendado porque incorpora a composição e o tamponamento reais da água.': 'Experimental titration: take a known water sample, gradually add exactly the same acid or base that will be used in the tank, and measure how much is required to reach the target pH. The system scales this sample ratio to the total tank volume. Example: if 1 mL corrects a 100 mL sample, 10 L will be required to correct 1000 L under the same conditions. This is the recommended method because it incorporates the actual water composition and buffering.',
+                'Capacidade tampão medida: indica quantos milimoles de carga ácida ou básica são necessários para alterar em uma unidade o pH de um litro da solução, em mmol/L/pH. Deve ser obtida por ensaio no intervalo entre o pH atual e o alvo. Quanto maior esse valor, maior será a dose necessária. Exemplo: dobrar a capacidade tampão dobra a quantidade calculada de ácido ou base para o mesmo tanque e a mesma variação de pH.': 'Measured buffer capacity: indicates how many millimoles of acidic or basic charge are required to change the pH of one liter of solution by one unit, in mmol/L/pH. It must be obtained experimentally over the interval between current and target pH. The higher this value, the greater the required dose. Example: doubling buffer capacity doubles the calculated acid or base amount for the same tank and pH change.',
+                'Volume da amostra de água utilizada no ensaio de titulação.': 'Water sample volume used in the titration.',
+                'Volume do titulante consumido para levar a amostra do pH atual ao pH alvo.': 'Titrant volume consumed to move the sample from current to target pH.',
+                'Capacidade tampão medida no intervalo entre o pH atual e o pH alvo, em mmol de carga por litro e por unidade de pH.': 'Buffer capacity measured between current and target pH in mmol of charge per liter per pH unit.',
+                'Propriedades medidas ou declaradas dos produtos disponíveis.': 'Measured or declared properties of available products.',
+                'pH medido da solução ácida disponível; é informativo e não substitui sua concentração.': 'Measured pH of available acid solution; informational and not a substitute for concentration.',
+                'pH medido da solução básica disponível; é informativo e não substitui sua concentração.': 'Measured pH of available base solution; informational and not a substitute for concentration.',
+                'Concentração molar informada pelo fabricante ou obtida por análise.': 'Molar concentration reported by the manufacturer or obtained by analysis.',
+                'Quantidade de equivalentes neutralizantes liberados por mol do ácido no processo considerado.': 'Neutralizing equivalents released per mole of acid in the process.',
+                'Quantidade de equivalentes neutralizantes fornecidos por mol da base no processo considerado.': 'Neutralizing equivalents supplied per mole of base in the process.',
+                'Fração efetiva do produto conforme certificado do fornecedor.': 'Effective product fraction according to supplier certificate.',
+                'Volume efetivamente disponível para dosagem.': 'Volume effectively available for dosing.',
+                'Escolha se o produto será aspirado pelo Venturi ou dosado por uma bomba peristáltica em garganta despressurizada.': 'Choose whether product is drawn by Venturi or metered by a peristaltic pump into a depressurized throat.',
+                'Vazão volumétrica de água que atravessa o Venturi.': 'Volumetric water flow through the Venturi.',
+                'Volume deslocado por volta conforme curva ou calibração da bomba. Use zero quando o dado não estiver disponível.': 'Volume displaced per revolution according to the pump curve or calibration. Use zero when unavailable.',
+                'Diâmetro interno real da tubulação antes do convergente.': 'Actual internal pipe diameter before the convergent.',
+                'Pressão manométrica medida imediatamente antes do Venturi.': 'Gauge pressure measured immediately before the Venturi.',
+                'Pressão manométrica requerida depois do difusor.': 'Required gauge pressure after the diffuser.',
+                'Tempo disponível para transferir toda a dose calculada.': 'Time available to transfer the entire calculated dose.',
+                'Desnível positivo quando o reservatório do aditivo está abaixo da garganta.': 'Positive elevation when the additive reservoir is below the throat.',
+                'Comprimento total da mangueira entre o produto e a garganta.': 'Total hose length between product and throat.',
+                'Diâmetro interno real da mangueira de produto.': 'Actual internal diameter of product hose.',
+                'Fator de atrito de Darcy medido ou calculado para a mangueira e o produto.': 'Measured or calculated Darcy friction factor for hose and product.',
+                'Densidade medida do produto que será efetivamente dosado.': 'Measured density of the product to be dosed.',
+                'Viscosidade dinâmica medida do produto, usada para caracterizar o escoamento na sucção.': 'Measured product dynamic viscosity used to characterize suction flow.',
+                'Ângulo total do cone convergente usado para transformar a diferença de diâmetros em comprimento.': 'Total convergent cone angle used to convert diameter difference into length.',
+                'Ângulo total do difusor usado para recuperar pressão com menor separação de escoamento.': 'Total diffuser angle used to recover pressure with less flow separation.',
+                'Comprimento da seção cilíndrica expresso em múltiplos do diâmetro da garganta.': 'Cylindrical section length expressed as multiples of throat diameter.',
+                'Microdosagem': 'Microdosing',
                 'Aplicação de Fluido no Solo': 'Soil Fluid Application',
                 'Aplicação Linha Pressurizada': 'Pressurized Line Application',
                 'Acessar Simulador': 'Open Simulator',
                 'Em desenvolvimento': 'In development',
+                'Perfil base': 'Base profile',
+                'Cenários': 'Scenarios',
+                'ENTRADA': 'INLET',
+                'TORQUE': 'TORQUE',
+                'SAÍDA': 'OUTLET',
+                'FLUXO MECÂNICO - DESTORROADOR': 'MECHANICAL FLOW - LUMP BREAKER',
+                'Rolos opostos puxam o material e geram torque de esmagamento': 'Opposing rollers pull the material and generate crushing torque',
+                'ROLOS DE MOAGEM': 'GRINDING ROLLERS',
                 '⬅ Voltar ao Portal': '⬅ Back to Portal',
                 '↓ Mínimo': '↓ Minimum',
                 '↑ Máximo': '↑ Maximum',
@@ -432,7 +646,22 @@ console.log('ðŸ”§ Script iniciando...');
                 'LINHAS SECUNDÁRIAS': 'SECONDARY LINES',
                 'DEPÓSITO': 'HOPPER',
                 'ENTRADA DA MÁQUINA': 'MACHINE INLET',
-                'Linha grossa = principal | linhas finas = secundárias': 'Thick line = primary | thin lines = secondary'
+                'Linha grossa = principal | linhas finas = secundárias': 'Thick line = primary | thin lines = secondary',
+                'Dashboard Destorroador NPK (Simulador Dinâmico)': 'NPK Lump Breaker Dashboard (Dynamic Simulator)',
+                'Preferências da interface': 'Interface preferences',
+                'Mudar idioma para inglês': 'Switch language to English',
+                'Ativar modo claro': 'Enable light mode',
+                'Ativar modo escuro': 'Enable dark mode',
+                'Controles da barra lateral': 'Sidebar controls',
+                'Rodapé do portal': 'Portal footer',
+                'Rodapé do dashboard': 'Dashboard footer',
+                'Voltar ao Portal': 'Back to Portal',
+                'Recolher barra lateral': 'Collapse sidebar',
+                'Desafixar barra lateral': 'Unpin sidebar',
+                'Portal de Engenharia': 'Engineering Portal',
+                'Selecione a ferramenta de simulação desejada.': 'Select the desired simulation tool.',
+                'Acessar Simulador': 'Open Simulator',
+                'Em desenvolvimento': 'In development'
             };
 
             function traduzirTexto(texto, idioma) {
@@ -477,6 +706,7 @@ console.log('ðŸ”§ Script iniciando...');
                 const inglesAtivo = idioma === 'en';
                 document.documentElement.lang = inglesAtivo ? 'en' : 'pt-BR';
                 document.body.dataset.language = inglesAtivo ? 'en' : 'pt';
+                document.title = textoIdioma('Dashboard Destorroador NPK (Simulador Dinâmico)', 'NPK Lump Breaker Dashboard (Dynamic Simulator)');
                 traduzirElemento(document.body, inglesAtivo ? 'en' : 'pt');
                 traduzirAtributos(document.body, inglesAtivo ? 'en' : 'pt');
                 document.querySelectorAll('[data-tooltip-original]').forEach((elemento) => {
@@ -501,6 +731,9 @@ console.log('ðŸ”§ Script iniciando...');
                 }
                 if (dom?.mainDist && !dom.mainDist.classList.contains('hidden')) {
                     atualizarDistribuidor();
+                }
+                if (dom?.mainPh && !dom.mainPh.classList.contains('hidden')) {
+                    atualizarPh();
                 }
                 if (persistir) {
                     try {
@@ -550,6 +783,7 @@ console.log('ðŸ”§ Script iniciando...');
                     button.title = acao;
                     button.setAttribute('aria-pressed', String(modoClaroAtivo));
                 });
+                if (dom?.mainPh && !dom.mainPh.classList.contains('hidden')) atualizarPh();
                 if (persistir) {
                     try {
                         localStorage.setItem(THEME_STORAGE_KEY, tema);
@@ -683,6 +917,12 @@ console.log('ðŸ”§ Script iniciando...');
                         numberStep: number ? number.step : range.step
                     };
                 });
+                container.querySelectorAll('input[type="text"], input[type="checkbox"], select').forEach((input) => {
+                    if (!input.id) return;
+                    estado[input.id] = input.type === 'checkbox'
+                        ? { checked: input.checked, type: 'checkbox' }
+                        : { value: input.value, type: input.tagName === 'SELECT' ? 'select' : 'text' };
+                });
                 return estado;
             }
 
@@ -703,6 +943,12 @@ console.log('ðŸ”§ Script iniciando...');
                         number.step = salvo.numberStep || number.step;
                         number.value = salvo.numberValue ?? salvo.value;
                     }
+                });
+                container.querySelectorAll('input[type="text"], input[type="checkbox"], select').forEach((input) => {
+                    const salvo = estado[input.id];
+                    if (!salvo) return;
+                    if (input.type === 'checkbox') input.checked = Boolean(salvo.checked);
+                    else input.value = salvo.value || '';
                 });
             }
 
@@ -733,11 +979,27 @@ console.log('ðŸ”§ Script iniciando...');
                         distribuidor: {
                             activeProfile: dashboardProfiles.distribuidor.activeProfile,
                             profiles: dashboardProfiles.distribuidor.profiles
+                        },
+                        ph: {
+                            activeProfile: dashboardProfiles.ph.activeProfile,
+                            profiles: dashboardProfiles.ph.profiles
                         }
                     },
                     radios: {
                         modo: obterModoSelecionado('modo'),
-                        modo_dist: obterModoSelecionado('modo_dist')
+                        modo_dist: obterModoSelecionado('modo_dist'),
+                        modo_aplicacao_ph: obterModoSelecionado('modo_aplicacao_ph')
+                    },
+                    controlePh: {
+                        estado: 'pausado',
+                        historico: controlePh.historico,
+                        doseAcido: controlePh.doseAcido,
+                        doseBase: controlePh.doseBase,
+                        ciclo: controlePh.ciclo,
+                        sensibilidade: controlePh.sensibilidade,
+                        estimativaRestante: controlePh.estimativaRestante,
+                        semRespostaConsecutiva: controlePh.semRespostaConsecutiva,
+                        etapa: controlePh.etapa
                     }
                 };
             }
@@ -779,6 +1041,11 @@ console.log('ðŸ”§ Script iniciando...');
                     return;
                 }
 
+                if (dashboardKey === 'ph') {
+                    atualizarPh();
+                    return;
+                }
+
                 atualizarDistribuidor();
                 const modoDistElement = document.querySelector('input[name="modo_dist"]:checked');
                 if (modoDistElement && modoDistElement.value === "2" && ativarAnimacaoDist) {
@@ -797,6 +1064,7 @@ console.log('ðŸ”§ Script iniciando...');
                 salvarEstadoDashboard(dashboardKey);
                 dashboard.activeProfile = profileKey;
                 restaurarEstadoDashboard(dashboardKey);
+                if (dashboardKey === 'ph') controlePh = criarEstadoControlePh();
                 atualizarBotoesDashboard(dashboardKey);
                 persistirEstadoAplicacao();
                 atualizarDashboardPorChave(dashboardKey);
@@ -806,7 +1074,7 @@ console.log('ðŸ”§ Script iniciando...');
                 const estadoSalvo = carregarEstadoPersistido();
                 if (!estadoSalvo) return;
 
-                ['destorroador', 'distribuidor'].forEach((dashboardKey) => {
+                ['destorroador', 'distribuidor', 'ph'].forEach((dashboardKey) => {
                     const salvo = estadoSalvo.dashboards?.[dashboardKey];
                     if (!salvo) return;
 
@@ -817,6 +1085,10 @@ console.log('ðŸ”§ Script iniciando...');
                     });
                     if (dashboardProfileKeys.includes(salvo.activeProfile)) {
                         dashboardProfiles[dashboardKey].activeProfile = salvo.activeProfile;
+                    } else if (salvo.activeProfile === 'minimo') {
+                        dashboardProfiles[dashboardKey].activeProfile = 'minimo_a';
+                    } else if (salvo.activeProfile === 'maximo') {
+                        dashboardProfiles[dashboardKey].activeProfile = 'maximo_a';
                     }
 
                     restaurarEstadoDashboard(dashboardKey);
@@ -825,6 +1097,15 @@ console.log('ðŸ”§ Script iniciando...');
 
                 aplicarModoSelecionado('modo', estadoSalvo.radios?.modo);
                 aplicarModoSelecionado('modo_dist', estadoSalvo.radios?.modo_dist);
+                aplicarModoSelecionado('modo_aplicacao_ph', estadoSalvo.radios?.modo_aplicacao_ph);
+                if (estadoSalvo.controlePh) {
+                    controlePh = {
+                        ...criarEstadoControlePh(),
+                        ...estadoSalvo.controlePh,
+                        estado: 'pausado',
+                        historico: Array.isArray(estadoSalvo.controlePh.historico) ? estadoSalvo.controlePh.historico : []
+                    };
+                }
             }
 
             function resetarDashboard(dashboardKey) {
@@ -838,8 +1119,11 @@ console.log('ðŸ”§ Script iniciando...');
 
                 if (dashboardKey === 'destorroador') {
                     aplicarModoSelecionado('modo', '1');
-                } else {
+                } else if (dashboardKey === 'distribuidor') {
                     aplicarModoSelecionado('modo_dist', '1');
+                } else {
+                    aplicarModoSelecionado('modo_aplicacao_ph', 'venturi');
+                    controlePh = criarEstadoControlePh();
                 }
 
                 restaurarEstadoDashboard(dashboardKey);
@@ -852,9 +1136,12 @@ console.log('ðŸ”§ Script iniciando...');
 
             function getTextoConfirmacaoReset(dashboardKey) {
                 const idiomaAtual = document.body.dataset.language === 'en' ? 'en' : 'pt';
-                const nomeDashboard = dashboardKey === 'destorroador'
-                    ? (idiomaAtual === 'en' ? 'NPK Lump Breaker' : 'Destorroador NPK')
-                    : (idiomaAtual === 'en' ? 'Solid Material Distributor' : 'Distribuidor de Sólidos');
+                const nomes = {
+                    destorroador: idiomaAtual === 'en' ? 'NPK Lump Breaker' : 'Destorroador NPK',
+                    distribuidor: idiomaAtual === 'en' ? 'Solid Material Distributor' : 'Distribuidor de Sólidos',
+                    ph: idiomaAtual === 'en' ? 'pH Regulation' : 'Regulação de pH'
+                };
+                const nomeDashboard = nomes[dashboardKey] || dashboardKey;
 
                 return idiomaAtual === 'en'
                     ? {
@@ -1604,6 +1891,23 @@ console.log('ðŸ”§ Script iniciando...');
                     });
                 }
             });
+            document.querySelectorAll('#sidebar-ph input[type="text"], #sidebar-ph input[type="checkbox"]').forEach((input) => {
+                input.addEventListener(input.type === 'checkbox' ? 'change' : 'input', () => {
+                    if (input.id === 'in_ph_acido_nome') document.getElementById('in_ph_acido_preset').value = 'personalizado';
+                    if (input.id === 'in_ph_base_nome') document.getElementById('in_ph_base_preset').value = 'personalizado';
+                    salvarEstadoDashboard('ph');
+                    persistirEstadoAplicacao();
+                    atualizarPh();
+                });
+            });
+            document.querySelectorAll('#in_ph_acido_preset, #in_ph_base_preset').forEach((select) => {
+                select.addEventListener('change', () => {
+                    aplicarPresetPh(select.value);
+                    salvarEstadoDashboard('ph');
+                    persistirEstadoAplicacao();
+                    atualizarPh();
+                });
+            });
 
             // Função helper para descobrir qual dashboard deve ser atualizado
             function dispararAtualizacaoBaseadoNoPainel(elemento) {
@@ -1624,6 +1928,12 @@ console.log('ðŸ”§ Script iniciando...');
                         const e = parseFloat(dom.distCr.value) || 0.6;
                         inicializarFisicaDistribuidor(theta, v0, h, e);
                     }
+                } else if (dom.sidebarPh.contains(elemento)) {
+                    const matchPreset = elemento.id.match(/^in_ph_(acido|base)_(ph|conc|eq|pureza)$/);
+                    if (matchPreset) document.getElementById(`in_ph_${matchPreset[1]}_preset`).value = 'personalizado';
+                    salvarEstadoDashboard('ph');
+                    persistirEstadoAplicacao();
+                    atualizarPh();
                 }
             }
 
@@ -1651,6 +1961,23 @@ console.log('ðŸ”§ Script iniciando...');
                         inicializarFisicaDistribuidor(theta, v0, h, e);
                     }
                 });
+            });
+
+            document.querySelectorAll('input[name="modo_aplicacao_ph"]').forEach((radio) => {
+                radio.addEventListener('change', () => {
+                    salvarEstadoDashboard('ph');
+                    persistirEstadoAplicacao();
+                    atualizarPh();
+                });
+            });
+            dom.painelEsqPh.addEventListener('click', (event) => {
+                if (event.target.closest('#btn-ph-continuar')) avancarEtapaPh(2);
+                if (event.target.closest('#btn-ph-voltar-config')) avancarEtapaPh(1);
+                if (event.target.closest('#btn-ph-iniciar')) iniciarNovoControlePh();
+                if (event.target.closest('#btn-ph-novo')) solicitarNovoControlePh();
+                if (event.target.closest('#btn-ph-acao')) executarAcaoControlePh();
+                if (event.target.closest('#btn-ph-resultados')) avancarEtapaPh(4);
+                if (event.target.closest('#btn-ph-voltar-ciclos')) avancarEtapaPh(3);
             });
 
             dom.stateButtons.forEach((button) => {
@@ -1689,7 +2016,7 @@ console.log('ðŸ”§ Script iniciando...');
                     dashboardProfiles[dashboardKey].profiles[profileKey] = clonarEstrutura(snapshotInicial);
                 });
                 dashboardDefaults[dashboardKey] = {
-                    activeProfile: 'minimo',
+                    activeProfile: 'minimo_a',
                     profiles: dashboardProfileKeys.reduce((acc, profileKey) => {
                         acc[profileKey] = clonarEstrutura(snapshotInicial);
                         return acc;
@@ -1710,6 +2037,8 @@ console.log('ðŸ”§ Script iniciando...');
                 dom.mainContent.classList.add('hidden');
                 dom.sidebarDist.classList.add('hidden');
                 dom.mainDist.classList.add('hidden');
+                dom.sidebarPh.classList.add('hidden');
+                dom.mainPh.classList.add('hidden');
                 dom.homeScreen.classList.remove('hidden');
             }
 
@@ -1771,10 +2100,549 @@ console.log('ðŸ”§ Script iniciando...');
                 }
             });
 
+            dom.btnPh.addEventListener('click', function() {
+                dom.homeScreen.classList.add('hidden');
+                dom.sidebarPh.classList.remove('hidden');
+                dom.mainPh.classList.remove('hidden');
+                setTimeout(redimensionarCanvasPh, 50);
+            });
+
             dom.btnVoltar.addEventListener('click', irParaHome);
             dom.btnVoltarDist.addEventListener('click', irParaHome);
+            dom.btnVoltarPh.addEventListener('click', irParaHome);
 
             // --- LÓGICA MATEMÁTICA E RENDERIZAÇÃO DE INTERFACE ---
+            function escaparHtml(valor) {
+                return String(valor || '').replace(/[&<>"]/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[char]));
+            }
+
+            function lerPh(id) {
+                const valor = lerValorSincronizado(id);
+                return Number.isFinite(valor) ? valor : 0;
+            }
+
+            const presetsPh = {
+                hcl_01: { tipo: 'acido', nome: 'HCl 0,100 mol/L', ph: 1, concentracao: 0.1, equivalentes: 1, pureza: 100 },
+                hno3_01: { tipo: 'acido', nome: 'HNO₃ 0,100 mol/L', ph: 1, concentracao: 0.1, equivalentes: 1, pureza: 100 },
+                h2so4_01: { tipo: 'acido', nome: 'H₂SO₄ 0,100 mol/L', ph: 0.959, concentracao: 0.1, equivalentes: 2, pureza: 100 },
+                naoh_01: { tipo: 'base', nome: 'NaOH 0,100 mol/L', ph: 13, concentracao: 0.1, equivalentes: 1, pureza: 100 },
+                koh_01: { tipo: 'base', nome: 'KOH 0,100 mol/L', ph: 13, concentracao: 0.1, equivalentes: 1, pureza: 100 }
+            };
+
+            function definirValorControlePh(id, valor) {
+                const range = document.getElementById(id);
+                if (!range) return;
+                range.value = String(valor);
+                const number = range.parentElement?.querySelector('input[type="number"]');
+                if (number) number.value = String(valor);
+            }
+
+            function aplicarPresetPh(chave) {
+                const preset = presetsPh[chave];
+                if (!preset) return;
+                const prefixo = `in_ph_${preset.tipo}_`;
+                document.getElementById(`${prefixo}nome`).value = preset.nome;
+                definirValorControlePh(`${prefixo}ph`, preset.ph);
+                definirValorControlePh(`${prefixo}conc`, preset.concentracao);
+                definirValorControlePh(`${prefixo}eq`, preset.equivalentes);
+                definirValorControlePh(`${prefixo}pureza`, preset.pureza);
+            }
+
+            function criarEstadoControlePh() {
+                return {
+                    estado: 'pausado',
+                    historico: [],
+                    doseAcido: 0,
+                    doseBase: 0,
+                    ciclo: 0,
+                    sensibilidade: null,
+                    estimativaRestante: null,
+                    semRespostaConsecutiva: 0,
+                    pendente: null,
+                    etapa: 1,
+                    erroInterface: ''
+                };
+            }
+
+            function limitar(valor, minimo, maximo) {
+                return Math.min(maximo, Math.max(minimo, valor));
+            }
+
+            function iniciarNovoControlePh() {
+                controlePh.erroInterface = '';
+                const modo = obterModoSelecionado('modo_aplicacao_ph') || 'venturi';
+                const hidraulica = calcularRegulacaoPh();
+                if (!document.getElementById('in_ph_compatibilidade').checked) {
+                    controlePh.erroInterface = textoIdioma('Confirme a compatibilidade química dos materiais antes de iniciar.', 'Confirm material chemical compatibility before starting.');
+                    controlePh.etapa = 2;
+                    atualizarPh();
+                    return;
+                }
+                if (modo === 'peristaltica' && lerPh('in_ph_bomba_ml_rev') <= 0) {
+                    controlePh.erroInterface = textoIdioma('Informe a calibração volumétrica da bomba peristáltica antes de iniciar.', 'Enter the peristaltic pump volumetric calibration before starting.');
+                    controlePh.etapa = 2;
+                    atualizarPh();
+                    return;
+                }
+                if (!hidraulica.geometriaValida || hidraulica.cavitacao) {
+                    controlePh.erroInterface = textoIdioma('Revise a hidráulica avançada: a geometria calculada é inválida ou apresenta risco de cavitação.', 'Review advanced hydraulics: the calculated geometry is invalid or presents cavitation risk.');
+                    controlePh.etapa = 2;
+                    atualizarPh();
+                    return;
+                }
+                controlePh = criarEstadoControlePh();
+                const erro = Math.abs(lerPh('in_ph_atual') - lerPh('in_ph_alvo'));
+                controlePh.estado = erro <= lerPh('in_ph_tolerancia') ? 'alvo' : 'pronto';
+                controlePh.etapa = controlePh.estado === 'alvo' ? 4 : 3;
+                persistirEstadoAplicacao();
+                atualizarPh();
+            }
+
+            function solicitarNovoControlePh() {
+                const possuiDados = controlePh.historico.length > 0 || controlePh.doseAcido > 0 || controlePh.doseBase > 0;
+                if (possuiDados && !window.confirm(textoIdioma('Iniciar um novo processo apagará o histórico atual. Deseja continuar?', 'Starting a new process will clear the current history. Continue?'))) return;
+                controlePh = criarEstadoControlePh();
+                persistirEstadoAplicacao();
+                atualizarPh();
+            }
+
+            function avancarEtapaPh(etapa) {
+                controlePh.erroInterface = '';
+                if (etapa === 2) {
+                    const erroAtual = Math.abs(lerPh('in_ph_atual') - lerPh('in_ph_alvo'));
+                    if (erroAtual <= lerPh('in_ph_tolerancia')) {
+                        controlePh.estado = 'alvo';
+                        controlePh.etapa = 4;
+                        atualizarPh();
+                        return;
+                    }
+                    const produto = lerPh('in_ph_atual') > lerPh('in_ph_alvo') ? 'acido' : 'base';
+                    const nome = document.getElementById(`in_ph_${produto}_nome`).value.trim();
+                    const volume = lerPh(`in_ph_${produto}_volume`);
+                    if (!nome || volume <= 0) {
+                        controlePh.erroInterface = textoIdioma('Informe a composição e o volume disponível do reagente necessário antes de continuar.', 'Enter the composition and available volume of the required reagent before continuing.');
+                        atualizarPh();
+                        return;
+                    }
+                }
+                controlePh.etapa = limitar(etapa, 1, 4);
+                persistirEstadoAplicacao();
+                atualizarPh();
+            }
+
+            function executarAcaoControlePh() {
+                if (controlePh.estado === 'pausado' || ['insuficiente', 'sem_resposta', 'tendencia'].includes(controlePh.estado)) {
+                    if (controlePh.estado === 'insuficiente') {
+                        const reavaliacao = calcularRegulacaoPh();
+                        controlePh.estado = reavaliacao.estimativaRestante !== null && reavaliacao.estimativaRestante > reavaliacao.volumeDisponivel ? 'insuficiente' : 'pronto';
+                    } else {
+                        controlePh.estado = 'pronto';
+                    }
+                    persistirEstadoAplicacao();
+                    atualizarPh();
+                    return;
+                }
+
+                if (controlePh.estado === 'pronto') {
+                    const r = calcularRegulacaoPh();
+                    if (!r.produto || r.proximoPulso <= 0) return;
+                    if (r.proximoPulso > r.volumeDisponivel) {
+                        controlePh.estado = 'insuficiente';
+                    } else if (r.doseAcumulada + r.proximoPulso > r.doseMaxima) {
+                        controlePh.estado = 'limite';
+                    } else if (controlePh.ciclo >= r.ciclosMaximos) {
+                        controlePh.estado = 'ciclos';
+                    } else {
+                        controlePh.pendente = {
+                            ciclo: controlePh.ciclo + 1,
+                            phInicial: r.phAtual,
+                            produto: r.produto,
+                            volume: r.proximoPulso
+                        };
+                        if (r.produto === 'acido') controlePh.doseAcido += r.proximoPulso;
+                        else controlePh.doseBase += r.proximoPulso;
+                        controlePh.estado = 'dosando';
+                    }
+                } else if (controlePh.estado === 'dosando') {
+                    controlePh.estado = 'misturando';
+                } else if (controlePh.estado === 'misturando') {
+                    controlePh.estado = 'estabilizando';
+                } else if (controlePh.estado === 'estabilizando' && controlePh.pendente) {
+                    const campoLeitura = document.getElementById('in_ph_nova_leitura');
+                    const phFinal = campoLeitura ? normalizarValorNumerico(campoLeitura.value) : NaN;
+                    if (!Number.isFinite(phFinal) || phFinal < 0 || phFinal > 14) {
+                        controlePh.erroInterface = textoIdioma('Informe uma nova leitura de pH válida entre 0 e 14.', 'Enter a valid new pH reading between 0 and 14.');
+                        atualizarPh();
+                        return;
+                    }
+                    definirValorControlePh('in_ph_atual', phFinal);
+                    controlePh.erroInterface = '';
+                    const pendente = controlePh.pendente;
+                    const deltaPh = phFinal - pendente.phInicial;
+                    const sensibilidade = Math.abs(deltaPh) / pendente.volume;
+                    const respostaMinima = lerPh('in_ph_variacao_min');
+                    const direcaoCorreta = pendente.produto === 'acido' ? deltaPh < 0 : deltaPh > 0;
+                    controlePh.historico.push({ ...pendente, phFinal, deltaPh, sensibilidade });
+                    controlePh.ciclo = pendente.ciclo;
+                    controlePh.pendente = null;
+
+                    const erro = Math.abs(phFinal - lerPh('in_ph_alvo'));
+                    if (erro <= lerPh('in_ph_tolerancia')) {
+                        controlePh.estado = 'alvo';
+                        controlePh.etapa = 4;
+                    } else if (Math.abs(deltaPh) < respostaMinima) {
+                        controlePh.semRespostaConsecutiva += 1;
+                        controlePh.estado = controlePh.semRespostaConsecutiva >= Math.round(lerPh('in_ph_sem_resposta_max')) ? 'sem_resposta' : 'pronto';
+                    } else if (!direcaoCorreta) {
+                        controlePh.estado = 'tendencia';
+                    } else {
+                        controlePh.semRespostaConsecutiva = 0;
+                        controlePh.sensibilidade = sensibilidade;
+                        const produtoSeguinte = phFinal > lerPh('in_ph_alvo') ? 'acido' : 'base';
+                        const usadoSeguinte = produtoSeguinte === 'acido' ? controlePh.doseAcido : controlePh.doseBase;
+                        const disponivelSeguinte = Math.max(0, lerPh(`in_ph_${produtoSeguinte}_volume`) - usadoSeguinte);
+                        const estimativaSeguinte = erro / sensibilidade;
+                        if (estimativaSeguinte > disponivelSeguinte) controlePh.estado = 'insuficiente';
+                        else controlePh.estado = controlePh.ciclo >= lerPh('in_ph_ciclos_max') ? 'ciclos' : 'pronto';
+                    }
+                }
+
+                persistirEstadoAplicacao();
+                atualizarPh();
+            }
+
+            function calcularRegulacaoPh() {
+                const phAtual = lerPh('in_ph_atual');
+                const phAlvo = lerPh('in_ph_alvo');
+                const tolerancia = lerPh('in_ph_tolerancia');
+                const erro = phAlvo - phAtual;
+                const alvoAtingido = Math.abs(erro) <= tolerancia;
+                const produto = alvoAtingido ? null : (erro < 0 ? 'acido' : 'base');
+                const pulsoMinimo = lerPh('in_ph_pulso_min');
+                const pulsoMaximo = Math.max(pulsoMinimo, lerPh('in_ph_pulso_max'));
+                const pulsoInicial = limitar(lerPh('in_ph_pulso_inicial'), pulsoMinimo, pulsoMaximo);
+                const fatorAproximacao = lerPh('in_ph_fator_aproximacao') / 100;
+                const estimativaRestante = controlePh.sensibilidade > 0 ? Math.abs(erro) / controlePh.sensibilidade : null;
+                const pulsoAdaptativo = estimativaRestante === null ? pulsoInicial : estimativaRestante * fatorAproximacao;
+                const proximoPulso = alvoAtingido ? 0 : limitar(pulsoAdaptativo, pulsoMinimo, pulsoMaximo);
+                const pulsoHidraulico = controlePh.pendente?.volume || proximoPulso;
+                const usadoProduto = produto === 'acido' ? controlePh.doseAcido : controlePh.doseBase;
+                const volumeOriginal = produto ? lerPh(`in_ph_${produto}_volume`) : 0;
+                const volumeDisponivel = Math.max(0, volumeOriginal - usadoProduto);
+                const doseAcumulada = controlePh.doseAcido + controlePh.doseBase;
+                const doseMaxima = lerPh('in_ph_dose_max');
+                const ciclosMaximos = Math.round(lerPh('in_ph_ciclos_max'));
+                const tempoAplicacao = lerPh('in_ph_tempo');
+                const vazaoProdutoLMin = tempoAplicacao > 0 ? pulsoHidraulico / tempoAplicacao : 0;
+                const qProduto = vazaoProdutoLMin / 60000;
+                const diamMangueira = lerPh('in_ph_mangueira_diam') / 1000;
+                const areaMangueira = Math.PI * diamMangueira * diamMangueira / 4;
+                const velProduto = areaMangueira > 0 ? qProduto / areaMangueira : 0;
+                const densidadeProduto = lerPh('in_ph_densidade_produto');
+                const viscosidade = lerPh('in_ph_viscosidade') / 1000;
+                const reynoldsProduto = viscosidade > 0 ? densidadeProduto * velProduto * diamMangueira / viscosidade : 0;
+                const perdaMangueira = diamMangueira > 0
+                    ? lerPh('in_ph_fator_atrito') * (lerPh('in_ph_mangueira_comp') / diamMangueira) * densidadeProduto * velProduto ** 2 / 2
+                    : 0;
+                const pressaoEstatica = densidadeProduto * GRAVIDADE_PADRAO * lerPh('in_ph_altura_succao');
+                const pressaoCinetica = densidadeProduto * velProduto ** 2 / 2;
+                const modoAplicacao = obterModoSelecionado('modo_aplicacao_ph') || 'venturi';
+                const pressaoBomba = Math.max(0, perdaMangueira + pressaoEstatica + pressaoCinetica);
+                const vacuoNecessario = modoAplicacao === 'venturi' ? pressaoBomba : 0;
+                const pressaoGargantaGauge = -vacuoNecessario;
+                const calibracaoBomba = lerPh('in_ph_bomba_ml_rev');
+                const rpmBomba = modoAplicacao === 'peristaltica' && calibracaoBomba > 0
+                    ? vazaoProdutoLMin * 1000 / calibracaoBomba
+                    : 0;
+
+                const vazaoLinha = lerPh('in_ph_vazao_linha') / 60000;
+                const diamLinha = lerPh('in_ph_diametro_linha') / 1000;
+                const areaLinha = Math.PI * diamLinha ** 2 / 4;
+                const velEntrada = areaLinha > 0 ? vazaoLinha / areaLinha : 0;
+                const pressaoEntrada = lerPh('in_ph_pressao_entrada') * 100000;
+                const pressaoSaida = lerPh('in_ph_pressao_saida') * 100000;
+                const densidadeAgua = 1000;
+                const termoVelocidade = velEntrada ** 2 + 2 * (pressaoEntrada - pressaoGargantaGauge) / densidadeAgua;
+                const velGarganta = termoVelocidade > 0 ? Math.sqrt(termoVelocidade) : 0;
+                const areaGarganta = velGarganta > 0 ? vazaoLinha / velGarganta : 0;
+                const diamGarganta = areaGarganta > 0 ? Math.sqrt(4 * areaGarganta / Math.PI) : 0;
+                const beta = diamLinha > 0 ? diamGarganta / diamLinha : 0;
+                const angConv = lerPh('in_ph_angulo_convergente') * Math.PI / 180;
+                const angDif = lerPh('in_ph_angulo_difusor') * Math.PI / 180;
+                const compConvergente = angConv > 0 ? (diamLinha - diamGarganta) / (2 * Math.tan(angConv / 2)) : 0;
+                const compDifusor = angDif > 0 ? (diamLinha - diamGarganta) / (2 * Math.tan(angDif / 2)) : 0;
+                const compGarganta = lerPh('in_ph_garganta_rel') * diamGarganta;
+                const temperatura = lerPh('in_ph_temperatura');
+                const temperaturaK = temperatura + 273.15;
+                const ant = temperaturaK <= 303
+                    ? { a: 5.40221, b: 1838.675, c: -31.737 }
+                    : (temperaturaK <= 333 ? { a: 5.20389, b: 1733.926, c: -39.485 } : { a: 5.0768, b: 1659.793, c: -45.854 });
+                const pressaoVapor = Math.pow(10, ant.a - ant.b / (temperaturaK + ant.c)) * 100000;
+                const pressaoAbsolutaGarganta = 101325 + pressaoGargantaGauge;
+                const cavitacao = pressaoAbsolutaGarganta <= pressaoVapor;
+                const geometriaValida = diamGarganta > 0 && diamGarganta < diamLinha && pressaoEntrada >= pressaoSaida && pressaoAbsolutaGarganta > 0;
+
+                return {
+                    phAtual, phAlvo, tolerancia, erro, alvoAtingido, produto, proximoPulso, pulsoHidraulico,
+                    estimativaRestante, volumeDisponivel, doseAcumulada, doseMaxima, ciclosMaximos, tempoAplicacao,
+                    vazaoProdutoLMin, velProduto, reynoldsProduto, perdaMangueira, pressaoEstatica, pressaoBomba,
+                    modoAplicacao, vacuoNecessario, pressaoGargantaGauge, calibracaoBomba, rpmBomba, diamLinha,
+                    velEntrada, pressaoEntrada, pressaoSaida, velGarganta, diamGarganta, beta, compConvergente,
+                    compDifusor, compGarganta, pressaoVapor, pressaoAbsolutaGarganta, cavitacao, geometriaValida,
+                    temperatura, ant, fatorAproximacao
+                };
+            }
+
+            function textoEstadoControlePh(estado) {
+                const estados = {
+                    pausado: textoIdioma('Processo pausado', 'Process paused'),
+                    pronto: textoIdioma('Pulso pronto para aplicação', 'Pulse ready for application'),
+                    dosando: controlePh.pendente?.produto === 'acido' ? textoIdioma('Dosando ácido', 'Dosing acid') : textoIdioma('Dosando base', 'Dosing base'),
+                    misturando: textoIdioma('Mistura em andamento', 'Mixing in progress'),
+                    estabilizando: textoIdioma('Aguardando leitura estabilizada', 'Waiting for stabilized reading'),
+                    alvo: textoIdioma('pH alvo atingido', 'Target pH reached'),
+                    insuficiente: textoIdioma('Produto insuficiente', 'Insufficient product'),
+                    limite: textoIdioma('Dose acumulada máxima atingida', 'Maximum cumulative dose reached'),
+                    ciclos: textoIdioma('Número máximo de ciclos atingido', 'Maximum cycle count reached'),
+                    sem_resposta: textoIdioma('Sensor sem resposta mensurável', 'No measurable sensor response'),
+                    tendencia: textoIdioma('pH moveu-se na direção contrária', 'pH moved in the opposite direction')
+                };
+                return estados[estado] || estado;
+            }
+
+            function textoAcaoControlePh() {
+                if (controlePh.estado === 'pronto') return textoIdioma('Iniciar aplicação do pulso', 'Start pulse application');
+                if (controlePh.estado === 'dosando') return textoIdioma('Já apliquei o pulso', 'I applied the pulse');
+                if (controlePh.estado === 'misturando') return textoIdioma('Mistura concluída', 'Mixing completed');
+                if (controlePh.estado === 'estabilizando') return textoIdioma('Registrar leitura e calcular próximo pulso', 'Record reading and calculate next pulse');
+                if (['pausado', 'insuficiente', 'sem_resposta', 'tendencia'].includes(controlePh.estado)) return textoIdioma('Retomar controle', 'Resume control');
+                return '';
+            }
+
+            function desenharRegulacaoPh(r) {
+                const canvasPh = document.getElementById('phCanvas');
+                if (!canvasPh) return;
+                const c = canvasPh.getContext('2d');
+                const estilos = getComputedStyle(document.body);
+                const fundo = estilos.getPropertyValue('--canvas-bg').trim();
+                const texto = estilos.getPropertyValue('--text-main').trim();
+                const muted = estilos.getPropertyValue('--text-muted').trim();
+                const border = estilos.getPropertyValue('--border').trim();
+                const accent = estilos.getPropertyValue('--accent').trim();
+                const success = estilos.getPropertyValue('--success').trim();
+                const error = estilos.getPropertyValue('--error').trim();
+                c.clearRect(0, 0, canvasPh.width, canvasPh.height);
+                c.fillStyle = fundo; c.fillRect(0, 0, canvasPh.width, canvasPh.height);
+                c.strokeStyle = border; c.globalAlpha = 0.35;
+                for (let x = 40; x < canvasPh.width; x += 50) { c.beginPath(); c.moveTo(x, 0); c.lineTo(x, canvasPh.height); c.stroke(); }
+                c.globalAlpha = 1;
+
+                const tanqueX = Math.max(42, canvasPh.width * 0.08);
+                const tanqueY = 45;
+                const tanqueW = Math.min(245, canvasPh.width * 0.3);
+                const tanqueH = 195;
+                c.strokeStyle = texto; c.lineWidth = 3; c.strokeRect(tanqueX, tanqueY, tanqueW, tanqueH);
+                const nivel = limitar(r.phAtual / 14, 0, 1);
+                c.fillStyle = r.alvoAtingido ? success : error; c.globalAlpha = 0.25;
+                c.fillRect(tanqueX + 4, tanqueY + 4 + tanqueH * (1 - nivel), tanqueW - 8, Math.max(0, tanqueH * nivel - 4));
+                c.globalAlpha = 1; c.fillStyle = texto; c.font = 'bold 14px monospace';
+                c.fillText(textoIdioma('TANQUE', 'TANK'), tanqueX + 12, tanqueY + 22);
+                c.font = 'bold 22px monospace'; c.fillText(`pH ${r.phAtual.toFixed(2)}`, tanqueX + 12, tanqueY + 52);
+                c.fillStyle = muted; c.font = '11px monospace';
+                c.fillText(`${textoIdioma('ALVO', 'TARGET')} ${r.phAlvo.toFixed(2)} ± ${r.tolerancia.toFixed(2)}`, tanqueX + 12, tanqueY + 72);
+                c.fillText(`${textoIdioma('CICLO', 'CYCLE')} ${controlePh.ciclo}/${r.ciclosMaximos}`, tanqueX + 12, tanqueY + 92);
+
+                const x0 = tanqueX + tanqueW + 55;
+                const x3 = canvasPh.width - 45;
+                const y = canvasPh.height * 0.55;
+                const x1 = x0 + (x3 - x0) * 0.3;
+                const x2 = x1 + Math.max(30, (x3 - x0) * 0.12);
+                const gargantaR = Math.max(8, Math.min(38, 55 * Math.max(0.1, r.beta)));
+                c.beginPath(); c.moveTo(x0, y - 38); c.lineTo(x1, y - gargantaR); c.lineTo(x2, y - gargantaR); c.lineTo(x3, y - 38);
+                c.lineTo(x3, y + 38); c.lineTo(x2, y + gargantaR); c.lineTo(x1, y + gargantaR); c.lineTo(x0, y + 38); c.closePath();
+                c.strokeStyle = accent; c.lineWidth = 3; c.stroke(); c.fillStyle = accent; c.globalAlpha = 0.12; c.fill(); c.globalAlpha = 1;
+                c.fillStyle = texto; c.font = 'bold 13px monospace'; c.fillText(textoIdioma('VENTURI E DOSAGEM', 'VENTURI AND DOSING'), x0, y - 60);
+                c.fillStyle = muted; c.font = '11px monospace';
+                c.fillText(`d ${(r.diamGarganta * 1000).toFixed(2)} mm`, x1, y + 60);
+                c.fillText(`P ${(r.pressaoGargantaGauge / 100000).toFixed(3)} bar(g)`, x1, y - 48);
+                c.strokeStyle = r.produto ? accent : muted; c.beginPath(); c.moveTo((x1 + x2) / 2, y + gargantaR); c.lineTo((x1 + x2) / 2, y + 92); c.stroke();
+                c.fillStyle = texto; c.font = 'bold 11px monospace';
+                c.fillText(textoEstadoControlePh(controlePh.estado).toUpperCase(), x0, canvasPh.height - 18);
+
+                const grafX = Math.max(x0, canvasPh.width - 235);
+                const grafY = 18;
+                const grafW = 190;
+                const grafH = 58;
+                c.strokeStyle = border; c.lineWidth = 1; c.strokeRect(grafX, grafY, grafW, grafH);
+                c.fillStyle = muted; c.font = '10px monospace';
+                c.fillText(textoIdioma('APROXIMAÇÃO AO ALVO', 'APPROACH TO TARGET'), grafX + 6, grafY + 12);
+                const pontos = controlePh.historico.map((item) => item.phFinal);
+                if (pontos.length) {
+                    const todos = [r.phAlvo, ...pontos];
+                    const minPh = Math.min(...todos) - 0.1;
+                    const maxPh = Math.max(...todos) + 0.1;
+                    const escalaY = (valor) => grafY + grafH - 5 - ((valor - minPh) / Math.max(maxPh - minPh, 0.01)) * (grafH - 22);
+                    c.strokeStyle = success; c.setLineDash([4, 3]); c.beginPath(); c.moveTo(grafX + 5, escalaY(r.phAlvo)); c.lineTo(grafX + grafW - 5, escalaY(r.phAlvo)); c.stroke(); c.setLineDash([]);
+                    c.strokeStyle = accent; c.lineWidth = 2; c.beginPath();
+                    pontos.forEach((valor, indice) => {
+                        const px = grafX + 7 + indice * (grafW - 14) / Math.max(pontos.length - 1, 1);
+                        const py = escalaY(valor);
+                        if (indice === 0) c.moveTo(px, py); else c.lineTo(px, py);
+                    });
+                    c.stroke();
+                }
+            }
+
+            function montarLinhasHistoricoPh() {
+                return controlePh.historico.map((item, indice) => `<tr class="${indice === controlePh.historico.length - 1 ? 'latest' : ''}"><td>${item.ciclo}</td><td>${item.phInicial.toFixed(3)}</td><td>${item.produto === 'acido' ? textoIdioma('Ácido', 'Acid') : textoIdioma('Base', 'Base')}</td><td>${item.volume.toFixed(4)} L</td><td>${item.phFinal.toFixed(3)}</td><td>${item.sensibilidade.toFixed(4)}</td></tr>`).join('');
+            }
+
+            function montarTabelaHistoricoPh() {
+                const linhas = montarLinhasHistoricoPh();
+                return `<div class="history-table-wrap"><table class="history-table"><thead><tr><th>#</th><th>pH ${textoIdioma('inicial', 'initial')}</th><th>${textoIdioma('Produto', 'Product')}</th><th>${textoIdioma('Volume', 'Volume')}</th><th>pH ${textoIdioma('final', 'final')}</th><th>ΔpH/ΔV</th></tr></thead><tbody>${linhas || `<tr><td colspan="6">${textoIdioma('Nenhum ciclo registrado.', 'No cycle recorded.')}</td></tr>`}</tbody></table></div>`;
+            }
+
+            function atualizarEtapaVisualPh() {
+                const etapa = limitar(controlePh.etapa || 1, 1, 4);
+                document.querySelectorAll('[data-ph-sidebar-step]').forEach((painel) => {
+                    painel.classList.toggle('hidden', Number(painel.dataset.phSidebarStep) !== etapa);
+                });
+                document.querySelectorAll('[data-ph-step-indicator]').forEach((indicador) => {
+                    const numero = Number(indicador.dataset.phStepIndicator);
+                    indicador.classList.toggle('active', numero === etapa);
+                    indicador.classList.toggle('completed', numero < etapa);
+                    if (numero === etapa) indicador.setAttribute('aria-current', 'step');
+                    else indicador.removeAttribute('aria-current');
+                });
+            }
+
+            function montarErroInterfacePh() {
+                return controlePh.erroInterface ? `<div class="ph-inline-error" role="alert">${controlePh.erroInterface}</div>` : '';
+            }
+
+            function montarMemorialCompletoPh(r) {
+                const refControle = 'https://www3.epa.gov/ttnemc01/cam/sec4-5.pdf';
+                const refBernoulli = 'https://www.grc.nasa.gov/www/k-12/airplane/bern.html';
+                const refDarcy = 'https://www1.eere.energy.gov/manufacturing/tech_assistance/pdfs/airmaster_plus_appendix.pdf';
+                const refVenturi = 'https://www.iso.org/standard/79181.html';
+                const refVapor = 'https://webbook.nist.gov/cgi/cbook.cgi?ID=C7732185&Plot=on&Type=ANTOINE';
+                const refBomba = 'https://www.lambda-instruments.com/fileadmin/LAMBDA_Peristaltic_pumps_touch_Operation_manual_rev14.pdf';
+                return `
+                    <h2>${textoIdioma('Memorial do controle', 'Control report')}</h2>
+                    <div class="memorial-item"><strong>${textoIdioma('1. Erro de controle', '1. Control error')}</strong><br><code>e = pH_alvo − pH_atual</code> = ${r.erro.toFixed(4)}; ${textoIdioma('tolerância', 'tolerance')} = ±${r.tolerancia.toFixed(3)}. <a href="${refControle}" target="_blank" rel="noopener noreferrer">EPA</a></div>
+                    <div class="memorial-item"><strong>${textoIdioma('2. Resposta observada', '2. Observed response')}</strong><br><code>S = |ΔpH/ΔV|</code> = ${controlePh.sensibilidade === null ? textoIdioma('aguardando primeiro ciclo', 'waiting for first cycle') : controlePh.sensibilidade.toFixed(6) + ' pH/L'}. <a href="${refControle}" target="_blank" rel="noopener noreferrer">EPA</a></div>
+                    <div class="memorial-item"><strong>${textoIdioma('3. Próximo pulso', '3. Next pulse')}</strong><br><code>V_próximo = limitar(|e|/S · F, V_mín, V_máx)</code><br>${textoIdioma('Resultado', 'Result')}: ${r.proximoPulso.toFixed(6)} L; F = ${(r.fatorAproximacao * 100).toFixed(0)}%. <a href="${refControle}" target="_blank" rel="noopener noreferrer">${textoIdioma('Controle por realimentação', 'Feedback control')}</a></div>
+                    <div class="memorial-item"><strong>${textoIdioma('4. Tempos do ciclo', '4. Cycle timing')}</strong><br>${textoIdioma('Aplicação', 'Application')}: ${r.tempoAplicacao.toFixed(2)} min; ${textoIdioma('mistura', 'mixing')}: ${lerPh('in_ph_tempo_mistura').toFixed(0)} s; ${textoIdioma('estabilização', 'stabilization')}: ${lerPh('in_ph_tempo_estabilizacao').toFixed(0)} s. <a href="${refControle}" target="_blank" rel="noopener noreferrer">EPA</a></div>
+                    <div class="memorial-item"><strong>${textoIdioma('5. Linha do aditivo', '5. Additive line')}</strong><br><code>v = Q/A; ΔP_f = f(L/D)ρv²/2; ΔP_z = ρgh</code><br>Re = ${r.reynoldsProduto.toFixed(0)}; ΔP_f = ${(r.perdaMangueira / 1000).toFixed(3)} kPa; ΔP_z = ${(r.pressaoEstatica / 1000).toFixed(3)} kPa. <a href="${refDarcy}" target="_blank" rel="noopener noreferrer">${textoIdioma('Referência', 'Reference')}</a></div>
+                    <div class="memorial-item"><strong>${textoIdioma('6. Venturi', '6. Venturi')}</strong><br><code>P₁ + ρv₁²/2 = P_g + ρv_g²/2; d = √(4Q/πv_g)</code><br>P_g = ${(r.pressaoGargantaGauge / 100000).toFixed(4)} bar(g); d = ${(r.diamGarganta * 1000).toFixed(3)} mm; β = ${r.beta.toFixed(4)}. <a href="${refBernoulli}" target="_blank" rel="noopener noreferrer">Bernoulli</a></div>
+                    <div class="memorial-item ${r.geometriaValida ? 'green' : 'red'}"><strong>${textoIdioma('7. Geometria', '7. Geometry')}</strong><br><code>L = (D-d)/[2 tan(θ/2)]</code><br>${textoIdioma('Convergente', 'Convergent')}: ${(r.compConvergente * 1000).toFixed(2)} mm; ${textoIdioma('garganta', 'throat')}: ${(r.compGarganta * 1000).toFixed(2)} mm; ${textoIdioma('difusor', 'diffuser')}: ${(r.compDifusor * 1000).toFixed(2)} mm. <a href="${refVenturi}" target="_blank" rel="noopener noreferrer">ISO 5167-4</a></div>
+                    ${r.modoAplicacao === 'peristaltica' ? `<div class="memorial-item"><strong>${textoIdioma('8. Bomba peristáltica', '8. Peristaltic pump')}</strong><br><code>n = Q/V_rev</code>; ${textoIdioma('rotação', 'speed')}: ${r.calibracaoBomba > 0 ? r.rpmBomba.toFixed(3) + ' rpm' : textoIdioma('aguardando calibração', 'waiting for calibration')}; ${textoIdioma('pressão residual', 'residual pressure')}: ${(r.pressaoBomba / 1000).toFixed(3)} kPa. <a href="${refBomba}" target="_blank" rel="noopener noreferrer">${textoIdioma('Referência', 'Reference')}</a></div>` : ''}
+                    <div class="memorial-item ${r.cavitacao ? 'red' : 'green'}"><strong>${textoIdioma('Pressão absoluta e cavitação', 'Absolute pressure and cavitation')}</strong><br>P_abs,g = ${(r.pressaoAbsolutaGarganta / 1000).toFixed(2)} kPa; P_vapor = ${(r.pressaoVapor / 1000).toFixed(2)} kPa. ${r.cavitacao ? textoIdioma('Risco de cavitação.', 'Cavitation risk.') : textoIdioma('Acima da pressão de vapor.', 'Above vapor pressure.')} <a href="${refVapor}" target="_blank" rel="noopener noreferrer">NIST</a></div>
+                    <div class="memorial-item yellow"><strong>${textoIdioma('Constantes utilizadas', 'Constants used')}</strong><br><span data-tooltip="${textoIdioma('[m/s²] Gravidade padrão. Converte desnível em pressão; dobrar a altura dobra essa parcela.', '[m/s²] Standard gravity. Converts elevation into pressure; doubling height doubles this component.')}">g = ${GRAVIDADE_PADRAO} m/s²</span>; <span data-tooltip="${textoIdioma('[kg/m³] Densidade de referência da água. Maior densidade exige maior diferencial para a mesma velocidade.', '[kg/m³] Reference water density. Greater density requires greater differential at the same velocity.')}">ρ_água = 1000 kg/m³</span>; <span data-tooltip="${textoIdioma('[Pa] Pressão atmosférica padrão usada na pressão absoluta e na margem de cavitação.', '[Pa] Standard atmospheric pressure used for absolute pressure and cavitation margin.')}">P_atm = 101325 Pa</span>; <span data-tooltip="${textoIdioma('[bar e K] Coeficientes de Antoine selecionados pela temperatura para calcular a pressão de vapor.', '[bar and K] Antoine coefficients selected by temperature to calculate vapor pressure.')}">A=${r.ant.a}, B=${r.ant.b}, C=${r.ant.c}</span>.</div>`;
+            }
+
+            function atualizarPh() {
+                const r = calcularRegulacaoPh();
+                atualizarEtapaVisualPh();
+                const etapa = limitar(controlePh.etapa || 1, 1, 4);
+                const produtoTexto = r.produto === 'acido' ? textoIdioma('Ácido', 'Acid') : (r.produto === 'base' ? textoIdioma('Base', 'Base') : textoIdioma('Nenhum', 'None'));
+                const produtoNome = r.produto ? escaparHtml(document.getElementById(`in_ph_${r.produto}_nome`).value.trim()) : textoIdioma('Nenhum', 'None');
+                const modoTexto = r.modoAplicacao === 'venturi' ? textoIdioma('Venturi dosador', 'Dosing Venturi') : textoIdioma('Bomba peristáltica', 'Peristaltic pump');
+                const erroHtml = montarErroInterfacePh();
+
+                if (etapa === 1) {
+                    dom.painelEsqPh.innerHTML = `
+                        <div class="ph-stage-card">
+                            <div class="ph-stage-kicker">${textoIdioma('Etapa 1 de 4', 'Step 1 of 4')}</div>
+                            <h2>${textoIdioma('Prepare o tanque e os reagentes', 'Prepare tank and reagents')}</h2>
+                            <p>${textoIdioma('Informe a primeira leitura real, o objetivo e o reagente disponível. Os dados hidráulicos ficam para a próxima etapa.', 'Enter the first real reading, the target, and the available reagent. Hydraulic data comes next.')}</p>
+                            <div class="ph-stage-summary">
+                                <div class="ph-summary-item"><span>${textoIdioma('pH inicial', 'Initial pH')}</span><strong>${r.phAtual.toFixed(2)}</strong></div>
+                                <div class="ph-summary-item"><span>${textoIdioma('pH alvo', 'Target pH')}</span><strong>${r.phAlvo.toFixed(2)} ± ${r.tolerancia.toFixed(2)}</strong></div>
+                                <div class="ph-summary-item"><span>${textoIdioma('Reagente necessário', 'Required reagent')}</span><strong>${produtoTexto}</strong></div>
+                            </div>
+                            ${erroHtml}
+                            <div class="ph-stage-actions"><button type="button" id="btn-ph-continuar" class="process-btn">${textoIdioma('Continuar para aplicação', 'Continue to application')}</button></div>
+                        </div>`;
+                    dom.painelDirPh.innerHTML = `
+                        <h2>${textoIdioma('O que preencher agora', 'What to enter now')}</h2>
+                        <ol class="ph-checklist"><li>${textoIdioma('Meça e informe o pH inicial do tanque.', 'Measure and enter the initial tank pH.')}</li><li>${textoIdioma('Defina o pH alvo e a tolerância.', 'Set target pH and tolerance.')}</li><li>${textoIdioma('Selecione ou descreva o reagente necessário.', 'Select or describe the required reagent.')}</li><li>${textoIdioma('Informe o volume realmente disponível.', 'Enter the volume actually available.')}</li></ol>
+                        <div class="alert alert-warning"><strong>${textoIdioma('Resposta química não simulada', 'Chemical response is not simulated')}</strong><br>${textoIdioma('O próximo pulso será aprendido pelas leituras reais registradas durante os ciclos.', 'The next pulse will be learned from real readings recorded during the cycles.')}</div>`;
+                } else if (etapa === 2) {
+                    const compatibilidade = document.getElementById('in_ph_compatibilidade').checked;
+                    dom.painelEsqPh.innerHTML = `
+                        <div class="ph-stage-card">
+                            <div class="ph-stage-kicker">${textoIdioma('Etapa 2 de 4', 'Step 2 of 4')}</div>
+                            <h2>${textoIdioma('Configure a aplicação', 'Configure application')}</h2>
+                            <p>${textoIdioma('Escolha o método e confira o resumo. Parâmetros menos frequentes estão recolhidos na barra lateral.', 'Choose the method and review the summary. Less frequent parameters are collapsed in the sidebar.')}</p>
+                            <div class="ph-stage-summary">
+                                <div class="ph-summary-item"><span>${textoIdioma('Método', 'Method')}</span><strong>${modoTexto}</strong></div>
+                                <div class="ph-summary-item"><span>${textoIdioma('Primeiro pulso', 'First pulse')}</span><strong>${r.proximoPulso.toFixed(4)} L</strong></div>
+                                <div class="ph-summary-item"><span>${textoIdioma('Garganta', 'Throat')}</span><strong>${(r.diamGarganta * 1000).toFixed(2)} mm</strong></div>
+                            </div>
+                            <div class="alert ${compatibilidade ? 'alert-success' : 'alert-warning'}"><strong>${textoIdioma('Compatibilidade química', 'Chemical compatibility')}</strong><br>${compatibilidade ? textoIdioma('Confirmada com dados do fabricante.', 'Confirmed using manufacturer data.') : textoIdioma('Ainda precisa ser confirmada.', 'Still needs confirmation.')}</div>
+                            ${erroHtml}
+                            <div class="ph-stage-actions"><button type="button" id="btn-ph-voltar-config" class="process-btn secondary">${textoIdioma('Voltar', 'Back')}</button><button type="button" id="btn-ph-iniciar" class="process-btn">${textoIdioma('Iniciar controle de pH', 'Start pH control')}</button></div>
+                        </div>`;
+                    dom.painelDirPh.innerHTML = `
+                        <h2>${textoIdioma('Resumo técnico', 'Technical summary')}</h2>
+                        <div class="memorial-item"><strong>${textoIdioma('Produto', 'Product')}</strong><br>${produtoNome || textoIdioma('Não informado', 'Not provided')} · ${r.volumeDisponivel.toFixed(3)} L ${textoIdioma('disponíveis', 'available')}</div>
+                        <div class="memorial-item ${r.geometriaValida ? 'green' : 'red'}"><strong>${textoIdioma('Venturi', 'Venturi')}</strong><br>d = ${(r.diamGarganta * 1000).toFixed(3)} mm · P = ${(r.pressaoGargantaGauge / 100000).toFixed(3)} bar(g)</div>
+                        <div class="memorial-item ${r.cavitacao ? 'red' : 'green'}"><strong>${textoIdioma('Cavitação', 'Cavitation')}</strong><br>${r.cavitacao ? textoIdioma('Risco calculado: revise a hidráulica avançada.', 'Calculated risk: review advanced hydraulics.') : textoIdioma('Pressão acima da pressão de vapor.', 'Pressure above vapor pressure.')}</div>`;
+                } else if (etapa === 3) {
+                    const acao = textoAcaoControlePh();
+                    const instrucao = controlePh.estado === 'pronto'
+                        ? textoIdioma('Confira o volume abaixo e inicie a aplicação física.', 'Review the volume below and start physical application.')
+                        : controlePh.estado === 'dosando'
+                            ? textoIdioma('Depois que todo o pulso entrar no tanque, confirme a aplicação.', 'After the full pulse enters the tank, confirm application.')
+                            : controlePh.estado === 'misturando'
+                                ? textoIdioma('Misture ou recircule pelo tempo configurado antes de continuar.', 'Mix or recirculate for the configured time before continuing.')
+                                : controlePh.estado === 'estabilizando'
+                                    ? textoIdioma('Aguarde a estabilização, digite a nova leitura abaixo e registre.', 'Wait for stabilization, enter the new reading below, and record it.')
+                                    : textoIdioma('Retome o controle para recalcular o próximo passo.', 'Resume control to recalculate the next step.');
+                    const leitura = controlePh.estado === 'estabilizando' ? `<div class="ph-reading-field"><label for="in_ph_nova_leitura">${textoIdioma('Nova leitura após mistura', 'New reading after mixing')}</label><input type="number" id="in_ph_nova_leitura" min="0" max="14" step="0.01" inputmode="decimal" placeholder="${textoIdioma('Digite o pH medido', 'Enter measured pH')}"></div>` : '';
+                    dom.painelEsqPh.innerHTML = `
+                        <div class="ph-stage-card ph-operation-card">
+                            <div class="ph-stage-kicker">${textoIdioma('Etapa 3 de 4', 'Step 3 of 4')} · ${textoIdioma('Ciclo', 'Cycle')} ${controlePh.ciclo + (controlePh.pendente ? 1 : 0)} ${textoIdioma('de', 'of')} ${r.ciclosMaximos}</div>
+                            <h2>${textoEstadoControlePh(controlePh.estado)}</h2>
+                            <p>${instrucao}</p>
+                            <div class="ph-stage-summary">
+                                <div class="ph-summary-item"><span>pH ${textoIdioma('atual', 'current')}</span><strong>${r.phAtual.toFixed(3)}</strong></div>
+                                <div class="ph-summary-item"><span>${textoIdioma('Alvo', 'Target')}</span><strong>${r.phAlvo.toFixed(2)} ± ${r.tolerancia.toFixed(2)}</strong></div>
+                                <div class="ph-summary-item"><span>${textoIdioma('Produto', 'Product')}</span><strong>${produtoTexto}</strong></div>
+                            </div>
+                            <div class="ph-operation-main"><div class="metric-label">${textoIdioma('Pulso desta etapa', 'Pulse for this step')}</div><div class="metric-value">${(controlePh.pendente?.volume || r.proximoPulso).toFixed(4)} L</div><div class="metric-delta">${modoTexto} · ${r.vazaoProdutoLMin.toFixed(4)} L/min</div></div>
+                            ${controlePh.estado === 'misturando' ? `<div class="alert alert-warning">${textoIdioma('Tempo de mistura configurado', 'Configured mixing time')}: <strong>${lerPh('in_ph_tempo_mistura').toFixed(0)} s</strong></div>` : ''}
+                            ${controlePh.estado === 'estabilizando' ? `<div class="alert alert-warning">${textoIdioma('Tempo de estabilização configurado', 'Configured stabilization time')}: <strong>${lerPh('in_ph_tempo_estabilizacao').toFixed(0)} s</strong></div>` : ''}
+                            ${leitura}
+                            ${erroHtml}
+                            <div class="ph-stage-actions"><button type="button" id="btn-ph-novo" class="process-btn secondary">${textoIdioma('Reiniciar processo', 'Restart process')}</button>${acao ? `<button type="button" id="btn-ph-acao" class="process-btn">${acao}</button>` : ''}${controlePh.historico.length ? `<button type="button" id="btn-ph-resultados" class="process-btn secondary">${textoIdioma('Ver histórico', 'View history')}</button>` : ''}</div>
+                        </div>`;
+                    dom.painelDirPh.innerHTML = `
+                        <h2>${textoIdioma('Histórico até agora', 'History so far')}</h2>
+                        ${montarTabelaHistoricoPh()}
+                        <div class="memorial-item"><strong>${textoIdioma('Sensibilidade observada', 'Observed sensitivity')}</strong><br>${controlePh.sensibilidade === null ? textoIdioma('Será calculada após uma resposta válida.', 'Will be calculated after a valid response.') : controlePh.sensibilidade.toFixed(6) + ' pH/L'}</div>
+                        <div class="memorial-item"><strong>${textoIdioma('Dose acumulada', 'Cumulative dose')}</strong><br>${textoIdioma('Ácido', 'Acid')}: ${controlePh.doseAcido.toFixed(4)} L · ${textoIdioma('Base', 'Base')}: ${controlePh.doseBase.toFixed(4)} L</div>`;
+                } else {
+                    const estimativaTexto = r.estimativaRestante === null ? textoIdioma('Indeterminada', 'Undetermined') : r.estimativaRestante.toFixed(4) + ' L';
+                    dom.painelEsqPh.innerHTML = `
+                        <div class="ph-stage-card">
+                            <div class="ph-stage-kicker">${textoIdioma('Etapa 4 de 4', 'Step 4 of 4')}</div>
+                            <h2>${textoIdioma('Resultado e histórico', 'Result and history')}</h2>
+                            <div class="alert ${r.alvoAtingido ? 'alert-success' : 'alert-warning'}"><strong>${textoEstadoControlePh(controlePh.estado)}</strong><br>pH ${textoIdioma('atual', 'current')}: ${r.phAtual.toFixed(3)} · ${textoIdioma('alvo', 'target')}: ${r.phAlvo.toFixed(3)}</div>
+                            <div class="ph-stage-summary">
+                                <div class="ph-summary-item"><span>${textoIdioma('Ciclos registrados', 'Recorded cycles')}</span><strong>${controlePh.historico.length}</strong></div>
+                                <div class="ph-summary-item"><span>${textoIdioma('Dose acumulada', 'Cumulative dose')}</span><strong>${r.doseAcumulada.toFixed(4)} L</strong></div>
+                                <div class="ph-summary-item"><span>${textoIdioma('Estimativa restante', 'Remaining estimate')}</span><strong>${estimativaTexto}</strong></div>
+                            </div>
+                            <h3>${textoIdioma('Histórico dos ciclos', 'Cycle history')}</h3>
+                            ${montarTabelaHistoricoPh()}
+                            <div class="ph-stage-actions"><button type="button" id="btn-ph-voltar-ciclos" class="process-btn secondary">${textoIdioma('Voltar aos ciclos', 'Back to cycles')}</button><button type="button" id="btn-ph-novo" class="process-btn">${textoIdioma('Iniciar novo processo', 'Start new process')}</button></div>
+                        </div>`;
+                    dom.painelDirPh.innerHTML = montarMemorialCompletoPh(r);
+                }
+                desenharRegulacaoPh(r);
+            }
             function atualizarDashboard() {
                 // Captura valores numéricos limpos
                 const E_e = parseFloat(dom.energia.value);
@@ -2475,9 +3343,139 @@ console.log('ðŸ”§ Script iniciando...');
 
                 ctx.restore();
             }
+
+            function desenharIlustracaoDestorroador() {
+                const estilos = getComputedStyle(document.body);
+                const corFundo = estilos.getPropertyValue('--canvas-bg').trim() || '#0d1117';
+                const corTexto = estilos.getPropertyValue('--text-main').trim() || '#c9d1d9';
+                const corMutado = estilos.getPropertyValue('--text-muted').trim() || '#8b949e';
+                const corBorda = estilos.getPropertyValue('--border').trim() || '#30363d';
+                const corAccent = estilos.getPropertyValue('--accent').trim() || '#58a6ff';
+                const corPerigo = estilos.getPropertyValue('--danger').trim() || '#ff7b72';
+
+                ctx.fillStyle = corFundo;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                ctx.strokeStyle = 'rgba(139, 148, 158, 0.08)';
+                ctx.lineWidth = 1;
+                for (let x = 50; x < canvas.width; x += 50) {
+                    ctx.beginPath();
+                    ctx.moveTo(x, 56);
+                    ctx.lineTo(x, canvas.height);
+                    ctx.stroke();
+                }
+
+                const centroX = canvas.width / 2;
+                const centroY = canvas.height / 2 + 18;
+
+                ctx.strokeStyle = corBorda;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(centroX - 210, centroY - 96);
+                ctx.lineTo(centroX + 210, centroY - 96);
+                ctx.stroke();
+
+                ctx.fillStyle = 'rgba(88, 166, 255, 0.08)';
+                ctx.beginPath();
+                ctx.moveTo(centroX - 120, centroY - 116);
+                ctx.lineTo(centroX + 120, centroY - 116);
+                ctx.lineTo(centroX + 80, centroY - 42);
+                ctx.lineTo(centroX - 80, centroY - 42);
+                ctx.closePath();
+                ctx.fill();
+                ctx.strokeStyle = corAccent;
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                ctx.fillStyle = corTexto;
+                ctx.font = '11px monospace';
+                ctx.fillText(textoIdioma('ENTRADA', 'INLET'), centroX - 22, centroY - 152);
+
+                ctx.strokeStyle = corAccent;
+                ctx.lineWidth = 4;
+                ctx.lineCap = 'round';
+                ctx.beginPath();
+                ctx.moveTo(centroX, centroY - 42);
+                ctx.lineTo(centroX, centroY - 12);
+                ctx.stroke();
+
+                ctx.fillStyle = corAccent;
+                ctx.beginPath();
+                ctx.moveTo(centroX - 12, centroY - 20);
+                ctx.lineTo(centroX, centroY - 6);
+                ctx.lineTo(centroX + 12, centroY - 20);
+                ctx.closePath();
+                ctx.fill();
+
+                ctx.fillStyle = 'rgba(88, 166, 255, 0.06)';
+                ctx.strokeStyle = corAccent;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.roundRect(centroX - 190, centroY - 10, 380, 140, 24);
+                ctx.fill();
+                ctx.stroke();
+
+                ctx.fillStyle = corBorda;
+                ctx.fillRect(centroX - 205, centroY + 82, 410, 14);
+                ctx.fillStyle = 'rgba(139, 148, 158, 0.24)';
+                ctx.fillRect(centroX - 160, centroY + 72, 320, 4);
+
+                ctx.save();
+                ctx.translate(centroX - 94, centroY + 30);
+                ctx.rotate(-0.06);
+                ctx.fillStyle = '#21262d';
+                ctx.strokeStyle = corAccent;
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.roundRect(-84, -42, 168, 84, 34);
+                ctx.fill();
+                ctx.stroke();
+                ctx.restore();
+
+                ctx.save();
+                ctx.translate(centroX + 94, centroY + 30);
+                ctx.rotate(0.06);
+                ctx.fillStyle = '#21262d';
+                ctx.strokeStyle = isStalled ? corPerigo : corAccent;
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.roundRect(-84, -42, 168, 84, 34);
+                ctx.fill();
+                ctx.stroke();
+                ctx.restore();
+
+                ctx.fillStyle = corTexto;
+                ctx.font = 'bold 11px monospace';
+                ctx.fillText(textoIdioma('ROLOS DE MOAGEM', 'GRINDING ROLLERS'), centroX - 55, centroY + 128);
+
+                ctx.strokeStyle = isStalled ? 'rgba(255, 123, 114, 0.75)' : 'rgba(88, 166, 255, 0.75)';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.arc(centroX, centroY + 28, 82, Math.PI * 1.15, Math.PI * 1.85);
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.arc(centroX + 2, centroY + 28, 82, Math.PI * 0.15, Math.PI * 0.85);
+                ctx.stroke();
+
+                ctx.fillStyle = corMutado;
+                ctx.font = '11px monospace';
+                ctx.fillText(textoIdioma('TORQUE', 'TORQUE'), centroX + 118, centroY + 34);
+
+                ctx.strokeStyle = corBorda;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(centroX - 88, centroY + 92);
+                ctx.lineTo(centroX + 88, centroY + 92);
+                ctx.stroke();
+
+                ctx.fillStyle = corMutado;
+                ctx.font = '11px monospace';
+                ctx.fillText(textoIdioma('SAÍDA', 'OUTLET'), centroX - 18, centroY + 114);
+            }
             
             function renderizar() {
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                desenharIlustracaoDestorroador();
 
                 let velAngular = 0;
                 if (!isStalled && rotacaoFinalGlobal > 0) {
@@ -2507,8 +3505,8 @@ console.log('ðŸ”§ Script iniciando...');
                     const particulasPorFrame = Math.ceil(taxaAtual / 15);
                     for(let i=0; i < particulasPorFrame; i++) {
                         particulas.push({
-                            x: centroX - 40 + Math.random() * 80,
-                            y: 0,
+                            x: centroX - 16 + Math.random() * 32,
+                            y: centroY - 132 + Math.random() * 18,
                             raio: 2 + Math.random() * 4,
                             velY: 2 + Math.random() * 3
                         });
@@ -3220,6 +4218,7 @@ console.log('ðŸ”§ Script iniciando...');
             console.log('✅ Ativando sistema...');
             atualizarDashboard();    // Pré-renderiza o Destorroador
             atualizarDistribuidor(); // Pré-renderiza o Distribuidor (corrige o bug do MathJax vazio na 1Âª abertura)
+            atualizarPh();
             console.log('✅ Dashboards atualizados');
             renderizar();
             console.log('✅ Renderizadores iniciados');

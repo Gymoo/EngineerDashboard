@@ -56,20 +56,23 @@
 
         body::-webkit-scrollbar,
         #sidebar::-webkit-scrollbar,
-        #sidebar-distribuidor::-webkit-scrollbar {
+        #sidebar-distribuidor::-webkit-scrollbar,
+        #sidebar-ph::-webkit-scrollbar {
             width: 12px;
             height: 12px;
         }
 
         body::-webkit-scrollbar-track,
         #sidebar::-webkit-scrollbar-track,
-        #sidebar-distribuidor::-webkit-scrollbar-track {
+        #sidebar-distribuidor::-webkit-scrollbar-track,
+        #sidebar-ph::-webkit-scrollbar-track {
             background: var(--scrollbar-track);
         }
 
         body::-webkit-scrollbar-thumb,
         #sidebar::-webkit-scrollbar-thumb,
-        #sidebar-distribuidor::-webkit-scrollbar-thumb {
+        #sidebar-distribuidor::-webkit-scrollbar-thumb,
+        #sidebar-ph::-webkit-scrollbar-thumb {
             background: var(--scrollbar-thumb);
             border: 3px solid var(--scrollbar-track);
             border-radius: 999px;
@@ -77,12 +80,13 @@
 
         body::-webkit-scrollbar-thumb:hover,
         #sidebar::-webkit-scrollbar-thumb:hover,
-        #sidebar-distribuidor::-webkit-scrollbar-thumb:hover {
+        #sidebar-distribuidor::-webkit-scrollbar-thumb:hover,
+        #sidebar-ph::-webkit-scrollbar-thumb:hover {
             background: var(--scrollbar-thumb-hover);
         }
 
         /* Sidebar Styling */
-        #sidebar, #sidebar-distribuidor {
+        #sidebar, #sidebar-distribuidor, #sidebar-ph {
             width: 380px;
             box-sizing: border-box;
             background: var(--bg-panel);
@@ -141,18 +145,21 @@
         }
 
         #sidebar.sidebar-collapsed,
-        #sidebar-distribuidor.sidebar-collapsed {
+        #sidebar-distribuidor.sidebar-collapsed,
+        #sidebar-ph.sidebar-collapsed {
             width: 60px;
             padding: 8px;
         }
 
         #sidebar.sidebar-collapsed > :not(.sidebar-toolbar),
-        #sidebar-distribuidor.sidebar-collapsed > :not(.sidebar-toolbar) {
+        #sidebar-distribuidor.sidebar-collapsed > :not(.sidebar-toolbar),
+        #sidebar-ph.sidebar-collapsed > :not(.sidebar-toolbar) {
             display: none;
         }
 
         #sidebar.sidebar-collapsed .sidebar-toolbar,
-        #sidebar-distribuidor.sidebar-collapsed .sidebar-toolbar {
+        #sidebar-distribuidor.sidebar-collapsed .sidebar-toolbar,
+        #sidebar-ph.sidebar-collapsed .sidebar-toolbar {
             position: static;
             flex-direction: column;
             align-items: center;
@@ -160,7 +167,7 @@
             padding: 4px;
         }
 
-        #sidebar h2, #sidebar h3, #sidebar-distribuidor h2, #sidebar-distribuidor h3 {
+        #sidebar h2, #sidebar h3, #sidebar-distribuidor h2, #sidebar-distribuidor h3, #sidebar-ph h2, #sidebar-ph h3 {
             margin-top: 0;
             margin-bottom: 15px;
             font-size: 1.1em;
@@ -190,20 +197,110 @@
             border-radius: 4px;
             font-family: monospace;
         }
+        .text-input {
+            width: 100%;
+            box-sizing: border-box;
+            background: var(--bg-main);
+            border: 1px solid var(--border);
+            color: var(--text-strong);
+            padding: 8px;
+            border-radius: 4px;
+        }
+        .check-label { align-items: center; justify-content: flex-start !important; gap: 8px; }
+        .ph-process-actions { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+        .process-btn {
+            border: 1px solid var(--accent);
+            border-radius: 7px;
+            padding: 10px 14px;
+            background: rgba(88, 166, 255, 0.16);
+            color: var(--text-strong);
+            cursor: pointer;
+            font-weight: 700;
+        }
+        .process-btn.secondary { background: var(--bg-card); border-color: var(--border); }
+        .process-btn:hover, .process-btn:focus-visible { border-color: var(--text-strong); }
+        .history-table-wrap { overflow-x: auto; margin-top: 10px; }
+        .history-table { width: 100%; border-collapse: collapse; font-size: 0.78rem; }
+        .history-table th, .history-table td { padding: 7px; border: 1px solid var(--border); text-align: right; white-space: nowrap; }
+        .history-table th:first-child, .history-table td:first-child { text-align: center; }
+        .history-table tr.latest td { background: color-mix(in srgb, var(--accent) 10%, var(--bg-card)); color: var(--text-strong); }
+        .ph-stepper {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+            padding: 12px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            background: var(--bg-panel);
+        }
+        .ph-step { display: flex; align-items: center; gap: 8px; color: var(--text-muted); min-width: 0; }
+        .ph-step span {
+            width: 28px;
+            height: 28px;
+            display: grid;
+            place-items: center;
+            flex: 0 0 auto;
+            border: 1px solid var(--border);
+            border-radius: 50%;
+            background: var(--bg-card);
+            font-size: 0.78rem;
+            font-weight: 800;
+        }
+        .ph-step strong { overflow: hidden; text-overflow: ellipsis; font-size: 0.82rem; }
+        .ph-step.active { color: var(--text-strong); }
+        .ph-step.active span { border-color: var(--accent); background: rgba(88, 166, 255, 0.18); }
+        .ph-step.completed span { border-color: var(--success); color: var(--success); }
+        .ph-sidebar-step-label { margin-bottom: 8px; color: var(--accent); font-size: 0.72rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
+        .ph-sidebar-guidance { padding: 16px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg-card); }
+        .ph-sidebar-guidance p { color: var(--text-muted); line-height: 1.5; margin-bottom: 0; }
+        .ph-advanced { margin: 14px 0; border: 1px solid var(--border); border-radius: 8px; background: var(--bg-card); }
+        .ph-advanced summary { padding: 13px; cursor: pointer; color: var(--text-strong); font-weight: 750; }
+        .ph-advanced[open] summary { border-bottom: 1px solid var(--border); margin-bottom: 14px; }
+        .ph-advanced > .control-group { padding: 0 13px; }
+        .ph-stage-card { padding: 20px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg-panel); }
+        .ph-stage-card h2, .ph-stage-card h3 { margin-top: 0; }
+        .ph-stage-kicker { color: var(--accent); font-size: 0.76rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
+        .ph-stage-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 16px 0; }
+        .ph-summary-item { padding: 12px; border-radius: 8px; background: var(--bg-card); border: 1px solid var(--border); }
+        .ph-summary-item span { display: block; color: var(--text-muted); font-size: 0.74rem; margin-bottom: 5px; }
+        .ph-summary-item strong { color: var(--text-strong); font-size: 1.05rem; }
+        .ph-operation-card { border: 2px solid color-mix(in srgb, var(--accent) 65%, var(--border)); box-shadow: 0 14px 35px rgba(0, 0, 0, 0.18); }
+        .ph-operation-main { margin: 16px 0; padding: 16px; border-radius: 9px; background: var(--bg-card); }
+        .ph-operation-main .metric-value { margin-top: 5px; }
+        .ph-reading-field { margin: 16px 0; }
+        .ph-reading-field label { display: block; color: var(--text-strong); font-weight: 800; margin-bottom: 8px; }
+        .ph-reading-field input { width: 100%; box-sizing: border-box; padding: 13px; font: 700 1.25rem monospace; color: var(--text-strong); background: var(--bg-main); border: 2px solid var(--accent); border-radius: 8px; }
+        .ph-inline-error { margin: 12px 0; color: var(--error); font-size: 0.86rem; line-height: 1.4; }
+        .ph-stage-actions { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 18px; }
+        .ph-stage-actions .process-btn:last-child { margin-left: auto; }
+        .ph-checklist { margin: 14px 0; padding-left: 22px; color: var(--text-main); line-height: 1.7; }
 
         .radio-group { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
         .radio-group label { display: flex; align-items: center; gap: 8px; font-size: 0.95em; cursor: pointer; }
         .state-toggle {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 10px;
+            gap: 12px;
             margin-bottom: 20px;
+            padding-top: 8px;
+            border-top: 1px solid var(--border);
             align-items: start;
         }
         .state-group {
             display: flex;
             flex-direction: column;
             gap: 6px;
+            padding: 8px;
+            background: color-mix(in srgb, var(--bg-card) 82%, transparent);
+            border: 1px solid color-mix(in srgb, var(--border) 82%, transparent);
+            border-radius: 10px;
+        }
+        .state-group-label {
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--text-muted);
+            padding: 0 2px;
         }
         .state-subgrid {
             display: grid;
@@ -258,7 +355,6 @@
             border-color: var(--accent);
             color: var(--text-main);
         }
-
         .reset-confirmation-modal {
             position: fixed;
             inset: 0;
@@ -319,7 +415,7 @@
         }
 
         /* Main Content Styling */
-        #main-content, #main-distribuidor {
+        #main-content, #main-distribuidor, #main-ph {
             flex: 1;
             padding: 30px 30px 72px;
             overflow-y: auto;
@@ -329,7 +425,8 @@
         }
 
         #sidebar,
-        #sidebar-distribuidor {
+        #sidebar-distribuidor,
+        #sidebar-ph {
             padding-bottom: 72px;
         }
 
@@ -445,7 +542,7 @@
         /* CSS da Tela Inicial (Portal de Simuladores) */
         #home-screen {
             flex: 1;
-            padding: 60px 20px;
+            padding: 60px 20px 88px;
             overflow-y: auto;
             display: flex;
             flex-direction: column;
@@ -482,11 +579,27 @@
         .tool-name { font-size: 1.25em; color: var(--text-strong); font-weight: bold; }
         .tool-status { font-size: 0.85em; padding: 5px 10px; border-radius: 12px; background: var(--bg-card); color: var(--text-muted); }
         .status-active { background: var(--success-bg); color: var(--success); font-weight: bold; }
+        .status-building { background: var(--warning-bg); color: var(--warning); font-weight: bold; }
         
         /* Classes Utilitárias de Navegação */
         .hidden { display: none !important; }
         .btn-voltar { cursor: pointer; color: var(--accent); display: inline-flex; align-items: center; gap: 8px; margin-bottom: 25px; font-weight: bold; padding: 8px 12px; background: var(--bg-card); border-radius: 6px; border: 1px solid var(--border); transition: 0.2s; }
         .btn-voltar:hover { background: var(--border); color: var(--text-strong); }
+
+        @media (max-width: 900px) {
+            body { overflow: auto; height: auto; display: block; }
+            #sidebar-ph, #main-ph { width: 100%; box-sizing: border-box; overflow: visible; }
+            #sidebar-ph { border-right: 0; border-bottom: 1px solid var(--border); }
+            #main-ph { padding: 20px 14px 76px; }
+            #main-ph .dashboard-grid { grid-template-columns: 1fr; gap: 16px; }
+            .ph-stepper { position: sticky; top: 0; z-index: 12; }
+            .ph-step { justify-content: center; }
+            .ph-step strong { display: none; }
+            .ph-stage-summary, #main-ph .metrics-row { grid-template-columns: 1fr; }
+            .ph-operation-card { position: relative; }
+            .process-btn { min-height: 46px; width: 100%; }
+            .ph-stage-actions .process-btn:last-child { margin-left: 0; }
+        }
 
         @media print {
             :root,
@@ -518,8 +631,10 @@
 
             #sidebar,
             #sidebar-distribuidor,
+            #sidebar-ph,
             #main-content,
-            #main-distribuidor {
+            #main-distribuidor,
+            #main-ph {
                 overflow: visible;
             }
 
