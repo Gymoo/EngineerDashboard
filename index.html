@@ -31,6 +31,11 @@
                 <div class="tool-name">Distribuidor de Sólidos</div>
                 <div class="tool-status status-active">Acessar Simulador</div>
             </div>
+            <div class="tool-card" id="btn-ph">
+                <div class="tool-icon">⚗️</div>
+                <div class="tool-name">Regulação de Ph</div>
+                <div class="tool-status status-building">Em construção · Acessar ferramenta</div>
+            </div>
             <div class="tool-card disabled">
                 <div class="tool-icon">💧</div>
                 <div class="tool-name">Aplicação de Fluido no Solo</div>
@@ -39,6 +44,11 @@
             <div class="tool-card disabled">
                 <div class="tool-icon">🚰</div>
                 <div class="tool-name">Aplicação Linha Pressurizada</div>
+                <div class="tool-status">Em desenvolvimento</div>
+            </div>
+            <div class="tool-card disabled">
+                <div class="tool-icon">🌾</div>
+                <div class="tool-name">Microdosagem</div>
                 <div class="tool-status">Em desenvolvimento</div>
             </div>
         </div>
@@ -62,7 +72,7 @@
         <div class="btn-voltar" id="btn-voltar">⬅ Voltar ao Portal</div>
         <div class="state-toggle" data-dashboard-state="destorroador">
             <div class="state-group">
-                <button type="button" class="state-btn active" data-dashboard="destorroador" data-profile="minimo">↓ Mínimo</button>
+                <div class="state-group-label">Perfil base</div>
                 <div class="state-subgrid">
                     <button type="button" class="state-btn state-subbtn" data-dashboard="destorroador" data-profile="minimo_a">A</button>
                     <button type="button" class="state-btn state-subbtn" data-dashboard="destorroador" data-profile="minimo_b">B</button>
@@ -70,7 +80,7 @@
                 </div>
             </div>
             <div class="state-group">
-                <button type="button" class="state-btn" data-dashboard="destorroador" data-profile="maximo">↑ Máximo</button>
+                <div class="state-group-label">Cenários</div>
                 <div class="state-subgrid">
                     <button type="button" class="state-btn state-subbtn" data-dashboard="destorroador" data-profile="maximo_a">A</button>
                     <button type="button" class="state-btn state-subbtn" data-dashboard="destorroador" data-profile="maximo_b">B</button>
@@ -130,19 +140,24 @@
                 <input type="number" min="1" max="200" value="50" step="1">
             </div>
         </div>
-        <div class="control-group" title="Demanda de produção: Quantos gramas de fertilizante a máquina precisa engolir e cuspir por segundo.">
-            <label>Taxa de Moagem Alvo (g/s)</label>
-            <div class="sync-inputs">
-                <input type="range" id="in_taxa_range" min="0.1" max="50.0" value="11.0" step="0.1">
-                <input type="number" id="in_taxa_num" min="0.1" max="50.0" value="11.0" step="0.1">
+            <div class="control-group" title="Demanda de produção: Quantos gramas de fertilizante a máquina precisa engolir e cuspir por segundo.">
+                <label>Taxa de Moagem Alvo (g/s)</label>
+                <div class="sync-inputs">
+                    <input type="range" id="in_taxa_range" min="0.1" max="50.0" value="3.0" step="0.1">
+                    <input type="number" id="in_taxa_num" min="0.1" max="50.0" value="3.0" step="0.1">
+                </div>
             </div>
-        </div>
     </div>
 
     <div id="main-content" class="hidden">
         <div>
             <h1 class="header-title">⚙️ Dashboard: Destorroador NPK</h1>
             <p style="color: var(--text-muted); margin: 0;">Simulador dinâmico de dimensionamento mecânico e proteção elétrica a 60 FPS.</p>
+        </div>
+
+        <div style="margin-top: 10px; margin-bottom: -6px; padding-left: 2px;">
+            <div style="font: bold 16px monospace; color: var(--text-main);">FLUXO MECÂNICO - DESTORROADOR</div>
+            <div style="font: 11px monospace; color: var(--text-muted);">Rolos opostos puxam o material e geram torque de esmagamento</div>
         </div>
 
         <canvas id="moinhoCanvas" width="1000" height="250" style="min-height: 250px; flex-shrink: 0;"></canvas>
@@ -176,7 +191,7 @@
         <div class="btn-voltar" id="btn-voltar-dist">⬅ Voltar ao Portal</div>
         <div class="state-toggle" data-dashboard-state="distribuidor">
             <div class="state-group">
-                <button type="button" class="state-btn active" data-dashboard="distribuidor" data-profile="minimo">↓ Mínimo</button>
+                <div class="state-group-label">Perfil base</div>
                 <div class="state-subgrid">
                     <button type="button" class="state-btn state-subbtn" data-dashboard="distribuidor" data-profile="minimo_a">A</button>
                     <button type="button" class="state-btn state-subbtn" data-dashboard="distribuidor" data-profile="minimo_b">B</button>
@@ -184,7 +199,7 @@
                 </div>
             </div>
             <div class="state-group">
-                <button type="button" class="state-btn" data-dashboard="distribuidor" data-profile="maximo">↑ Máximo</button>
+                <div class="state-group-label">Cenários</div>
                 <div class="state-subgrid">
                     <button type="button" class="state-btn state-subbtn" data-dashboard="distribuidor" data-profile="maximo_a">A</button>
                     <button type="button" class="state-btn state-subbtn" data-dashboard="distribuidor" data-profile="maximo_b">B</button>
@@ -452,6 +467,119 @@
             <span class="dashboard-footer-sep">|</span>
             <a href="https://www.linkedin.com/in/guilhermeasdo/" target="_blank" rel="noopener noreferrer">LinkedIn</a>
         </footer>
+    </div>
+
+    <div id="sidebar-ph" class="hidden">
+        <div class="sidebar-toolbar" aria-label="Controles da barra lateral">
+            <button type="button" class="sidebar-control language-control" data-language-toggle aria-label="Mudar idioma para inglês" title="Mudar idioma para inglês">EN</button>
+            <button type="button" class="sidebar-control" data-theme-toggle aria-label="Ativar modo claro" title="Ativar modo claro">☀️</button>
+            <button type="button" class="sidebar-control" data-sidebar-toggle="ph" aria-expanded="true" title="Recolher barra lateral">☰</button>
+            <button type="button" class="sidebar-control active" data-sidebar-pin="ph" aria-pressed="true" title="Desafixar barra lateral">📌</button>
+        </div>
+        <div class="btn-voltar" id="btn-voltar-ph">⬅ Voltar ao Portal</div>
+        <div class="state-toggle" data-dashboard-state="ph">
+            <div class="state-group"><div class="state-group-label">Perfil base</div><div class="state-subgrid">
+                <button type="button" class="state-btn state-subbtn" data-dashboard="ph" data-profile="minimo_a">A</button><button type="button" class="state-btn state-subbtn" data-dashboard="ph" data-profile="minimo_b">B</button><button type="button" class="state-btn state-subbtn" data-dashboard="ph" data-profile="minimo_c">C</button>
+            </div></div>
+            <div class="state-group"><div class="state-group-label">Cenários</div><div class="state-subgrid">
+                <button type="button" class="state-btn state-subbtn" data-dashboard="ph" data-profile="maximo_a">A</button><button type="button" class="state-btn state-subbtn" data-dashboard="ph" data-profile="maximo_b">B</button><button type="button" class="state-btn state-subbtn" data-dashboard="ph" data-profile="maximo_c">C</button>
+            </div></div>
+            <button type="button" class="state-btn" data-dashboard-reset="ph">Resetar</button>
+        </div>
+
+        <section class="ph-step-panel" data-ph-sidebar-step="1">
+            <div class="ph-sidebar-step-label">Etapa 1 de 4</div>
+            <h2 title="Informe a condição inicial do tanque e os reagentes realmente disponíveis.">🧪 Tanque e reagentes</h2>
+            <div class="control-group" title="Valor medido antes do primeiro pulso deste processo."><label>pH inicial medido</label><div class="sync-inputs"><input type="range" id="in_ph_atual" min="0" max="14" value="7" step="0.1"><input type="number" min="0" max="14" value="7" step="0.1"></div></div>
+            <div class="control-group" title="Valor de pH que o controle deve atingir."><label>pH alvo</label><div class="sync-inputs"><input type="range" id="in_ph_alvo" min="0" max="14" value="6.5" step="0.1"><input type="number" min="0" max="14" value="6.5" step="0.1"></div></div>
+            <div class="control-group" title="Diferença máxima aceita entre o pH medido e o alvo."><label>Tolerância do pH (±pH)</label><div class="sync-inputs"><input type="range" id="in_ph_tolerancia" min="0.01" max="2" value="0.1" step="0.01"><input type="number" min="0.01" max="2" value="0.1" step="0.01"></div></div>
+            <div class="control-group" title="Volume real de solução que será corrigido."><label>Volume do tanque (L)</label><div class="sync-inputs"><input type="range" id="in_ph_volume_tanque" min="1" max="50000" value="1000" step="1"><input type="number" min="1" max="50000" value="1000" step="1"></div></div>
+            <div class="control-group" title="Temperatura medida da água usada na avaliação hidráulica."><label>Temperatura da água (°C)</label><div class="sync-inputs"><input type="range" id="in_ph_temperatura" min="1" max="80" value="25" step="1"><input type="number" min="1" max="80" value="25" step="1"></div></div>
+            <hr>
+
+            <h2 title="Selecione uma solução padronizada ou informe os dados reais do produto.">⚗️ Ácido disponível</h2>
+            <div class="control-group"><label>Pré-seleção de ácido</label><select class="text-input" id="in_ph_acido_preset"><option value="personalizado">Solução personalizada</option><option value="hcl_01">Ácido clorídrico 0,100 mol/L</option><option value="hno3_01">Ácido nítrico 0,100 mol/L</option><option value="h2so4_01">Ácido sulfúrico 0,100 mol/L</option></select></div>
+            <div class="control-group"><label>Nome ou composição do ácido</label><input class="text-input" type="text" id="in_ph_acido_nome" placeholder="Informar produto e composição"></div>
+            <div class="control-group" title="pH medido ou declarado da solução ácida disponível."><label>pH do ácido</label><div class="sync-inputs"><input type="range" id="in_ph_acido_ph" min="0" max="7" value="2" step="0.1"><input type="number" min="0" max="7" value="2" step="0.1"></div></div>
+            <div class="control-group" title="Concentração molar informada pelo fabricante ou obtida por análise."><label>Concentração do ácido (mol/L)</label><div class="sync-inputs"><input type="range" id="in_ph_acido_conc" min="0" max="20" value="0" step="0.01"><input type="number" min="0" max="20" value="0" step="0.01"></div></div>
+            <div class="control-group" title="Quantidade de equivalentes neutralizantes por mol do ácido."><label>Equivalentes do ácido (eq/mol)</label><div class="sync-inputs"><input type="range" id="in_ph_acido_eq" min="1" max="6" value="1" step="1"><input type="number" min="1" max="6" value="1" step="1"></div></div>
+            <div class="control-group" title="Fração efetiva do produto conforme certificado do fornecedor."><label>Pureza do ácido (%)</label><div class="sync-inputs"><input type="range" id="in_ph_acido_pureza" min="0" max="100" value="100" step="0.1"><input type="number" min="0" max="100" value="100" step="0.1"></div></div>
+            <div class="control-group" title="Volume efetivamente disponível para os ciclos."><label>Volume de ácido disponível (L)</label><div class="sync-inputs"><input type="range" id="in_ph_acido_volume" min="0" max="1000" value="0" step="0.1"><input type="number" min="0" max="1000" value="0" step="0.1"></div></div>
+
+            <h2 title="Selecione uma solução padronizada ou informe os dados reais do produto.">⚗️ Base disponível</h2>
+            <div class="control-group"><label>Pré-seleção de base</label><select class="text-input" id="in_ph_base_preset"><option value="personalizado">Solução personalizada</option><option value="naoh_01">Hidróxido de sódio 0,100 mol/L</option><option value="koh_01">Hidróxido de potássio 0,100 mol/L</option></select></div>
+            <div class="control-group"><label>Nome ou composição da base</label><input class="text-input" type="text" id="in_ph_base_nome" placeholder="Informar produto e composição"></div>
+            <div class="control-group" title="pH medido ou declarado da solução básica disponível."><label>pH da base</label><div class="sync-inputs"><input type="range" id="in_ph_base_ph" min="7" max="14" value="12" step="0.1"><input type="number" min="7" max="14" value="12" step="0.1"></div></div>
+            <div class="control-group" title="Concentração molar informada pelo fabricante ou obtida por análise."><label>Concentração da base (mol/L)</label><div class="sync-inputs"><input type="range" id="in_ph_base_conc" min="0" max="20" value="0" step="0.01"><input type="number" min="0" max="20" value="0" step="0.01"></div></div>
+            <div class="control-group" title="Quantidade de equivalentes neutralizantes por mol da base."><label>Equivalentes da base (eq/mol)</label><div class="sync-inputs"><input type="range" id="in_ph_base_eq" min="1" max="6" value="1" step="1"><input type="number" min="1" max="6" value="1" step="1"></div></div>
+            <div class="control-group" title="Fração efetiva do produto conforme certificado do fornecedor."><label>Pureza da base (%)</label><div class="sync-inputs"><input type="range" id="in_ph_base_pureza" min="0" max="100" value="100" step="0.1"><input type="number" min="0" max="100" value="100" step="0.1"></div></div>
+            <div class="control-group" title="Volume efetivamente disponível para os ciclos."><label>Volume de base disponível (L)</label><div class="sync-inputs"><input type="range" id="in_ph_base_volume" min="0" max="1000" value="0" step="0.1"><input type="number" min="0" max="1000" value="0" step="0.1"></div></div>
+        </section>
+
+        <section class="ph-step-panel hidden" data-ph-sidebar-step="2">
+            <div class="ph-sidebar-step-label">Etapa 2 de 4</div>
+            <h2 title="Defina como cada pulso será transferido ao tanque.">🌊 Método de aplicação</h2>
+            <div class="radio-group"><label><input type="radio" name="modo_aplicacao_ph" value="venturi" checked> Venturi dosador</label><label><input type="radio" name="modo_aplicacao_ph" value="peristaltica"> Bomba peristáltica</label></div>
+            <div class="control-group"><label>Material em contato com o produto</label><input class="text-input" type="text" id="in_ph_material" placeholder="Informar material da mangueira, bomba e Venturi"></div>
+            <div class="control-group"><label class="check-label"><input type="checkbox" id="in_ph_compatibilidade"> Compatibilidade química confirmada pelo fabricante</label></div>
+            <div class="control-group" title="Tempo disponível para transferir cada pulso calculado."><label>Tempo de aplicação por pulso (min)</label><div class="sync-inputs"><input type="range" id="in_ph_tempo" min="0.01" max="60" value="1" step="0.01"><input type="number" min="0.01" max="60" value="1" step="0.01"></div></div>
+            <div class="control-group" title="Volume deslocado por volta conforme curva ou calibração da bomba."><label>Calibração da bomba (mL/rev)</label><div class="sync-inputs"><input type="range" id="in_ph_bomba_ml_rev" min="0" max="100" value="0" step="0.001"><input type="number" min="0" max="100" value="0" step="0.001"></div></div>
+
+            <details class="ph-advanced">
+                <summary>Controle incremental avançado</summary>
+                <div class="control-group" title="Volume utilizado no primeiro ciclo, antes de existir resposta medida."><label>Pulso inicial (L)</label><div class="sync-inputs"><input type="range" id="in_ph_pulso_inicial" min="0.001" max="100" value="0.1" step="0.001"><input type="number" min="0.001" max="100" value="0.1" step="0.001"></div></div>
+                <div class="control-group" title="Menor volume permitido em um ciclo."><label>Pulso mínimo (L)</label><div class="sync-inputs"><input type="range" id="in_ph_pulso_min" min="0.001" max="100" value="0.01" step="0.001"><input type="number" min="0.001" max="100" value="0.01" step="0.001"></div></div>
+                <div class="control-group" title="Maior volume permitido em um ciclo."><label>Pulso máximo (L)</label><div class="sync-inputs"><input type="range" id="in_ph_pulso_max" min="0.001" max="1000" value="1" step="0.001"><input type="number" min="0.001" max="1000" value="1" step="0.001"></div></div>
+                <div class="control-group" title="Fração da dose estimada aplicada no próximo ciclo."><label>Fator de aproximação (%)</label><div class="sync-inputs"><input type="range" id="in_ph_fator_aproximacao" min="1" max="100" value="50" step="1"><input type="number" min="1" max="100" value="50" step="1"></div></div>
+                <div class="control-group" title="Tempo reservado para homogeneizar o tanque depois da aplicação."><label>Tempo de mistura (s)</label><div class="sync-inputs"><input type="range" id="in_ph_tempo_mistura" min="1" max="3600" value="60" step="1"><input type="number" min="1" max="3600" value="60" step="1"></div></div>
+                <div class="control-group" title="Tempo aguardado após a mistura antes da nova leitura."><label>Tempo de estabilização (s)</label><div class="sync-inputs"><input type="range" id="in_ph_tempo_estabilizacao" min="1" max="3600" value="30" step="1"><input type="number" min="1" max="3600" value="30" step="1"></div></div>
+                <div class="control-group" title="Menor alteração considerada uma resposta mensurável."><label>Variação mínima detectável (pH)</label><div class="sync-inputs"><input type="range" id="in_ph_variacao_min" min="0.001" max="1" value="0.01" step="0.001"><input type="number" min="0.001" max="1" value="0.01" step="0.001"></div></div>
+                <div class="control-group" title="Ciclos consecutivos sem resposta antes da interrupção."><label>Limite de ciclos sem resposta</label><div class="sync-inputs"><input type="range" id="in_ph_sem_resposta_max" min="1" max="10" value="2" step="1"><input type="number" min="1" max="10" value="2" step="1"></div></div>
+                <div class="control-group" title="Volume total máximo antes da interrupção."><label>Dose acumulada máxima (L)</label><div class="sync-inputs"><input type="range" id="in_ph_dose_max" min="0.001" max="5000" value="10" step="0.001"><input type="number" min="0.001" max="5000" value="10" step="0.001"></div></div>
+                <div class="control-group" title="Quantidade máxima de ciclos permitida."><label>Número máximo de ciclos</label><div class="sync-inputs"><input type="range" id="in_ph_ciclos_max" min="1" max="100" value="20" step="1"><input type="number" min="1" max="100" value="20" step="1"></div></div>
+            </details>
+
+            <details class="ph-advanced">
+                <summary>Hidráulica avançada</summary>
+                <div class="control-group" title="Vazão volumétrica de água que atravessa o Venturi."><label>Vazão da linha (L/min)</label><div class="sync-inputs"><input type="range" id="in_ph_vazao_linha" min="1" max="5000" value="100" step="1"><input type="number" min="1" max="5000" value="100" step="1"></div></div>
+                <div class="control-group" title="Diâmetro interno real da tubulação antes do convergente."><label>Diâmetro interno da linha (mm)</label><div class="sync-inputs"><input type="range" id="in_ph_diametro_linha" min="10" max="500" value="50" step="1"><input type="number" min="10" max="500" value="50" step="1"></div></div>
+                <div class="control-group" title="Pressão manométrica imediatamente antes do Venturi."><label>Pressão antes do Venturi (bar g)</label><div class="sync-inputs"><input type="range" id="in_ph_pressao_entrada" min="0" max="20" value="3" step="0.01"><input type="number" min="0" max="20" value="3" step="0.01"></div></div>
+                <div class="control-group" title="Pressão manométrica requerida depois do difusor."><label>Pressão depois do Venturi (bar g)</label><div class="sync-inputs"><input type="range" id="in_ph_pressao_saida" min="0" max="20" value="2" step="0.01"><input type="number" min="0" max="20" value="2" step="0.01"></div></div>
+                <div class="control-group" title="Desnível positivo quando o reservatório está abaixo da garganta."><label>Altura de sucção (m)</label><div class="sync-inputs"><input type="range" id="in_ph_altura_succao" min="-10" max="20" value="0" step="0.1"><input type="number" min="-10" max="20" value="0" step="0.1"></div></div>
+                <div class="control-group" title="Comprimento total da mangueira do produto."><label>Comprimento da mangueira (m)</label><div class="sync-inputs"><input type="range" id="in_ph_mangueira_comp" min="0.1" max="100" value="2" step="0.1"><input type="number" min="0.1" max="100" value="2" step="0.1"></div></div>
+                <div class="control-group" title="Diâmetro interno real da mangueira de produto."><label>Diâmetro da mangueira (mm)</label><div class="sync-inputs"><input type="range" id="in_ph_mangueira_diam" min="1" max="100" value="8" step="0.1"><input type="number" min="1" max="100" value="8" step="0.1"></div></div>
+                <div class="control-group" title="Fator de atrito de Darcy da mangueira e do produto."><label>Fator de atrito da mangueira</label><div class="sync-inputs"><input type="range" id="in_ph_fator_atrito" min="0.001" max="0.2" value="0.03" step="0.001"><input type="number" min="0.001" max="0.2" value="0.03" step="0.001"></div></div>
+                <div class="control-group" title="Densidade medida do produto dosado."><label>Densidade do produto (kg/m³)</label><div class="sync-inputs"><input type="range" id="in_ph_densidade_produto" min="500" max="2500" value="1000" step="1"><input type="number" min="500" max="2500" value="1000" step="1"></div></div>
+                <div class="control-group" title="Viscosidade dinâmica medida do produto."><label>Viscosidade do produto (mPa·s)</label><div class="sync-inputs"><input type="range" id="in_ph_viscosidade" min="0.1" max="5000" value="1" step="0.1"><input type="number" min="0.1" max="5000" value="1" step="0.1"></div></div>
+                <div class="control-group" title="Ângulo total do cone convergente."><label>Ângulo do convergente (°)</label><div class="sync-inputs"><input type="range" id="in_ph_angulo_convergente" min="5" max="45" value="21" step="0.1"><input type="number" min="5" max="45" value="21" step="0.1"></div></div>
+                <div class="control-group" title="Ângulo total do difusor."><label>Ângulo do difusor (°)</label><div class="sync-inputs"><input type="range" id="in_ph_angulo_difusor" min="2" max="20" value="7" step="0.1"><input type="number" min="2" max="20" value="7" step="0.1"></div></div>
+                <div class="control-group" title="Comprimento cilíndrico em múltiplos do diâmetro da garganta."><label>Comprimento relativo da garganta (L/d)</label><div class="sync-inputs"><input type="range" id="in_ph_garganta_rel" min="0.1" max="5" value="1" step="0.1"><input type="number" min="0.1" max="5" value="1" step="0.1"></div></div>
+            </details>
+        </section>
+
+        <section class="ph-step-panel hidden ph-sidebar-guidance" data-ph-sidebar-step="3">
+            <div class="ph-sidebar-step-label">Etapa 3 de 4</div>
+            <h2>▶ Executar ciclos</h2>
+            <p>Use o cartão operacional no painel principal. A nova leitura de pH aparecerá junto ao botão correto depois da mistura.</p>
+        </section>
+        <section class="ph-step-panel hidden ph-sidebar-guidance" data-ph-sidebar-step="4">
+            <div class="ph-sidebar-step-label">Etapa 4 de 4</div>
+            <h2>📊 Resultado e histórico</h2>
+            <p>Consulte o histórico, o gráfico de aproximação e o memorial completo no painel principal.</p>
+        </section>
+    </div>
+    <div id="main-ph" class="hidden">
+        <div><h1 class="header-title">⚗️ Dashboard: Regulação de pH</h1><p style="color: var(--text-muted); margin: 0;">Controle incremental por realimentação de pH e dimensionamento hidráulico.</p></div>
+        <nav class="ph-stepper" aria-label="Etapas da regulação de pH">
+            <div class="ph-step active" data-ph-step-indicator="1"><span>1</span><strong>Tanque</strong></div>
+            <div class="ph-step" data-ph-step-indicator="2"><span>2</span><strong>Aplicação</strong></div>
+            <div class="ph-step" data-ph-step-indicator="3"><span>3</span><strong>Ciclos</strong></div>
+            <div class="ph-step" data-ph-step-indicator="4"><span>4</span><strong>Resultado</strong></div>
+        </nav>
+        <canvas id="phCanvas" width="1000" height="300" style="min-height: 300px; flex-shrink: 0;"></canvas>
+        <div class="dashboard-grid"><div id="painel_esq_ph"></div><div id="painel_dir_ph" class="memorial-box"></div></div>
+        <div style="border-top: 1px solid var(--border); padding-top: 15px; margin-top: 10px; color: var(--text-muted); font-size: 0.85em;">Física aplicada: realimentação de pH, continuidade, equação de Bernoulli e Darcy-Weisbach.</div>
+        <footer class="dashboard-footer" aria-label="Rodapé do dashboard"><span>© 2026 Guilherme Silva de Oliveira</span><span class="dashboard-footer-sep">|</span><a href="https://oliveiraengineer.vercel.app" target="_blank" rel="noopener noreferrer">Visitar Portfólio</a><span class="dashboard-footer-sep">|</span><a href="https://www.linkedin.com/in/guilhermeasdo/" target="_blank" rel="noopener noreferrer">LinkedIn</a></footer>
     </div>
 
     <div id="reset-confirmation-modal" class="reset-confirmation-modal hidden" role="dialog" aria-modal="true" aria-labelledby="reset-confirmation-title" aria-describedby="reset-confirmation-text">
