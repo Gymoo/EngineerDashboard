@@ -503,14 +503,36 @@
             border-radius: 10px;
             background: var(--bg-panel);
         }
-        .graph-panel-header { display: grid; grid-template-columns: minmax(0, 1fr) minmax(240px, 0.8fr); gap: 18px; align-items: start; }
+        .graph-panel.graph-floating {
+            position: fixed;
+            right: 18px;
+            bottom: 70px;
+            width: min(760px, calc(100vw - 36px));
+            max-height: calc(100vh - 96px);
+            overflow: auto;
+            z-index: 40;
+            box-shadow: 0 16px 42px rgba(0, 0, 0, 0.35);
+        }
+        .graph-panel-header { display: flex; gap: 16px; align-items: flex-start; justify-content: space-between; }
+        .graph-drag-handle { flex: 1; cursor: move; user-select: none; }
         .graph-panel h2 { margin: 0 0 6px; color: var(--text-strong); }
         .graph-panel p { margin: 0; color: var(--text-muted); }
-        .graph-output-picker { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
-        .graph-output-picker strong { width: 100%; color: var(--text-main); }
-        .memorial-output-picker { margin-bottom: 16px; padding: 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg-card); }
-        .graph-output-btn { padding: 7px 9px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg-card); color: var(--text-main); cursor: pointer; }
-        .graph-output-btn.active { border-color: var(--accent); background: rgba(88, 166, 255, 0.16); color: var(--text-strong); }
+        .graph-float-btn { flex: 0 0 auto; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg-card); color: var(--text-main); cursor: pointer; }
+        .graph-floating .graph-float-btn { border-color: var(--accent); color: var(--text-strong); }
+        .graph-output-volumeRolo,
+        .graph-output-massaLinha,
+        .graph-output-rotacaoDosador,
+        .graph-output-velocidadeSecundaria,
+        .graph-output-perdaTotal,
+        .graph-output-vazaoTotal { cursor: pointer; outline: 1px dashed transparent; }
+        .graph-output-volumeRolo:hover,
+        .graph-output-massaLinha:hover,
+        .graph-output-rotacaoDosador:hover,
+        .graph-output-velocidadeSecundaria:hover,
+        .graph-output-perdaTotal:hover,
+        .graph-output-vazaoTotal:hover,
+        .graph-output-selected,
+        [data-graph-output][aria-pressed="true"] { outline-color: var(--accent); color: var(--accent); }
         .graph-selection-summary { margin: 16px 0 10px; padding: 10px 12px; border-left: 3px solid var(--accent); color: var(--text-muted); line-height: 1.6; }
         #grafico_dist_canvas { width: 100%; min-height: 340px; display: block; border: 1px solid var(--border); border-radius: 8px; }
         .graph-empty { padding: 22px 0 6px; color: var(--text-muted); }
@@ -648,7 +670,8 @@
             .ph-operation-card { position: relative; }
             .process-btn { min-height: 46px; width: 100%; }
             .ph-stage-actions .process-btn:last-child { margin-left: 0; }
-            .graph-panel-header { grid-template-columns: 1fr; }
+            .graph-panel-header { flex-direction: column; }
+            .graph-float-btn { width: 100%; }
             .graph-input-toggle { display: flex; margin: 5px 0 0; }
         }
 

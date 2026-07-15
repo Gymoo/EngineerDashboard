@@ -1185,7 +1185,9 @@ console.log('ðŸ”§ Script iniciando...');
             ];
             const graficoDistEstado = {
                 entradas: ['in_dist_espessura', 'in_dist_qtd_discos', 'in_dist_area_cavidade'],
-                saida: 'rotacaoDosador'
+                saida: 'rotacaoDosador',
+                flutuante: false,
+                posicao: null
             };
 
             function obterVariaveisEntradaGraficoDist() {
@@ -1239,9 +1241,48 @@ console.log('ðŸ”§ Script iniciando...');
                 });
                 dom.mainDist?.addEventListener('click', (event) => {
                     const botao = event.target.closest('[data-graph-output]');
-                    if (!botao) return;
-                    graficoDistEstado.saida = botao.dataset.graphOutput;
-                    atualizarGraficoDist();
+                    if (botao) {
+                        graficoDistEstado.saida = botao.dataset.graphOutput;
+                        atualizarDistribuidor();
+                        return;
+                    }
+                    const flutuante = event.target.closest('[data-graph-float]');
+                    if (flutuante) {
+                        graficoDistEstado.flutuante = !graficoDistEstado.flutuante;
+                        if (!graficoDistEstado.flutuante) graficoDistEstado.posicao = null;
+                        atualizarGraficoDist();
+                    }
+                });
+                dom.mainDist?.addEventListener('keydown', (event) => {
+                    if ((event.key !== 'Enter' && event.key !== ' ') || !event.target.closest('[data-graph-output]')) return;
+                    event.preventDefault();
+                    event.target.click();
+                });
+                let arrasteGrafico = null;
+                document.addEventListener('pointerdown', (event) => {
+                    if (!graficoDistEstado.flutuante || !event.target.closest('.graph-drag-handle')) return;
+                    const painel = dom.painelGraficoDist;
+                    const rect = painel.getBoundingClientRect();
+                    arrasteGrafico = { offsetX: event.clientX - rect.left, offsetY: event.clientY - rect.top };
+                    painel.classList.add('graph-dragging');
+                });
+                document.addEventListener('pointermove', (event) => {
+                    if (!arrasteGrafico || !graficoDistEstado.flutuante) return;
+                    const painel = dom.painelGraficoDist;
+                    const largura = painel.offsetWidth;
+                    const altura = painel.offsetHeight;
+                    const left = Math.max(8, Math.min(window.innerWidth - largura - 8, event.clientX - arrasteGrafico.offsetX));
+                    const top = Math.max(8, Math.min(window.innerHeight - altura - 8, event.clientY - arrasteGrafico.offsetY));
+                    painel.style.left = `${left}px`;
+                    painel.style.top = `${top}px`;
+                    painel.style.right = 'auto';
+                    painel.style.bottom = 'auto';
+                    graficoDistEstado.posicao = { left, top };
+                });
+                document.addEventListener('pointerup', () => {
+                    if (!arrasteGrafico) return;
+                    arrasteGrafico = null;
+                    dom.painelGraficoDist.classList.remove('graph-dragging');
                 });
             }
 
@@ -1360,7 +1401,19 @@ console.log('ðŸ”§ Script iniciando...');
                 const entradas = obterVariaveisEntradaGraficoDist().filter((item) => graficoDistEstado.entradas.includes(item.chave));
                 const saida = graficoDistSaidas.find((item) => item.chave === graficoDistEstado.saida) || graficoDistSaidas[0];
                 const saidaNome = textoIdioma(saida.pt, saida.en);
-                dom.painelGraficoDist.innerHTML = `<div class="graph-panel-header"><div><h2>${textoIdioma('Gráfico de sensibilidade', 'Sensitivity graph')}</h2><p>${textoIdioma('As entradas selecionadas variam dentro dos limites atuais dos sliders; as demais variáveis permanecem nos valores atuais.', 'Selected inputs sweep across the current slider limits; all other variables remain at their current values.')}</p></div><div class="graph-output-picker"><strong>${textoIdioma('Saída do memorial', 'Memorial output')}</strong>${graficoDistSaidas.map((item) => `<button type="button" class="graph-output-btn ${item.chave === saida.chave ? 'active' : ''}" data-graph-output="${item.chave}" aria-pressed="${item.chave === saida.chave}">${textoIdioma(item.pt, item.en)} (${item.unidade})</button>`).join('')}</div></div>${entradas.length ? `<div class="graph-selection-summary"><strong>${textoIdioma('Entradas', 'Inputs')}:</strong> ${entradas.map((item) => `${item.nome} (${item.unidade || ''})`).join(' · ')}<br><strong>${textoIdioma('Saída', 'Output')}:</strong> ${saidaNome} (${saida.unidade})</div><canvas id="grafico_dist_canvas" aria-label="${textoIdioma('Gráfico de sensibilidade do distribuidor', 'Distributor sensitivity graph')}"></canvas>` : `<div class="graph-empty">${textoIdioma('Selecione pelo menos uma entrada na sidebar para gerar o gráfico.', 'Select at least one sidebar input to generate the graph.')}</div>`}`;
+                dom.painelGraficoDist.innerHTML = `<div class="graph-panel-header"><div class="graph-drag-handle"><h2>${textoIdioma('Gráfico de sensibilidade', 'Sensitivity graph')}</h2><p>${textoIdioma('As entradas selecionadas variam dentro dos limites atuais dos sliders; as demais variáveis permanecem nos valores atuais.', 'Selected inputs sweep across the current slider limits; all other variables remain at their current values.')}</p></div><button type="button" class="graph-float-btn" data-graph-float aria-pressed="${graficoDistEstado.flutuante}">${graficoDistEstado.flutuante ? textoIdioma('Fixar no fluxo', 'Return to flow') : textoIdioma('Tornar flutuante', 'Make floating')}</button></div>${entradas.length ? `<div class="graph-selection-summary"><strong>${textoIdioma('Entradas', 'Inputs')}:</strong> ${entradas.map((item) => `${item.nome} (${item.unidade || ''})`).join(' · ')}<br><strong>${textoIdioma('Saída', 'Output')}:</strong> ${saidaNome} (${saida.unidade})</div><canvas id="grafico_dist_canvas" aria-label="${textoIdioma('Gráfico de sensibilidade do distribuidor', 'Distributor sensitivity graph')}"></canvas>` : `<div class="graph-empty">${textoIdioma('Selecione pelo menos uma entrada na sidebar para gerar o gráfico.', 'Select at least one sidebar input to generate the graph.')}</div>`}`;
+                dom.painelGraficoDist.classList.toggle('graph-floating', graficoDistEstado.flutuante);
+                if (graficoDistEstado.flutuante && graficoDistEstado.posicao) {
+                    dom.painelGraficoDist.style.left = `${graficoDistEstado.posicao.left}px`;
+                    dom.painelGraficoDist.style.top = `${graficoDistEstado.posicao.top}px`;
+                    dom.painelGraficoDist.style.right = 'auto';
+                    dom.painelGraficoDist.style.bottom = 'auto';
+                } else {
+                    dom.painelGraficoDist.style.left = '';
+                    dom.painelGraficoDist.style.top = '';
+                    dom.painelGraficoDist.style.right = '';
+                    dom.painelGraficoDist.style.bottom = '';
+                }
                 if (!entradas.length) return;
                 const x = entradas[0];
                 const pontosX = Array.from({ length: 41 }, (_, indice) => x.min + (x.max - x.min) * indice / 40);
@@ -1368,6 +1421,21 @@ console.log('ðŸ”§ Script iniciando...');
                 const combinacoes = valoresSeries.length ? valoresSeries.reduce((acumulado, serie) => acumulado.flatMap((base) => serie.valores.map((valor) => [...base, { item: serie.item, valor }])), [[]]) : [[]];
                 const series = combinacoes.map((combinacao, indice) => ({ label: combinacao.map((item) => `${item.item.nome}: ${formatarValorGrafico(item.valor)}`).join(' · ') || textoIdioma('Valor atual', 'Current value'), pontos: pontosX.map((valorX) => { const substituicoes = { [x.chave]: valorX }; combinacao.forEach((item) => { substituicoes[item.item.chave] = item.valor; }); return { x: valorX, y: calcularPontoGraficoDist(substituicoes)[saida.chave] }; }) }));
                 desenharGraficoDist(series, x, { ...saida, nome: saidaNome });
+            }
+
+            function marcarVariaveisSaidaMemorialDist() {
+                dom.painelDirDist?.querySelectorAll('[class*="graph-output-"]').forEach((elemento) => {
+                    const classe = Array.from(elemento.classList).find((item) => item.startsWith('graph-output-'));
+                    const chave = classe?.replace('graph-output-', '');
+                    if (!graficoDistSaidas.some((item) => item.chave === chave)) return;
+                    elemento.dataset.graphOutput = chave;
+                    const descricao = catalogoVariaveisFormula[chave];
+                    if (descricao) elemento.dataset.tooltip = textoIdioma(descricao.pt, descricao.en);
+                    elemento.classList.toggle('graph-output-selected', chave === graficoDistEstado.saida);
+                    elemento.setAttribute('role', 'button');
+                    elemento.setAttribute('tabindex', '0');
+                    elemento.setAttribute('aria-label', textoIdioma('Clique para usar esta variável como saída do gráfico.', 'Click to use this variable as the graph output.'));
+                });
             }
 
             function calcularVolumeRolo() {
@@ -1702,7 +1770,9 @@ console.log('ðŸ”§ Script iniciando...');
                     console.warn(`[formula] Variável sem descrição: ${chave}`);
                     return latex;
                 }
-                return `\\texttip{${latex}}{${document.body.dataset.language === 'en' ? item.en : item.pt}}`;
+                const formula = `\\texttip{${latex}}{${document.body.dataset.language === 'en' ? item.en : item.pt}}`;
+                const saidasGrafico = ['volumeRolo', 'massaLinha', 'rotacaoDosador', 'velocidadeSecundaria', 'perdaTotal', 'vazaoTotal'];
+                return saidasGrafico.includes(chave) ? `\\class{graph-output-${chave}}{${formula}}` : formula;
             }
 
             function configurarTooltipsInstantaneos() {
@@ -3476,10 +3546,6 @@ console.log('ðŸ”§ Script iniciando...');
                         </div>
                     `;
                 }
-                if (modoDist === '1') {
-                    const botoesSaidaMemorial = graficoDistSaidas.map((item) => `<button type="button" class="graph-output-btn ${item.chave === graficoDistEstado.saida ? 'active' : ''}" data-graph-output="${item.chave}" aria-pressed="${item.chave === graficoDistEstado.saida}">${textoIdioma(item.pt, item.en)} (${item.unidade})</button>`).join('');
-                    htmlDireito = `<div class="graph-output-picker memorial-output-picker"><strong>${textoIdioma('Clique em uma variável calculada para usá-la como saída do gráfico:', 'Click a calculated variable to use it as the graph output:')}</strong>${botoesSaidaMemorial}</div>` + htmlDireito;
-                }
                 dom.painelEsqDist.innerHTML = htmlEsquerdo;
 
                 if (mathJaxTimerDist) clearTimeout(mathJaxTimerDist);
@@ -3492,10 +3558,12 @@ console.log('ðŸ”§ Script iniciando...');
                             return MathJax.typesetPromise([buffer]).then(function() {
                                 dom.painelDirDist.innerHTML = "";
                                 while (buffer.firstChild) dom.painelDirDist.appendChild(buffer.firstChild);
+                                marcarVariaveisSaidaMemorialDist();
                             });
                         }).catch(err => console.log(err));
                     } else {
                         dom.painelDirDist.innerHTML = traduzirTextosDeFormula(htmlDireito);
+                        marcarVariaveisSaidaMemorialDist();
                     }
                 }, 80);
                 atualizarGraficoDist();
