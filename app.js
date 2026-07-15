@@ -1602,7 +1602,44 @@ console.log('ðŸ”§ Script iniciando...');
                         inicio = html.indexOf(inicioToken, cursor);
                     }
                 });
+
+                let cursor = 0;
+                while (true) {
+                    const inicio = html.indexOf('\\texttip{', cursor);
+                    if (inicio < 0) break;
+                    const prefixo = html.slice(Math.max(0, inicio - 80), inicio);
+                    const simboloInicio = inicio + '\\texttip{'.length;
+                    const simboloFim = encontrarFechamentoGrupoFormula(html, simboloInicio - 1);
+                    if (simboloFim < 0) break;
+                    const simbolo = html.slice(simboloInicio, simboloFim);
+                    const descricaoInicio = simboloFim + 2;
+                    const descricaoFim = encontrarFechamentoGrupoFormula(html, descricaoInicio - 1);
+                    if (prefixo.includes('graph-output-') || descricaoFim < 0 || !/[A-Za-z\\]/u.test(simbolo)) {
+                        cursor = Math.max(simboloFim + 1, inicio + 9);
+                        continue;
+                    }
+
+                    const descricao = html.slice(descricaoInicio, descricaoFim);
+                    const chave = simbolos[simbolo] || `memorial_${Array.from(simbolo).reduce((total, caractere) => total + caractere.charCodeAt(0), 0)}`;
+                    if (!catalogoVariaveisFormula[chave] && !graficoDescricoesAuto[chave]) {
+                        graficoDescricoesAuto[chave] = { descricao };
+                    }
+                    const token = html.slice(inicio, descricaoFim + 1);
+                    const marcado = `\\class{graph-output-${chave}}{${token}}`;
+                    html = html.slice(0, inicio) + marcado + html.slice(descricaoFim + 1);
+                    cursor = inicio + marcado.length;
+                }
                 return html;
+            }
+
+            function encontrarFechamentoGrupoFormula(texto, abertura) {
+                if (texto[abertura] !== '{') return -1;
+                let profundidade = 0;
+                for (let indice = abertura; indice < texto.length; indice += 1) {
+                    if (texto[indice] === '{') profundidade += 1;
+                    if (texto[indice] === '}' && --profundidade === 0) return indice;
+                }
+                return -1;
             }
 
             function calcularVolumeRolo() {
@@ -3747,7 +3784,7 @@ console.log('ðŸ”§ Script iniciando...');
                 if (mathJaxTimerDist) clearTimeout(mathJaxTimerDist);
                 mathJaxTimerDist = setTimeout(function() {
                     const buffer = document.createElement('div');
-                    buffer.innerHTML = traduzirTextosDeFormula(htmlDireito);
+                    buffer.innerHTML = traduzirTextosDeFormula(envolverSimbolosCalculadosMemorialDist(htmlDireito));
                     if (window.MathJax && MathJax.typesetPromise) {
                         if (!window.mjPromiseDist) window.mjPromiseDist = Promise.resolve();
                         window.mjPromiseDist = window.mjPromiseDist.then(function() {
@@ -3758,7 +3795,7 @@ console.log('ðŸ”§ Script iniciando...');
                             });
                         }).catch(err => console.log(err));
                     } else {
-                        dom.painelDirDist.innerHTML = traduzirTextosDeFormula(htmlDireito);
+                        dom.painelDirDist.innerHTML = traduzirTextosDeFormula(envolverSimbolosCalculadosMemorialDist(htmlDireito));
                         marcarVariaveisSaidaMemorialDist();
                     }
                 }, 80);
