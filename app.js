@@ -1222,9 +1222,10 @@ console.log('ðŸ”§ Script iniciando...');
                     const label = grupo?.querySelector('label span');
                     const itemCatalogo = catalogoVariaveisFormula[chavesCatalogo[range.id]];
                     const unidade = itemCatalogo?.pt.match(/^\s*(\[[^\]]+\])/u)?.[1]?.slice(1, -1) || '';
+                    const nomeBruto = label?.textContent?.trim() || range.id;
                     return {
                         chave: range.id,
-                        nome: label?.textContent?.trim() || range.id,
+                        nome: nomeBruto.replace(/\s*\([^)]*\)\s*$/u, ''),
                         unidade,
                         min: parseFloat(range.min),
                         max: parseFloat(range.max),
@@ -1367,6 +1368,7 @@ console.log('ðŸ”§ Script iniciando...');
                 return {
                     volumeRolo,
                     massaLinha,
+                    massaTotal: massaLinha * nLinhas,
                     rotacaoDosador,
                     velocidadeSecundaria: rede.velocidadeSecundaria,
                     perdaTotal: rede.deltaPTotal,
@@ -1388,6 +1390,20 @@ console.log('ðŸ”§ Script iniciando...');
                     comprimentoSecundario,
                     diametroSecundario,
                     kTorre,
+                    vazaoPrimaria: rede.vazaoPrimariaReal,
+                    areaPrimaria,
+                    velocidadePrimaria: rede.velocidadePrimaria,
+                    slrPrimario: rede.slrPrimario,
+                    massaSolidoPrimario: massaLinha * nLinhas / Math.max(nPrimarios, 1),
+                    massaArPrimario: rede.massaArPrimariaKgh,
+                    perdaPrimaria: rede.deltaPPrimario,
+                    perdaTorre: rede.deltaPTorre,
+                    areaSecundaria,
+                    vazaoSecundaria: rede.vazaoSecundariaReal,
+                    slrSecundario: rede.slrSecundario,
+                    massaArSecundario: rede.massaArSecundariaKgh,
+                    perdaSecundaria: rede.deltaPSecundario,
+                    fatorAcoplamento: rede.fatorVazao,
                     vazaoTurbina,
                     pressaoMaxima: pressaoMax
                 };
@@ -2129,6 +2145,27 @@ console.log('ðŸ”§ Script iniciando...');
                     return `${unidade || '[unit defined by the variable]'} ${simbolo}. Definition: engineering term used in the displayed relationship. Importance and impact must be verified from the linked technical reference.`;
                 }
 
+                const chavesPorSimbolo = {
+                    'V_r': 'volumeRolo',
+                    '\\dot{m}_{linha}': 'massaLinha',
+                    '\\dot{m}_{total}': 'massaTotal',
+                    'N_r': 'rotacaoDosador',
+                    'Q_{total,real}': 'vazaoTotal',
+                    'Q_{prim}': 'vazaoPrimaria',
+                    'A_{prim}': 'areaPrimaria',
+                    'v_{prim}': 'velocidadePrimaria',
+                    'SLR_{prim}': 'slrPrimario',
+                    '\\Delta P_{prim}': 'perdaPrimaria',
+                    '\\Delta P_{torre}': 'perdaTorre',
+                    'A_{sec}': 'areaSecundaria',
+                    'Q_{sec}': 'vazaoSecundaria',
+                    'v_{sec}': 'velocidadeSecundaria',
+                    'SLR_{sec}': 'slrSecundario',
+                    '\\Delta P_{sec}': 'perdaSecundaria',
+                    '\\Delta P_{total}': 'perdaTotal',
+                    'f': 'fatorAcoplamento'
+                };
+
                 let resultado = '';
                 let cursor = 0;
                 while (cursor < html.length) {
@@ -2159,7 +2196,9 @@ console.log('ðŸ”§ Script iniciando...');
                         textoTooltip = criarTooltipEspecificoEmIngles(simbolo.conteudo, textoTooltip);
                     }
 
-                    resultado += `${prefixo}${simbolo.conteudo}}{${textoTooltip}}`;
+                    const textoTip = `${prefixo}${simbolo.conteudo}}{${textoTooltip}}`;
+                    const chaveGrafico = chavesPorSimbolo[simbolo.conteudo];
+                    resultado += chaveGrafico ? `\\class{graph-output-${chaveGrafico}}{${textoTip}}` : textoTip;
                     cursor = descricao.fim;
                 }
                 return resultado;
