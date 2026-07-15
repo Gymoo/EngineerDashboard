@@ -1648,20 +1648,8 @@ console.log('ðŸ”§ Script iniciando...');
                 });
                 const corSaida = (valor) => {
                     const proporcao = Math.max(0, Math.min(1, (valor - zSaidaMin) / escalaSaida));
-                    const pontosCor = [
-                        [25, 75, 180],
-                        [20, 170, 210],
-                        [45, 195, 75],
-                        [245, 205, 40],
-                        [220, 55, 45]
-                    ];
-                    const posicao = proporcao * (pontosCor.length - 1);
-                    const indice = Math.min(Math.floor(posicao), pontosCor.length - 2);
-                    const fracao = posicao - indice;
-                    const inicio = pontosCor[indice];
-                    const fim = pontosCor[indice + 1];
-                    const rgb = inicio.map((canal, canalIndice) => Math.round(canal + (fim[canalIndice] - canal) * fracao));
-                    return `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`;
+                    const cores = ['#1746d1', '#00a9d9', '#19c957', '#f2cf25', '#e6332a'];
+                    return cores[Math.min(cores.length - 1, Math.floor(proporcao * cores.length))];
                 };
                 const desenharEixo = (fim) => {
                     const angulo = Math.atan2(fim.y - origem.y, fim.x - origem.x);
