@@ -1193,6 +1193,11 @@ console.log('ðŸ”§ Script iniciando...');
                     const nomeIngles = (item.en || chave).replace(/^\s*\[[^\]]+\]\s*/u, '').split('.')[0] || chave;
                     saidas.set(chave, { chave, pt: nome, en: nomeIngles, unidade });
                 });
+                Object.entries(graficoDescricoesAuto).forEach(([chave, item]) => {
+                    if (saidas.has(chave)) return;
+                    const unidade = item.descricao.match(/^\s*(\[[^\]]+\])/u)?.[1]?.slice(1, -1) || '';
+                    saidas.set(chave, { chave, pt: item.simbolo, en: item.simbolo, unidade });
+                });
                 return Array.from(saidas.values());
             }
             const graficoDistEstado = {
@@ -1201,6 +1206,7 @@ console.log('ðŸ”§ Script iniciando...');
                 flutuante: false,
                 posicao: null
             };
+            const graficoDescricoesAuto = {};
 
             function obterVariaveisEntradaGraficoDist() {
                 const chavesCatalogo = {
@@ -1527,10 +1533,13 @@ console.log('ðŸ”§ Script iniciando...');
                 dom.painelDirDist?.querySelectorAll('[class*="graph-output-"]').forEach((elemento) => {
                     const classe = Array.from(elemento.classList).find((item) => item.startsWith('graph-output-'));
                     const chave = classe?.replace('graph-output-', '');
-                    if (!catalogoVariaveisFormula[chave]) return;
+                    const descricaoAuto = graficoDescricoesAuto[chave];
+                    if (!catalogoVariaveisFormula[chave] && !descricaoAuto) return;
                     elemento.dataset.graphOutput = chave;
                     const descricao = catalogoVariaveisFormula[chave];
-                    if (descricao) elemento.dataset.tooltip = textoIdioma(descricao.pt, descricao.en);
+                    elemento.dataset.tooltip = descricao
+                        ? textoIdioma(descricao.pt, descricao.en)
+                        : descricaoAuto.descricao;
                     elemento.classList.toggle('graph-output-selected', chave === graficoDistEstado.saida);
                     elemento.setAttribute('role', 'button');
                     elemento.setAttribute('tabindex', '0');
@@ -2002,7 +2011,7 @@ console.log('ðŸ”§ Script iniciando...');
             }
 
             function traduzirTextosDeFormula(html) {
-                if (document.body.dataset.language !== 'en') return html;
+                const inglesAtivo = document.body.dataset.language === 'en';
                 const traducoesFormula = {
                     '_{linha}': '_{row}',
                     '_{linhas}': '_{rows}',
@@ -2031,10 +2040,12 @@ console.log('ðŸ”§ Script iniciando...');
                     'Vazão Virgem Absoluta de Laboratório Ideal sem canos no vento frio limpo e silencioso germânico testado na Punker.': 'Nominal free-flow turbine capacity measured without network losses.',
                     '[m³/min] VAZÃO MAGISTRAL DE TRABALHO EMPÍRICA REAL E VERDADEIRA! Impacto: É este pulmão matemático inegável retroativo e exato que permitiu trancar o balanço e resolver em frações as velocidades milimétricas que manterão as toneladas de adubo e soja de 60 covas perfeitamente suspensas como mágica flutuante e assopradas contra o abismo do leito arado no solo quente da fazenda!': '[m³/min] Actual operating flow. Impact: determines the air available to suspend and transport material through all rows.'
                 };
-                const traduzido = Object.entries(traducoesFormula).reduce(
-                    (resultado, [portugues, ingles]) => resultado.split(portugues).join(ingles),
-                    html
-                );
+                const traduzido = inglesAtivo
+                    ? Object.entries(traducoesFormula).reduce(
+                        (resultado, [portugues, ingles]) => resultado.split(portugues).join(ingles),
+                        html
+                    )
+                    : html;
                 return substituirTexttipsNaoTraduzidos(traduzido);
             }
 
@@ -2168,23 +2179,23 @@ console.log('ðŸ”§ Script iniciando...');
 
                 let resultado = '';
                 let cursor = 0;
-                while (cursor < html.length) {
-                    const inicioTexttip = html.indexOf(prefixo, cursor);
+                while (cursor < traduzido.length) {
+                    const inicioTexttip = traduzido.indexOf(prefixo, cursor);
                     if (inicioTexttip < 0) {
-                        resultado += html.slice(cursor);
+                        resultado += traduzido.slice(cursor);
                         break;
                     }
 
-                    resultado += html.slice(cursor, inicioTexttip);
+                    resultado += traduzido.slice(cursor, inicioTexttip);
                     const inicioSimbolo = inicioTexttip + prefixo.length - 1;
-                    const simbolo = lerGrupoBalanceado(html, inicioSimbolo);
-                    if (!simbolo || html[simbolo.fim] !== '{') {
+                    const simbolo = lerGrupoBalanceado(traduzido, inicioSimbolo);
+                    if (!simbolo || traduzido[simbolo.fim] !== '{') {
                         resultado += prefixo;
                         cursor = inicioTexttip + prefixo.length;
                         continue;
                     }
 
-                    const descricao = lerGrupoBalanceado(html, simbolo.fim);
+                    const descricao = lerGrupoBalanceado(traduzido, simbolo.fim);
                     if (!descricao) {
                         resultado += prefixo;
                         cursor = inicioTexttip + prefixo.length;
@@ -2192,13 +2203,20 @@ console.log('ðŸ”§ Script iniciando...');
                     }
 
                     let textoTooltip = descricao.conteudo;
-                    if (portuguesVisivel.test(textoTooltip)) {
+                    if (inglesAtivo && portuguesVisivel.test(textoTooltip)) {
                         textoTooltip = criarTooltipEspecificoEmIngles(simbolo.conteudo, textoTooltip);
                     }
 
                     const textoTip = `${prefixo}${simbolo.conteudo}}{${textoTooltip}}`;
-                    const chaveGrafico = chavesPorSimbolo[simbolo.conteudo];
-                    resultado += chaveGrafico ? `\\class{graph-output-${chaveGrafico}}{${textoTip}}` : textoTip;
+                    const simboloLimpo = simbolo.conteudo.trim();
+                    const somenteNumero = /^[0-9.,+\-={}\\^\s]+$/u.test(simboloLimpo);
+                    const chaveGrafico = somenteNumero ? null : (chavesPorSimbolo[simboloLimpo] || `auto_${simboloLimpo.replace(/[^A-Za-z0-9]+/gu, '_').replace(/^_+|_+$/gu, '')}`);
+                    if (chaveGrafico) {
+                        graficoDescricoesAuto[chaveGrafico] = { simbolo: simboloLimpo, descricao: textoTooltip };
+                        resultado += `\\class{graph-output-${chaveGrafico}}{${textoTip}}`;
+                    } else {
+                        resultado += textoTip;
+                    }
                     cursor = descricao.fim;
                 }
                 return resultado;
