@@ -1636,6 +1636,7 @@ console.log('ðŸ”§ Script iniciando...');
                 const zSaidaMin = Math.min(...pontos.map((ponto) => ponto.saida));
                 const zSaidaMax = Math.max(...pontos.map((ponto) => ponto.saida));
                 const escalaSaida = zSaidaMax - zSaidaMin || Math.abs(zSaidaMax) * 0.1 || 1;
+                const valoresSaidaOrdenados = pontos.map((ponto) => ponto.saida).sort((a, b) => a - b);
                 const origem = { x: 205, y: 545 };
                 const vetores = [
                     { x: 430, y: 0 },
@@ -1647,7 +1648,10 @@ console.log('ðŸ”§ Script iniciando...');
                     y: origem.y + ponto.coordenadas[0] * vetores[0].y + ponto.coordenadas[1] * vetores[1].y + ponto.coordenadas[2] * vetores[2].y
                 });
                 const corSaida = (valor) => {
-                    const proporcao = Math.max(0, Math.min(1, (valor - zSaidaMin) / escalaSaida));
+                    const quantidadeAbaixo = valoresSaidaOrdenados.filter((item) => item <= valor).length - 1;
+                    const proporcao = valoresSaidaOrdenados.length > 1
+                        ? quantidadeAbaixo / (valoresSaidaOrdenados.length - 1)
+                        : 0.5;
                     const cores = ['#1746d1', '#00a9d9', '#19c957', '#f2cf25', '#e6332a'];
                     return cores[Math.min(cores.length - 1, Math.floor(proporcao * cores.length))];
                 };
@@ -1810,7 +1814,7 @@ console.log('ðŸ”§ Script iniciando...');
                         saida: pontoAtualResultado[saida.chave]
                     };
                     const legenda = document.getElementById('grafico_dist_legenda');
-                    if (legenda) legenda.innerHTML = `<span class="graph-legend-item"><i class="graph-surface-gradient"></i>${textoIdioma('Cor: magnitude da saída; eixos: três entradas selecionadas', 'Color: output magnitude; axes: three selected inputs')}</span><span class="graph-legend-item"><i class="graph-current-point"></i>${textoIdioma('Ponto atual do simulador', 'Current simulator point')}</span>`;
+                    if (legenda) legenda.innerHTML = `<span class="graph-legend-item"><i class="graph-surface-gradient"></i>${textoIdioma('Cor: ordem relativa do valor da saída (menor para maior)', 'Color: relative output value rank (low to high)')}</span><span class="graph-legend-item"><i class="graph-current-point"></i>${textoIdioma('Ponto atual do simulador', 'Current simulator point')}</span>`;
                     desenharMapa3DGraficoDist(pontos, entradas, { ...saida, nome: saidaNome }, pontoAtual);
                     return;
                 }
