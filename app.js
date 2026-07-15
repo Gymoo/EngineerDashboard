@@ -1744,6 +1744,76 @@ console.log('ðŸ”§ Script iniciando...');
                 ctx.textAlign = 'left';
             }
 
+            function configurarPlotly3D(elemento, dados, layout) {
+                if (!window.Plotly || !elemento) return false;
+                window.Plotly.react(elemento, dados, layout, { responsive: true, displaylogo: false, modeBarButtonsToRemove: ['toImage'] });
+                return true;
+            }
+
+            function desenharPlotlyMapa3DDist(pontos, variaveis, saida, pontoAtual) {
+                const elemento = document.getElementById('grafico_dist_plotly');
+                if (!elemento) return;
+                const valores = pontos.map((ponto) => ponto.saida);
+                const minimo = Math.min(...valores);
+                const maximo = Math.max(...valores);
+                const x = pontos.map((ponto) => variaveis[0].min + ponto.coordenadas[0] * (variaveis[0].max - variaveis[0].min));
+                const y = pontos.map((ponto) => variaveis[1].min + ponto.coordenadas[1] * (variaveis[1].max - variaveis[1].min));
+                const z = pontos.map((ponto) => variaveis[2].min + ponto.coordenadas[2] * (variaveis[2].max - variaveis[2].min));
+                const dados = [{
+                    type: 'scatter3d', mode: 'markers', x, y, z,
+                    marker: { size: 4, color: valores, cmin: minimo, cmax: maximo, colorscale: 'Jet', opacity: 0.88, colorbar: { title: `${textoIdioma('Saída', 'Output')}: ${saida.nome}` } },
+                    hovertemplate: `${variaveis[0].nome}: %{x}<br>${variaveis[1].nome}: %{y}<br>${variaveis[2].nome}: %{z}<br>${saida.nome}: %{marker.color}<extra></extra>`
+                }];
+                if (pontoAtual && Number.isFinite(pontoAtual.saida)) {
+                    dados.push({
+                        type: 'scatter3d', mode: 'markers', name: textoIdioma('Ponto atual', 'Current point'),
+                        x: [variaveis[0].valor], y: [variaveis[1].valor], z: [variaveis[2].valor],
+                        marker: { size: 7, color: '#ffffff', line: { color: '#111827', width: 3 } },
+                        hovertemplate: `${textoIdioma('Ponto atual', 'Current point')}<br>${saida.nome}: ${formatarValorGrafico(pontoAtual.saida)}<extra></extra>`
+                    });
+                }
+                const estilos = getComputedStyle(document.body);
+                const fundo = estilos.getPropertyValue('--bg-card').trim() || '#161b22';
+                const texto = estilos.getPropertyValue('--text-main').trim() || '#c9d1d9';
+                configurarPlotly3D(elemento, dados, {
+                    paper_bgcolor: fundo, plot_bgcolor: fundo, font: { color: texto }, margin: { l: 0, r: 0, t: 10, b: 0 },
+                    scene: {
+                        aspectmode: 'cube', dragmode: 'orbit',
+                        xaxis: { title: `${variaveis[0].nome} (${variaveis[0].unidade || ''})` },
+                        yaxis: { title: `${variaveis[1].nome} (${variaveis[1].unidade || ''})` },
+                        zaxis: { title: `${variaveis[2].nome} (${variaveis[2].unidade || ''})` },
+                        camera: { eye: { x: 1.5, y: 1.5, z: 1.25 } }
+                    }
+                });
+            }
+
+            function desenharPlotlySuperficieDist(superficie, variavelX, variavelY, saida) {
+                const elemento = document.getElementById('grafico_dist_plotly');
+                if (!elemento) return;
+                const x = superficie[0].map((ponto) => ponto.x);
+                const y = superficie.map((linha) => linha[0].y);
+                const z = superficie.map((linha) => linha.map((ponto) => ponto.z));
+                const valores = z.flat();
+                const estilos = getComputedStyle(document.body);
+                const fundo = estilos.getPropertyValue('--bg-card').trim() || '#161b22';
+                const texto = estilos.getPropertyValue('--text-main').trim() || '#c9d1d9';
+                configurarPlotly3D(elemento, [{
+                    type: 'surface', x, y, z, colorscale: 'Jet', showscale: true,
+                    cmin: Math.min(...valores), cmax: Math.max(...valores),
+                    colorbar: { title: `${textoIdioma('Saída', 'Output')}: ${saida.nome}` }, contours: { z: { show: true, usecolormap: true, project: { z: true } } },
+                    hovertemplate: `${variavelX.nome}: %{x}<br>${variavelY.nome}: %{y}<br>${saida.nome}: %{z}<extra></extra>`
+                }], {
+                    paper_bgcolor: fundo, plot_bgcolor: fundo, font: { color: texto }, margin: { l: 0, r: 0, t: 10, b: 0 },
+                    scene: {
+                        aspectmode: 'cube', dragmode: 'orbit',
+                        xaxis: { title: `${variavelX.nome} (${variavelX.unidade || ''})` },
+                        yaxis: { title: `${variavelY.nome} (${variavelY.unidade || ''})` },
+                        zaxis: { title: `${saida.nome} (${saida.unidade || ''})` },
+                        camera: { eye: { x: 1.5, y: 1.5, z: 1.25 } }
+                    }
+                });
+            }
+
             function atualizarGraficoDist() {
                 const modo = document.querySelector('input[name="modo_dist"]:checked')?.value;
                 if (!dom.painelGraficoDist) return;
@@ -1753,7 +1823,7 @@ console.log('ðŸ”§ Script iniciando...');
                 const saidasDisponiveis = obterSaidasGraficoDist();
                 const saida = saidasDisponiveis.find((item) => item.chave === graficoDistEstado.saida);
                 const saidaNome = saida ? textoIdioma(saida.pt, saida.en) : textoIdioma('Nenhuma saída selecionada', 'No output selected');
-                dom.painelGraficoDist.innerHTML = `<div class="graph-panel-header"><div class="graph-drag-handle"><h2>${entradas.length >= 2 ? textoIdioma('Mapa 3D de sensibilidade', '3D sensitivity map') : textoIdioma('Gráfico de sensibilidade', 'Sensitivity graph')}</h2><p>${textoIdioma('As entradas selecionadas variam dentro dos limites atuais dos sliders; as demais variáveis permanecem nos valores atuais.', 'Selected inputs sweep across the current slider limits; all other variables remain at their current values.')}</p></div><button type="button" class="graph-float-btn" data-graph-float aria-pressed="${graficoDistEstado.flutuante}">${graficoDistEstado.flutuante ? textoIdioma('Fixar no fluxo', 'Return to flow') : textoIdioma('Tornar flutuante', 'Make floating')}</button></div>${entradas.length ? `<div class="graph-selection-summary"><strong>${textoIdioma('Entradas', 'Inputs')}:</strong> ${entradas.map((item) => `${item.nome} (${item.unidade}) = ${formatarValorGrafico(item.valor)}`).join(' · ')}<br><strong>${textoIdioma('Saída', 'Output')}:</strong> ${saidaNome} (${saida?.unidade || ''})</div><canvas id="grafico_dist_canvas" aria-label="${textoIdioma('Mapa tridimensional de sensibilidade do distribuidor', 'Distributor three-dimensional sensitivity map')}"></canvas><div id="grafico_dist_legenda" class="graph-legend" aria-label="${textoIdioma('Legenda da magnitude da saída', 'Output magnitude legend')}"></div>` : `<div class="graph-empty">${textoIdioma('Selecione pelo menos uma entrada na sidebar para gerar o gráfico.', 'Select at least one sidebar input to generate the graph.')}</div>`}`;
+                dom.painelGraficoDist.innerHTML = `<div class="graph-panel-header"><div class="graph-drag-handle"><h2>${entradas.length >= 2 ? textoIdioma('Mapa 3D de sensibilidade', '3D sensitivity map') : textoIdioma('Gráfico de sensibilidade', 'Sensitivity graph')}</h2><p>${textoIdioma('As entradas selecionadas variam dentro dos limites atuais dos sliders; as demais variáveis permanecem nos valores atuais.', 'Selected inputs sweep across the current slider limits; all other variables remain at their current values.')}</p></div><button type="button" class="graph-float-btn" data-graph-float aria-pressed="${graficoDistEstado.flutuante}">${graficoDistEstado.flutuante ? textoIdioma('Fixar no fluxo', 'Return to flow') : textoIdioma('Tornar flutuante', 'Make floating')}</button></div>${entradas.length ? `<div class="graph-selection-summary"><strong>${textoIdioma('Entradas', 'Inputs')}:</strong> ${entradas.map((item) => `${item.nome} (${item.unidade}) = ${formatarValorGrafico(item.valor)}`).join(' · ')}<br><strong>${textoIdioma('Saída', 'Output')}:</strong> ${saidaNome} (${saida?.unidade || ''})</div>${entradas.length >= 2 ? `<div id="grafico_dist_plotly" aria-label="${textoIdioma('Mapa tridimensional de sensibilidade do distribuidor', 'Distributor three-dimensional sensitivity map')}"></div>` : `<canvas id="grafico_dist_canvas" aria-label="${textoIdioma('Gráfico de sensibilidade do distribuidor', 'Distributor sensitivity graph')}"></canvas>`}<div id="grafico_dist_legenda" class="graph-legend" aria-label="${textoIdioma('Legenda da magnitude da saída', 'Output magnitude legend')}"></div>` : `<div class="graph-empty">${textoIdioma('Selecione pelo menos uma entrada na sidebar para gerar o gráfico.', 'Select at least one sidebar input to generate the graph.')}</div>`}`;
                 dom.painelGraficoDist.classList.toggle('graph-floating', graficoDistEstado.flutuante);
                 if (graficoDistEstado.flutuante && graficoDistEstado.posicao) {
                     dom.painelGraficoDist.style.left = `${graficoDistEstado.posicao.left}px`;
@@ -1815,7 +1885,7 @@ console.log('ðŸ”§ Script iniciando...');
                     };
                     const legenda = document.getElementById('grafico_dist_legenda');
                     if (legenda) legenda.innerHTML = `<span class="graph-legend-item"><i class="graph-surface-gradient"></i>${textoIdioma('Cor: ordem relativa do valor da saída (menor para maior)', 'Color: relative output value rank (low to high)')}</span><span class="graph-legend-item"><i class="graph-current-point"></i>${textoIdioma('Ponto atual do simulador', 'Current simulator point')}</span>`;
-                    desenharMapa3DGraficoDist(pontos, entradas, { ...saida, nome: saidaNome }, pontoAtual);
+                    desenharPlotlyMapa3DDist(pontos, entradas, { ...saida, nome: saidaNome }, pontoAtual);
                     return;
                 }
                 if (entradas.length === 2) {
@@ -1843,7 +1913,7 @@ console.log('ðŸ”§ Script iniciando...');
                     }
                     const legenda = document.getElementById('grafico_dist_legenda');
                     if (legenda) legenda.innerHTML = `<span class="graph-legend-item"><i class="graph-surface-gradient"></i>${textoIdioma('Superfície: cor representa a magnitude da saída', 'Surface: color represents output magnitude')}</span>`;
-                    desenharSuperficieGraficoDist(superficie, x, y, { ...saida, nome: saidaNome });
+                    desenharPlotlySuperficieDist(superficie, x, y, { ...saida, nome: saidaNome });
                     return;
                 }
                 const pontosX = Array.from({ length: 41 }, (_, indice) => x.min + (x.max - x.min) * indice / 40);
