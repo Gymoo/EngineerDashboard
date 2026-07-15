@@ -2210,7 +2210,7 @@ console.log('ðŸ”§ Script iniciando...');
                     const textoTip = `${prefixo}${simbolo.conteudo}}{${textoTooltip}}`;
                     const simboloLimpo = simbolo.conteudo.trim();
                     const somenteNumero = /^[0-9.,+\-={}\\^\s]+$/u.test(simboloLimpo);
-                    const chaveGrafico = somenteNumero ? null : (chavesPorSimbolo[simboloLimpo] || `auto_${simboloLimpo.replace(/[^A-Za-z0-9]+/gu, '_').replace(/^_+|_+$/gu, '')}`);
+                    const chaveGrafico = somenteNumero ? null : chavesPorSimbolo[simboloLimpo];
                     if (chaveGrafico) {
                         graficoDescricoesAuto[chaveGrafico] = { simbolo: simboloLimpo, descricao: textoTooltip };
                         resultado += `\\class{graph-output-${chaveGrafico}}{${textoTip}}`;
