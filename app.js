@@ -1376,6 +1376,8 @@ console.log('ðŸ”§ Script iniciando...');
                     massaLinha,
                     massaTotal: massaLinha * nLinhas,
                     rotacaoDosador,
+                    potenciaUtilMax: (lerValorDistGrafico('in_dist_tensao', substituicoes) || 0) * (lerValorDistGrafico('in_dist_corrente', substituicoes) || 0) * ((lerValorDistGrafico('in_dist_eficiencia_motor', substituicoes) || 0) / 100),
+                    potenciaRequerida: ((massaLinha * (1000 / 3600)) * (lerValorDistGrafico('in_dist_energia_dosador', substituicoes) || 0)) / EFICIENCIA_REDUTOR,
                     velocidadeSecundaria: rede.velocidadeSecundaria,
                     perdaTotal: rede.deltaPTotal,
                     vazaoTotal: rede.vazaoTotalReal,
@@ -1545,6 +1547,62 @@ console.log('ðŸ”§ Script iniciando...');
                     elemento.setAttribute('tabindex', '0');
                     elemento.setAttribute('aria-label', textoIdioma('Clique para usar esta variável como saída do gráfico.', 'Click to use this variable as the graph output.'));
                 });
+            }
+
+            function envolverSimbolosCalculadosMemorialDist(html) {
+                const simbolos = {
+                    'V_r': 'volumeRolo',
+                    '\\dot{m}_{linha}': 'massaLinha',
+                    '\\dot{m}_{total}': 'massaTotal',
+                    'N_r': 'rotacaoDosador',
+                    'P_{util,max}': 'potenciaUtilMax',
+                    'P_{req}': 'potenciaRequerida',
+                    'D_{prim}': 'diametroPrimario',
+                    'A_{prim}': 'areaPrimaria',
+                    'Q_{prim}': 'vazaoPrimaria',
+                    'v_{prim}': 'velocidadePrimaria',
+                    'SLR_{prim}': 'slrPrimario',
+                    '\\Delta P_{prim}': 'perdaPrimaria',
+                    '\\Delta P_{torre}': 'perdaTorre',
+                    'A_{sec}': 'areaSecundaria',
+                    'Q_{sec}': 'vazaoSecundaria',
+                    'v_{sec}': 'velocidadeSecundaria',
+                    'SLR_{sec}': 'slrSecundario',
+                    '\\Delta P_{sec}': 'perdaSecundaria',
+                    '\\Delta P_{total}': 'perdaTotal',
+                    'f': 'fatorAcoplamento',
+                    'Q_{total,real}': 'vazaoTotal'
+                };
+
+                Object.entries(simbolos).forEach(([simbolo, chave]) => {
+                    const inicioToken = `\\texttip{${simbolo}}`;
+                    let cursor = 0;
+                    let inicio = html.indexOf(inicioToken, cursor);
+                    while (inicio >= 0) {
+                        const prefixo = html.slice(Math.max(0, inicio - 80), inicio);
+                        const abertura = inicio + inicioToken.length;
+                        if (prefixo.includes('graph-output-') || html[abertura] !== '{') {
+                            cursor = abertura;
+                            inicio = html.indexOf(inicioToken, cursor);
+                            continue;
+                        }
+
+                        let profundidade = 0;
+                        let fim = abertura;
+                        for (; fim < html.length; fim += 1) {
+                            if (html[fim] === '{') profundidade += 1;
+                            if (html[fim] === '}' && --profundidade === 0) break;
+                        }
+                        if (fim >= html.length) break;
+
+                        const token = html.slice(inicio, fim + 1);
+                        const marcado = `\\class{graph-output-${chave}}{${token}}`;
+                        html = html.slice(0, inicio) + marcado + html.slice(fim + 1);
+                        cursor = inicio + marcado.length;
+                        inicio = html.indexOf(inicioToken, cursor);
+                    }
+                });
+                return html;
             }
 
             function calcularVolumeRolo() {
@@ -1738,6 +1796,14 @@ console.log('ðŸ”§ Script iniciando...');
                 volumeRolo: {
                     pt: '[mm³/rev] Volume útil do rolo por revolução. Descrição: volume deslocado em uma volta. Impacto: aumentar o volume reduz a rotação necessária para a mesma vazão mássica.',
                     en: '[mm³/rev] Useful roller volume per revolution. Description: volume displaced in one turn. Impact: increasing volume reduces the speed required for the same mass flow.'
+                },
+                potenciaUtilMax: {
+                    pt: '[W] Potência útil máxima. Descrição: capacidade mecânica disponível no eixo do dosador. Impacto: aumentar esta potência amplia a margem antes da sobrecarga.',
+                    en: '[W] Maximum useful power. Description: mechanical capacity available at the metering shaft. Impact: increasing it expands the margin before overload.'
+                },
+                potenciaRequerida: {
+                    pt: '[W] Potência requerida. Descrição: potência mecânica calculada para dosar o material. Impacto: aumentar a vazão ou a energia específica eleva a exigência do motor.',
+                    en: '[W] Required power. Description: mechanical power calculated for metering the material. Impact: increasing flow or specific energy raises motor demand.'
                 },
                 densidadeSolido: {
                     pt: '[g/mm³] Densidade do sólido. Descrição: massa do material por unidade de volume. Impacto: aumentar a densidade eleva a massa entregue por volta e reduz a rotação necessária para a mesma dose.',
@@ -3235,7 +3301,7 @@ console.log('ðŸ”§ Script iniciando...');
                 mathJaxTimer = setTimeout(function() {
                     // Cria uma "tela fantasma" na memória
                     const bufferInvisivel = document.createElement('div');
-                    bufferInvisivel.innerHTML = traduzirTextosDeFormula(htmlDireito);
+                    bufferInvisivel.innerHTML = traduzirTextosDeFormula(envolverSimbolosCalculadosMemorialDist(htmlDireito));
                     
                     if (window.MathJax && MathJax.typesetPromise) {
                         // Cria uma fila para garantir que o MathJax não se atropele no arrasto rápido
@@ -3253,7 +3319,7 @@ console.log('ðŸ”§ Script iniciando...');
                             });
                         }).catch(function(err){ console.log(err); });
                     } else {
-                        dom.painelDireito.innerHTML = traduzirTextosDeFormula(htmlDireito);
+                        dom.painelDireito.innerHTML = traduzirTextosDeFormula(envolverSimbolosCalculadosMemorialDist(htmlDireito));
                     }
                 }, 80); // 80ms: o equilíbrio perfeito entre responsividade visual e alívio da GPU
             }
