@@ -1509,6 +1509,16 @@ console.log('ðŸ”§ Script iniciando...');
                     const proporcao = Math.max(0, Math.min(1, (valor - zMin) / escalaZ));
                     return `hsl(${220 - proporcao * 185} 78% ${38 + proporcao * 20}%)`;
                 };
+                const desenharEixo = (inicio, fim) => {
+                    const angulo = Math.atan2(fim.y - inicio.y, fim.x - inicio.x);
+                    const tamanho = 14;
+                    ctx.beginPath();
+                    ctx.moveTo(fim.x, fim.y);
+                    ctx.lineTo(fim.x - tamanho * Math.cos(angulo - Math.PI / 6), fim.y - tamanho * Math.sin(angulo - Math.PI / 6));
+                    ctx.moveTo(fim.x, fim.y);
+                    ctx.lineTo(fim.x - tamanho * Math.cos(angulo + Math.PI / 6), fim.y - tamanho * Math.sin(angulo + Math.PI / 6));
+                    ctx.stroke();
+                };
 
                 ctx.clearRect(0, 0, largura, altura);
                 ctx.fillStyle = fundo;
@@ -1539,16 +1549,40 @@ console.log('ðŸ”§ Script iniciando...');
                 const fimX = { x: origem.x + vetorX.x, y: origem.y + vetorX.y };
                 const fimY = { x: origem.x + vetorY.x, y: origem.y + vetorY.y };
                 const fimZ = { x: origem.x + vetorZ.x, y: origem.y + vetorZ.y };
+                ctx.save();
+                ctx.strokeStyle = grade;
+                ctx.lineWidth = 1.5;
+                ctx.setLineDash([5, 7]);
+                for (let indice = 1; indice < 6; indice += 1) {
+                    const fracao = indice / 6;
+                    const inicioX = { x: origem.x + vetorX.x * fracao, y: origem.y + vetorX.y * fracao };
+                    const inicioY = { x: origem.x + vetorY.x * fracao, y: origem.y + vetorY.y * fracao };
+                    ctx.beginPath(); ctx.moveTo(inicioX.x, inicioX.y); ctx.lineTo(inicioX.x + vetorY.x, inicioX.y + vetorY.y); ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(inicioY.x, inicioY.y); ctx.lineTo(inicioY.x + vetorX.x, inicioY.y + vetorX.y); ctx.stroke();
+                }
+                ctx.restore();
                 ctx.strokeStyle = texto;
                 ctx.fillStyle = texto;
-                ctx.lineWidth = 3;
+                ctx.lineWidth = 4;
                 [[origem, fimX], [origem, fimY], [origem, fimZ]].forEach(([inicio, fim]) => {
                     ctx.beginPath(); ctx.moveTo(inicio.x, inicio.y); ctx.lineTo(fim.x, fim.y); ctx.stroke();
+                    desenharEixo(inicio, fim);
                 });
+                ctx.save();
+                ctx.setLineDash([8, 8]);
+                ctx.strokeStyle = 'rgba(255,255,255,0.28)';
+                ctx.lineWidth = 2;
+                for (let indice = 1; indice < 5; indice += 1) {
+                    const fracao = indice / 5;
+                    const inicioGrade = { x: origem.x + vetorY.x * fracao, y: origem.y + vetorY.y * fracao };
+                    const fimGrade = { x: fimX.x + vetorY.x * fracao, y: fimX.y + vetorY.y * fracao };
+                    ctx.beginPath(); ctx.moveTo(inicioGrade.x, inicioGrade.y); ctx.lineTo(fimGrade.x, fimGrade.y); ctx.stroke();
+                }
+                ctx.restore();
                 ctx.font = '22px Segoe UI';
                 ctx.textAlign = 'center';
                 ctx.fillText(`${variavelX.nome} (${variavelX.unidade || ''})`, fimX.x - 20, fimX.y + 34);
-                ctx.fillText(`${variavelY.nome} (${variavelY.unidade || ''})`, fimY.x - 45, fimY.y - 14);
+                ctx.fillText(`${textoIdioma('Profundidade', 'Depth')}: ${variavelY.nome} (${variavelY.unidade || ''})`, fimY.x - 62, fimY.y - 18);
                 ctx.save();
                 ctx.translate(fimZ.x - 24, fimZ.y);
                 ctx.rotate(-Math.PI / 2);
@@ -1564,6 +1598,27 @@ console.log('ðŸ”§ Script iniciando...');
                 ctx.fillText(formatarValorGrafico(variavelX.max), fimX.x + 8, fimX.y + 28);
                 ctx.fillText(formatarValorGrafico(variavelY.max), fimY.x - 8, fimY.y - 8);
                 ctx.fillText(formatarValorGrafico(zMax), fimZ.x - 54, fimZ.y - 8);
+                const barraX = largura - 74;
+                const barraTopo = 92;
+                const barraAltura = 300;
+                const gradiente = ctx.createLinearGradient(0, barraTopo + barraAltura, 0, barraTopo);
+                gradiente.addColorStop(0, 'hsl(220 78% 38%)');
+                gradiente.addColorStop(0.5, 'hsl(125 78% 48%)');
+                gradiente.addColorStop(1, 'hsl(35 78% 58%)');
+                ctx.fillStyle = gradiente;
+                ctx.fillRect(barraX, barraTopo, 22, barraAltura);
+                ctx.strokeStyle = grade;
+                ctx.strokeRect(barraX, barraTopo, 22, barraAltura);
+                ctx.fillStyle = apagado;
+                ctx.textAlign = 'left';
+                ctx.fillText(formatarValorGrafico(zMax), barraX + 30, barraTopo + 8);
+                ctx.fillText(formatarValorGrafico(zMin), barraX + 30, barraTopo + barraAltura);
+                ctx.save();
+                ctx.translate(barraX + 62, barraTopo + barraAltura / 2);
+                ctx.rotate(-Math.PI / 2);
+                ctx.textAlign = 'center';
+                ctx.fillText(textoIdioma('Magnitude da saída', 'Output magnitude'), 0, 0);
+                ctx.restore();
                 ctx.textAlign = 'left';
             }
 
@@ -1576,7 +1631,7 @@ console.log('ðŸ”§ Script iniciando...');
                 const saidasDisponiveis = obterSaidasGraficoDist();
                 const saida = saidasDisponiveis.find((item) => item.chave === graficoDistEstado.saida);
                 const saidaNome = saida ? textoIdioma(saida.pt, saida.en) : textoIdioma('Nenhuma saída selecionada', 'No output selected');
-                dom.painelGraficoDist.innerHTML = `<div class="graph-panel-header"><div class="graph-drag-handle"><h2>${textoIdioma('Gráfico de sensibilidade', 'Sensitivity graph')}</h2><p>${textoIdioma('As entradas selecionadas variam dentro dos limites atuais dos sliders; as demais variáveis permanecem nos valores atuais.', 'Selected inputs sweep across the current slider limits; all other variables remain at their current values.')}</p></div><button type="button" class="graph-float-btn" data-graph-float aria-pressed="${graficoDistEstado.flutuante}">${graficoDistEstado.flutuante ? textoIdioma('Fixar no fluxo', 'Return to flow') : textoIdioma('Tornar flutuante', 'Make floating')}</button></div>${entradas.length ? `<div class="graph-selection-summary"><strong>${textoIdioma('Entradas', 'Inputs')}:</strong> ${entradas.map((item) => `${item.nome} (${item.unidade}) = ${formatarValorGrafico(item.valor)}`).join(' · ')}<br><strong>${textoIdioma('Saída', 'Output')}:</strong> ${saidaNome} (${saida?.unidade || ''})</div><canvas id="grafico_dist_canvas" aria-label="${textoIdioma('Gráfico de sensibilidade do distribuidor', 'Distributor sensitivity graph')}"></canvas><div id="grafico_dist_legenda" class="graph-legend" aria-label="${textoIdioma('Legenda das curvas', 'Curve legend')}"></div>` : `<div class="graph-empty">${textoIdioma('Selecione pelo menos uma entrada na sidebar para gerar o gráfico.', 'Select at least one sidebar input to generate the graph.')}</div>`}`;
+                dom.painelGraficoDist.innerHTML = `<div class="graph-panel-header"><div class="graph-drag-handle"><h2>${entradas.length === 2 ? textoIdioma('Superfície 3D de sensibilidade', '3D sensitivity surface') : textoIdioma('Gráfico de sensibilidade', 'Sensitivity graph')}</h2><p>${textoIdioma('As entradas selecionadas variam dentro dos limites atuais dos sliders; as demais variáveis permanecem nos valores atuais.', 'Selected inputs sweep across the current slider limits; all other variables remain at their current values.')}</p></div><button type="button" class="graph-float-btn" data-graph-float aria-pressed="${graficoDistEstado.flutuante}">${graficoDistEstado.flutuante ? textoIdioma('Fixar no fluxo', 'Return to flow') : textoIdioma('Tornar flutuante', 'Make floating')}</button></div>${entradas.length ? `<div class="graph-selection-summary"><strong>${textoIdioma('Entradas', 'Inputs')}:</strong> ${entradas.map((item) => `${item.nome} (${item.unidade}) = ${formatarValorGrafico(item.valor)}`).join(' · ')}<br><strong>${textoIdioma('Saída', 'Output')}:</strong> ${saidaNome} (${saida?.unidade || ''})</div><canvas id="grafico_dist_canvas" aria-label="${textoIdioma('Gráfico de sensibilidade do distribuidor', 'Distributor sensitivity graph')}"></canvas><div id="grafico_dist_legenda" class="graph-legend" aria-label="${textoIdioma('Legenda das curvas', 'Curve legend')}"></div>` : `<div class="graph-empty">${textoIdioma('Selecione pelo menos uma entrada na sidebar para gerar o gráfico.', 'Select at least one sidebar input to generate the graph.')}</div>`}`;
                 dom.painelGraficoDist.classList.toggle('graph-floating', graficoDistEstado.flutuante);
                 if (graficoDistEstado.flutuante && graficoDistEstado.posicao) {
                     dom.painelGraficoDist.style.left = `${graficoDistEstado.posicao.left}px`;
