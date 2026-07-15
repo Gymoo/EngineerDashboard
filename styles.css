@@ -519,22 +519,17 @@
         .graph-panel p { margin: 0; color: var(--text-muted); }
         .graph-float-btn { flex: 0 0 auto; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg-card); color: var(--text-main); cursor: pointer; }
         .graph-floating .graph-float-btn { border-color: var(--accent); color: var(--text-strong); }
-        .graph-output-volumeRolo,
-        .graph-output-massaLinha,
-        .graph-output-rotacaoDosador,
-        .graph-output-velocidadeSecundaria,
-        .graph-output-perdaTotal,
-        .graph-output-vazaoTotal { cursor: pointer; outline: 1px dashed transparent; }
-        .graph-output-volumeRolo:hover,
-        .graph-output-massaLinha:hover,
-        .graph-output-rotacaoDosador:hover,
-        .graph-output-velocidadeSecundaria:hover,
-        .graph-output-perdaTotal:hover,
-        .graph-output-vazaoTotal:hover,
+        [class^="graph-output-"],
+        [class*=" graph-output-"] { cursor: pointer; outline: 1px dashed transparent; }
+        [class^="graph-output-"]:hover,
+        [class*=" graph-output-"]:hover,
         .graph-output-selected,
         [data-graph-output][aria-pressed="true"] { outline-color: var(--accent); color: var(--accent); }
         .graph-selection-summary { margin: 16px 0 10px; padding: 10px 12px; border-left: 3px solid var(--accent); color: var(--text-muted); line-height: 1.6; }
         #grafico_dist_canvas { width: 100%; min-height: 340px; display: block; border: 1px solid var(--border); border-radius: 8px; }
+        .graph-legend { display: flex; flex-wrap: wrap; gap: 8px 14px; margin-top: 10px; color: var(--text-muted); font-size: 0.8rem; }
+        .graph-legend-item { display: inline-flex; align-items: center; gap: 5px; }
+        .graph-legend-item i { width: 18px; height: 3px; display: inline-block; border-radius: 2px; }
         .graph-empty { padding: 22px 0 6px; color: var(--text-muted); }
 
         /* Metric Cards */

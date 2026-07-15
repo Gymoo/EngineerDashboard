@@ -1203,12 +1203,29 @@ console.log('ðŸ”§ Script iniciando...');
             };
 
             function obterVariaveisEntradaGraficoDist() {
+                const chavesCatalogo = {
+                    in_dist_taxa: 'taxaHectare',
+                    in_dist_veltrator: 'velocidadeTrator',
+                    in_dist_largura: 'larguraLinha',
+                    in_dist_espessura: 'espessuraDisco',
+                    in_dist_qtd_discos: 'discosAtivos',
+                    in_dist_cavidades: 'cavidadesDisco',
+                    in_dist_area_cavidade: 'areaCavidade',
+                    in_dist_densidade: 'densidadeSolido',
+                    in_dist_qtd_primarios: 'numeroPrimarios',
+                    in_dist_comprimento_primario: 'comprimentoPrimario',
+                    in_dist_densidade_ar: 'densidadeAr',
+                    in_dist_fator_atrito: 'fatorAtrito'
+                };
                 return Array.from(dom.distGrpModo1?.querySelectorAll('input[type="range"]') || []).map((range) => {
                     const grupo = range.closest('.control-group');
                     const label = grupo?.querySelector('label span');
+                    const itemCatalogo = catalogoVariaveisFormula[chavesCatalogo[range.id]];
+                    const unidade = itemCatalogo?.pt.match(/^\s*(\[[^\]]+\])/u)?.[1]?.slice(1, -1) || '';
                     return {
                         chave: range.id,
                         nome: label?.textContent?.trim() || range.id,
+                        unidade,
                         min: parseFloat(range.min),
                         max: parseFloat(range.max),
                         step: parseFloat(range.step) || 1,
@@ -1382,6 +1399,10 @@ console.log('ðŸ”§ Script iniciando...');
                 return valor.toFixed(2);
             }
 
+            function corSerieGraficoDist(indice) {
+                return `hsl(${(indice * 47) % 360} 78% 62%)`;
+            }
+
             function desenharGraficoDist(series, variavelX, saida) {
                 const canvas = document.getElementById('grafico_dist_canvas');
                 if (!canvas) return;
@@ -1416,7 +1437,7 @@ console.log('ðŸ”§ Script iniciando...');
                 ctx.strokeStyle = estilos.getPropertyValue('--text-muted').trim() || '#8b949e';
                 ctx.beginPath(); ctx.moveTo(margem.esquerda, margem.topo); ctx.lineTo(margem.esquerda, altura - margem.baixo); ctx.lineTo(largura - margem.direita, altura - margem.baixo); ctx.stroke();
                 series.forEach((serie, indice) => {
-                    ctx.strokeStyle = `hsl(${(indice * 47) % 360} 78% 62%)`;
+                    ctx.strokeStyle = corSerieGraficoDist(indice);
                     ctx.lineWidth = 4;
                     ctx.beginPath();
                     serie.pontos.forEach((ponto, pontoIndice) => {
@@ -1440,7 +1461,7 @@ console.log('ðŸ”§ Script iniciando...');
                 const saidasDisponiveis = obterSaidasGraficoDist();
                 const saida = saidasDisponiveis.find((item) => item.chave === graficoDistEstado.saida);
                 const saidaNome = saida ? textoIdioma(saida.pt, saida.en) : textoIdioma('Nenhuma saída selecionada', 'No output selected');
-                dom.painelGraficoDist.innerHTML = `<div class="graph-panel-header"><div class="graph-drag-handle"><h2>${textoIdioma('Gráfico de sensibilidade', 'Sensitivity graph')}</h2><p>${textoIdioma('As entradas selecionadas variam dentro dos limites atuais dos sliders; as demais variáveis permanecem nos valores atuais.', 'Selected inputs sweep across the current slider limits; all other variables remain at their current values.')}</p></div><button type="button" class="graph-float-btn" data-graph-float aria-pressed="${graficoDistEstado.flutuante}">${graficoDistEstado.flutuante ? textoIdioma('Fixar no fluxo', 'Return to flow') : textoIdioma('Tornar flutuante', 'Make floating')}</button></div>${entradas.length ? `<div class="graph-selection-summary"><strong>${textoIdioma('Entradas', 'Inputs')}:</strong> ${entradas.map((item) => `${item.nome} (${item.unidade || ''})`).join(' · ')}<br><strong>${textoIdioma('Saída', 'Output')}:</strong> ${saidaNome} (${saida?.unidade || ''})</div><canvas id="grafico_dist_canvas" aria-label="${textoIdioma('Gráfico de sensibilidade do distribuidor', 'Distributor sensitivity graph')}"></canvas>` : `<div class="graph-empty">${textoIdioma('Selecione pelo menos uma entrada na sidebar para gerar o gráfico.', 'Select at least one sidebar input to generate the graph.')}</div>`}`;
+                dom.painelGraficoDist.innerHTML = `<div class="graph-panel-header"><div class="graph-drag-handle"><h2>${textoIdioma('Gráfico de sensibilidade', 'Sensitivity graph')}</h2><p>${textoIdioma('As entradas selecionadas variam dentro dos limites atuais dos sliders; as demais variáveis permanecem nos valores atuais.', 'Selected inputs sweep across the current slider limits; all other variables remain at their current values.')}</p></div><button type="button" class="graph-float-btn" data-graph-float aria-pressed="${graficoDistEstado.flutuante}">${graficoDistEstado.flutuante ? textoIdioma('Fixar no fluxo', 'Return to flow') : textoIdioma('Tornar flutuante', 'Make floating')}</button></div>${entradas.length ? `<div class="graph-selection-summary"><strong>${textoIdioma('Entradas', 'Inputs')}:</strong> ${entradas.map((item) => `${item.nome} (${item.unidade}) = ${formatarValorGrafico(item.valor)}`).join(' · ')}<br><strong>${textoIdioma('Saída', 'Output')}:</strong> ${saidaNome} (${saida?.unidade || ''})</div><canvas id="grafico_dist_canvas" aria-label="${textoIdioma('Gráfico de sensibilidade do distribuidor', 'Distributor sensitivity graph')}"></canvas><div id="grafico_dist_legenda" class="graph-legend" aria-label="${textoIdioma('Legenda das curvas', 'Curve legend')}"></div>` : `<div class="graph-empty">${textoIdioma('Selecione pelo menos uma entrada na sidebar para gerar o gráfico.', 'Select at least one sidebar input to generate the graph.')}</div>`}`;
                 dom.painelGraficoDist.classList.toggle('graph-floating', graficoDistEstado.flutuante);
                 if (graficoDistEstado.flutuante && graficoDistEstado.posicao) {
                     dom.painelGraficoDist.style.left = `${graficoDistEstado.posicao.left}px`;
@@ -1478,6 +1499,10 @@ console.log('ðŸ”§ Script iniciando...');
                         canvas.replaceWith(aviso);
                     }
                     return;
+                }
+                const legenda = document.getElementById('grafico_dist_legenda');
+                if (legenda) {
+                    legenda.innerHTML = series.map((serie, indice) => `<span class="graph-legend-item"><i style="background:${corSerieGraficoDist(indice)}"></i>${serie.label}</span>`).join('');
                 }
                 desenharGraficoDist(series, x, { ...saida, nome: saidaNome });
             }
