@@ -1622,7 +1622,7 @@ console.log('ðŸ”§ Script iniciando...');
                 ctx.textAlign = 'left';
             }
 
-            function desenharMapa3DGraficoDist(pontos, variaveis, saida) {
+            function desenharMapa3DGraficoDist(pontos, variaveis, saida, pontoAtual) {
                 const canvas = document.getElementById('grafico_dist_canvas');
                 if (!canvas || !pontos.length) return;
                 const ctx = canvas.getContext('2d');
@@ -1685,6 +1685,18 @@ console.log('ðŸ”§ Script iniciando...');
                     ctx.fill();
                     ctx.globalAlpha = 1;
                 });
+                if (pontoAtual && Number.isFinite(pontoAtual.saida)) {
+                    const posicaoAtual = projetar(pontoAtual);
+                    ctx.beginPath();
+                    ctx.arc(posicaoAtual.x, posicaoAtual.y, 11, 0, Math.PI * 2);
+                    ctx.strokeStyle = '#ffffff';
+                    ctx.lineWidth = 4;
+                    ctx.stroke();
+                    ctx.beginPath();
+                    ctx.arc(posicaoAtual.x, posicaoAtual.y, 5, 0, Math.PI * 2);
+                    ctx.fillStyle = corSaida(pontoAtual.saida);
+                    ctx.fill();
+                }
                 const fins = vetores.map((vetor) => ({ x: origem.x + vetor.x, y: origem.y + vetor.y }));
                 ctx.strokeStyle = texto;
                 ctx.lineWidth = 4;
@@ -1787,9 +1799,18 @@ console.log('ðŸ”§ Script iniciando...');
                         }
                         return;
                     }
+                    const valoresAtuais = entradas.map((item) => parseFloat(item.valor));
+                    const pontoAtualResultado = calcularPontoGraficoDist({});
+                    const pontoAtual = {
+                        coordenadas: entradas.map((item, indice) => {
+                            const valor = valoresAtuais[indice];
+                            return (valor - item.min) / (item.max - item.min || 1);
+                        }),
+                        saida: pontoAtualResultado[saida.chave]
+                    };
                     const legenda = document.getElementById('grafico_dist_legenda');
-                    if (legenda) legenda.innerHTML = `<span class="graph-legend-item"><i class="graph-surface-gradient"></i>${textoIdioma('Cor: magnitude da saída; eixos: três entradas selecionadas', 'Color: output magnitude; axes: three selected inputs')}</span>`;
-                    desenharMapa3DGraficoDist(pontos, entradas, { ...saida, nome: saidaNome });
+                    if (legenda) legenda.innerHTML = `<span class="graph-legend-item"><i class="graph-surface-gradient"></i>${textoIdioma('Cor: magnitude da saída; eixos: três entradas selecionadas', 'Color: output magnitude; axes: three selected inputs')}</span><span class="graph-legend-item"><i class="graph-current-point"></i>${textoIdioma('Ponto atual do simulador', 'Current simulator point')}</span>`;
+                    desenharMapa3DGraficoDist(pontos, entradas, { ...saida, nome: saidaNome }, pontoAtual);
                     return;
                 }
                 if (entradas.length === 2) {

@@ -531,6 +531,7 @@
         .graph-legend-item { display: inline-flex; align-items: center; gap: 5px; }
         .graph-legend-item i { width: 18px; height: 3px; display: inline-block; border-radius: 2px; }
         .graph-legend-item .graph-surface-gradient { width: 42px; height: 10px; background: linear-gradient(90deg, hsl(220 78% 38%), hsl(160 78% 48%), hsl(35 78% 58%)); }
+        .graph-legend-item .graph-current-point { width: 12px; height: 12px; border: 2px solid var(--text-strong); background: var(--accent); border-radius: 50%; }
         .graph-empty { padding: 22px 0 6px; color: var(--text-muted); }
 
         /* Metric Cards */
