@@ -2011,7 +2011,7 @@ console.log('ðŸ”§ Script iniciando...');
             }
 
             function traduzirTextosDeFormula(html) {
-                const inglesAtivo = document.body.dataset.language === 'en';
+                if (document.body.dataset.language !== 'en') return html;
                 const traducoesFormula = {
                     '_{linha}': '_{row}',
                     '_{linhas}': '_{rows}',
@@ -2040,12 +2040,10 @@ console.log('ðŸ”§ Script iniciando...');
                     'Vazão Virgem Absoluta de Laboratório Ideal sem canos no vento frio limpo e silencioso germânico testado na Punker.': 'Nominal free-flow turbine capacity measured without network losses.',
                     '[m³/min] VAZÃO MAGISTRAL DE TRABALHO EMPÍRICA REAL E VERDADEIRA! Impacto: É este pulmão matemático inegável retroativo e exato que permitiu trancar o balanço e resolver em frações as velocidades milimétricas que manterão as toneladas de adubo e soja de 60 covas perfeitamente suspensas como mágica flutuante e assopradas contra o abismo do leito arado no solo quente da fazenda!': '[m³/min] Actual operating flow. Impact: determines the air available to suspend and transport material through all rows.'
                 };
-                const traduzido = inglesAtivo
-                    ? Object.entries(traducoesFormula).reduce(
-                        (resultado, [portugues, ingles]) => resultado.split(portugues).join(ingles),
-                        html
-                    )
-                    : html;
+                const traduzido = Object.entries(traducoesFormula).reduce(
+                    (resultado, [portugues, ingles]) => resultado.split(portugues).join(ingles),
+                    html
+                );
                 return substituirTexttipsNaoTraduzidos(traduzido);
             }
 
@@ -2203,20 +2201,12 @@ console.log('ðŸ”§ Script iniciando...');
                     }
 
                     let textoTooltip = descricao.conteudo;
-                    if (inglesAtivo && portuguesVisivel.test(textoTooltip)) {
+                    if (portuguesVisivel.test(textoTooltip)) {
                         textoTooltip = criarTooltipEspecificoEmIngles(simbolo.conteudo, textoTooltip);
                     }
 
                     const textoTip = `${prefixo}${simbolo.conteudo}}{${textoTooltip}}`;
-                    const simboloLimpo = simbolo.conteudo.trim();
-                    const somenteNumero = /^[0-9.,+\-={}\\^\s]+$/u.test(simboloLimpo);
-                    const chaveGrafico = somenteNumero ? null : chavesPorSimbolo[simboloLimpo];
-                    if (chaveGrafico) {
-                        graficoDescricoesAuto[chaveGrafico] = { simbolo: simboloLimpo, descricao: textoTooltip };
-                        resultado += `\\class{graph-output-${chaveGrafico}}{${textoTip}}`;
-                    } else {
-                        resultado += textoTip;
-                    }
+                    resultado += textoTip;
                     cursor = descricao.fim;
                 }
                 return resultado;
