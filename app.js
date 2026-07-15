@@ -1181,7 +1181,7 @@ console.log('ðŸ”§ Script iniciando...');
                 { chave: 'rotacaoDosador', pt: 'Rotação do dosador', en: 'Metering roller speed', unidade: 'RPM' },
                 { chave: 'velocidadeSecundaria', pt: 'Velocidade secundária', en: 'Secondary velocity', unidade: 'm/s' },
                 { chave: 'perdaTotal', pt: 'Perda de pressão total', en: 'Total pressure loss', unidade: 'Pa' },
-                { chave: 'vazaoTotalReal', pt: 'Vazão total real', en: 'Actual total airflow', unidade: 'm³/min' }
+                { chave: 'vazaoTotal', pt: 'Vazão total real', en: 'Actual total airflow', unidade: 'm³/min' }
             ];
             const graficoDistEstado = {
                 entradas: ['in_dist_espessura', 'in_dist_qtd_discos', 'in_dist_area_cavidade'],
@@ -1242,7 +1242,7 @@ console.log('ðŸ”§ Script iniciando...');
                 dom.mainDist?.addEventListener('click', (event) => {
                     const botao = event.target.closest('[data-graph-output]');
                     if (botao) {
-                        graficoDistEstado.saida = botao.dataset.graphOutput;
+                        graficoDistEstado.saida = graficoDistEstado.saida === botao.dataset.graphOutput ? null : botao.dataset.graphOutput;
                         atualizarDistribuidor();
                         return;
                     }
@@ -1335,7 +1335,7 @@ console.log('ðŸ”§ Script iniciando...');
                     massaSolidoSecundarioKgh: massaLinha
                 };
                 const rede = simularRedePneumatica(parametrosRede);
-                return { volumeRolo, massaLinha, rotacaoDosador, velocidadeSecundaria: rede.velocidadeSecundaria, perdaTotal: rede.deltaPTotal, vazaoTotalReal: rede.vazaoTotalReal };
+                return { volumeRolo, massaLinha, rotacaoDosador, velocidadeSecundaria: rede.velocidadeSecundaria, perdaTotal: rede.deltaPTotal, vazaoTotal: rede.vazaoTotalReal };
             }
 
             function formatarValorGrafico(valor) {
@@ -1399,9 +1399,9 @@ console.log('ðŸ”§ Script iniciando...');
                 if (modo !== '1') { dom.painelGraficoDist.classList.add('hidden'); return; }
                 dom.painelGraficoDist.classList.remove('hidden');
                 const entradas = obterVariaveisEntradaGraficoDist().filter((item) => graficoDistEstado.entradas.includes(item.chave));
-                const saida = graficoDistSaidas.find((item) => item.chave === graficoDistEstado.saida) || graficoDistSaidas[0];
-                const saidaNome = textoIdioma(saida.pt, saida.en);
-                dom.painelGraficoDist.innerHTML = `<div class="graph-panel-header"><div class="graph-drag-handle"><h2>${textoIdioma('Gráfico de sensibilidade', 'Sensitivity graph')}</h2><p>${textoIdioma('As entradas selecionadas variam dentro dos limites atuais dos sliders; as demais variáveis permanecem nos valores atuais.', 'Selected inputs sweep across the current slider limits; all other variables remain at their current values.')}</p></div><button type="button" class="graph-float-btn" data-graph-float aria-pressed="${graficoDistEstado.flutuante}">${graficoDistEstado.flutuante ? textoIdioma('Fixar no fluxo', 'Return to flow') : textoIdioma('Tornar flutuante', 'Make floating')}</button></div>${entradas.length ? `<div class="graph-selection-summary"><strong>${textoIdioma('Entradas', 'Inputs')}:</strong> ${entradas.map((item) => `${item.nome} (${item.unidade || ''})`).join(' · ')}<br><strong>${textoIdioma('Saída', 'Output')}:</strong> ${saidaNome} (${saida.unidade})</div><canvas id="grafico_dist_canvas" aria-label="${textoIdioma('Gráfico de sensibilidade do distribuidor', 'Distributor sensitivity graph')}"></canvas>` : `<div class="graph-empty">${textoIdioma('Selecione pelo menos uma entrada na sidebar para gerar o gráfico.', 'Select at least one sidebar input to generate the graph.')}</div>`}`;
+                const saida = graficoDistSaidas.find((item) => item.chave === graficoDistEstado.saida);
+                const saidaNome = saida ? textoIdioma(saida.pt, saida.en) : textoIdioma('Nenhuma saída selecionada', 'No output selected');
+                dom.painelGraficoDist.innerHTML = `<div class="graph-panel-header"><div class="graph-drag-handle"><h2>${textoIdioma('Gráfico de sensibilidade', 'Sensitivity graph')}</h2><p>${textoIdioma('As entradas selecionadas variam dentro dos limites atuais dos sliders; as demais variáveis permanecem nos valores atuais.', 'Selected inputs sweep across the current slider limits; all other variables remain at their current values.')}</p></div><button type="button" class="graph-float-btn" data-graph-float aria-pressed="${graficoDistEstado.flutuante}">${graficoDistEstado.flutuante ? textoIdioma('Fixar no fluxo', 'Return to flow') : textoIdioma('Tornar flutuante', 'Make floating')}</button></div>${entradas.length ? `<div class="graph-selection-summary"><strong>${textoIdioma('Entradas', 'Inputs')}:</strong> ${entradas.map((item) => `${item.nome} (${item.unidade || ''})`).join(' · ')}<br><strong>${textoIdioma('Saída', 'Output')}:</strong> ${saidaNome} (${saida?.unidade || ''})</div><canvas id="grafico_dist_canvas" aria-label="${textoIdioma('Gráfico de sensibilidade do distribuidor', 'Distributor sensitivity graph')}"></canvas>` : `<div class="graph-empty">${textoIdioma('Selecione pelo menos uma entrada na sidebar para gerar o gráfico.', 'Select at least one sidebar input to generate the graph.')}</div>`}`;
                 dom.painelGraficoDist.classList.toggle('graph-floating', graficoDistEstado.flutuante);
                 if (graficoDistEstado.flutuante && graficoDistEstado.posicao) {
                     dom.painelGraficoDist.style.left = `${graficoDistEstado.posicao.left}px`;
@@ -1415,6 +1415,16 @@ console.log('ðŸ”§ Script iniciando...');
                     dom.painelGraficoDist.style.bottom = '';
                 }
                 if (!entradas.length) return;
+                if (!saida) {
+                    const canvas = document.getElementById('grafico_dist_canvas');
+                    if (canvas) {
+                        const aviso = document.createElement('div');
+                        aviso.className = 'graph-empty';
+                        aviso.textContent = textoIdioma('Clique em uma variável calculada dentro do memorial para definir a saída do gráfico.', 'Click a calculated variable inside the memorial to define the graph output.');
+                        canvas.replaceWith(aviso);
+                    }
+                    return;
+                }
                 const x = entradas[0];
                 const pontosX = Array.from({ length: 41 }, (_, indice) => x.min + (x.max - x.min) * indice / 40);
                 const valoresSeries = entradas.slice(1).map((item) => ({ item, valores: [item.min + (item.max - item.min) * 0.25, item.min + (item.max - item.min) * 0.5, item.min + (item.max - item.min) * 0.75] }));
