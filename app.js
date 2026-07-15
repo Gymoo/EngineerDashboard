@@ -221,6 +221,7 @@ console.log('ðŸ”§ Script iniciando...');
                 distCr: document.getElementById('in_dist_cr'),
                 painelEsqDist: document.getElementById('painel_esq_dist'),
                 painelDirDist: document.getElementById('painel_dir_dist'),
+                painelGraficoDist: document.getElementById('painel_grafico_dist'),
 
                 painelEsqPh: document.getElementById('painel_esq_ph'),
                 painelDirPh: document.getElementById('painel_dir_ph')
@@ -1174,6 +1175,201 @@ console.log('ðŸ”§ Script iniciando...');
                 dom.resetModalCancel.focus();
             }
 
+            const graficoDistSaidas = [
+                { chave: 'volumeRolo', pt: 'Volume do rolo', en: 'Roller volume', unidade: 'mm³/rev' },
+                { chave: 'massaLinha', pt: 'Fluxo mássico por linha', en: 'Mass flow per row', unidade: 'kg/h' },
+                { chave: 'rotacaoDosador', pt: 'Rotação do dosador', en: 'Metering roller speed', unidade: 'RPM' },
+                { chave: 'velocidadeSecundaria', pt: 'Velocidade secundária', en: 'Secondary velocity', unidade: 'm/s' },
+                { chave: 'perdaTotal', pt: 'Perda de pressão total', en: 'Total pressure loss', unidade: 'Pa' },
+                { chave: 'vazaoTotalReal', pt: 'Vazão total real', en: 'Actual total airflow', unidade: 'm³/min' }
+            ];
+            const graficoDistEstado = {
+                entradas: ['in_dist_espessura', 'in_dist_qtd_discos', 'in_dist_area_cavidade'],
+                saida: 'rotacaoDosador'
+            };
+
+            function obterVariaveisEntradaGraficoDist() {
+                return Array.from(dom.distGrpModo1?.querySelectorAll('input[type="range"]') || []).map((range) => {
+                    const grupo = range.closest('.control-group');
+                    const label = grupo?.querySelector('label span');
+                    return {
+                        chave: range.id,
+                        nome: label?.textContent?.trim() || range.id,
+                        min: parseFloat(range.min),
+                        max: parseFloat(range.max),
+                        step: parseFloat(range.step) || 1,
+                        valor: parseFloat(range.value)
+                    };
+                });
+            }
+
+            function configurarSeletoresGraficoDist() {
+                dom.distGrpModo1?.querySelectorAll('.control-group').forEach((grupo) => {
+                    const range = grupo.querySelector('input[type="range"]');
+                    const label = grupo.querySelector('label');
+                    if (!range || !label || label.querySelector('.graph-input-toggle')) return;
+
+                    const toggle = document.createElement('input');
+                    toggle.type = 'checkbox';
+                    toggle.id = `graph_input_${range.id}`;
+                    toggle.className = 'graph-input-toggle';
+                    toggle.dataset.graphInput = range.id;
+                    toggle.checked = graficoDistEstado.entradas.includes(range.id);
+                    toggle.setAttribute('aria-label', textoIdioma('Usar como entrada do gráfico', 'Use as graph input'));
+
+                    const texto = document.createElement('span');
+                    texto.className = 'graph-input-label';
+                    texto.textContent = textoIdioma('Entrada do gráfico', 'Graph input');
+                    texto.dataset.tooltip = textoIdioma('Seleciona esta variável como uma das entradas da varredura do gráfico.', 'Selects this variable as one of the graph sweep inputs.');
+                    const grupoEntrada = document.createElement('span');
+                    grupoEntrada.className = 'graph-input-toggle';
+                    grupoEntrada.append(toggle, texto);
+                    label.appendChild(grupoEntrada);
+                });
+
+                dom.sidebarDist?.addEventListener('change', (event) => {
+                    if (!event.target.matches('.graph-input-toggle')) return;
+                    const entradas = Array.from(dom.sidebarDist.querySelectorAll('.graph-input-toggle:checked')).map((input) => input.dataset.graphInput);
+                    if (entradas.length > 3) {
+                        event.target.checked = false;
+                        return;
+                    }
+                    graficoDistEstado.entradas = entradas;
+                    atualizarGraficoDist();
+                });
+                dom.mainDist?.addEventListener('click', (event) => {
+                    const botao = event.target.closest('[data-graph-output]');
+                    if (!botao) return;
+                    graficoDistEstado.saida = botao.dataset.graphOutput;
+                    atualizarGraficoDist();
+                });
+            }
+
+            function lerValorDistGrafico(id, substituicoes) {
+                const entrada = document.getElementById(id);
+                const valor = substituicoes?.[id] ?? entrada?.value;
+                return parseFloat(valor);
+            }
+
+            function calcularPontoGraficoDist(substituicoes = {}) {
+                const nLinhas = parseInt(lerValorDistGrafico('in_dist_linhas', substituicoes)) || 1;
+                const nPrimarios = parseInt(lerValorDistGrafico('in_dist_qtd_primarios', substituicoes)) || 1;
+                const comprimentoSecundario = lerValorDistGrafico('in_dist_comprimento', substituicoes) || 0;
+                const comprimentoPrimario = lerValorDistGrafico('in_dist_comprimento_primario', substituicoes) || 0;
+                const taxa = lerValorDistGrafico('in_dist_taxa', substituicoes) || 0;
+                const velocidadeTrator = lerValorDistGrafico('in_dist_veltrator', substituicoes) || 0;
+                const largura = lerValorDistGrafico('in_dist_largura', substituicoes) || 0;
+                const espessura = lerValorDistGrafico('in_dist_espessura', substituicoes) || 1;
+                const discos = lerValorDistGrafico('in_dist_qtd_discos', substituicoes) || 1;
+                const cavidades = lerValorDistGrafico('in_dist_cavidades', substituicoes) || 1;
+                const areaCavidade = lerValorDistGrafico('in_dist_area_cavidade', substituicoes) || 1;
+                const densidadeSolido = lerValorDistGrafico('in_dist_densidade', substituicoes) || 1;
+                const vazaoTurbina = lerValorDistGrafico('in_dist_vazaoturbina', substituicoes) || 0;
+                const diametroSecundario = (lerValorDistGrafico('in_dist_diametro', substituicoes) || 1) / 1000;
+                const diametroPrimario = (lerValorDistGrafico('in_dist_diametro_primario_pol', substituicoes) || 1) * 0.0254;
+                const densidadeAr = lerValorDistGrafico('in_dist_densidade_ar', substituicoes) || 1;
+                const fatorAtrito = lerValorDistGrafico('in_dist_fator_atrito', substituicoes) || 0;
+                const pressaoMax = lerValorDistGrafico('in_dist_pressao_turbina', substituicoes) || 1;
+                const kTorre = lerValorDistGrafico('in_dist_k_torre', substituicoes) || 0;
+                const volumeRolo = espessura * discos * cavidades * areaCavidade;
+                const massaLinha = (taxa * velocidadeTrator * largura) / 10;
+                const rotacaoDosador = (massaLinha * 1000) / (volumeRolo * densidadeSolido * 60);
+                const areaSecundaria = Math.PI * Math.pow(diametroSecundario, 2) / 4;
+                const areaPrimaria = Math.PI * Math.pow(diametroPrimario, 2) / 4;
+                const parametrosRede = {
+                    vazaoTotalNominalM3Min: vazaoTurbina,
+                    quantidadePrimarios: Math.max(nPrimarios, 1),
+                    quantidadeLinhas: Math.max(nLinhas, 1),
+                    comprimentoPrimarioM: comprimentoPrimario,
+                    comprimentoSecundarioM: comprimentoSecundario,
+                    diametroPrimarioM: diametroPrimario,
+                    diametroSecundarioM: diametroSecundario,
+                    areaPrimaria,
+                    areaSecundaria,
+                    densidadeAr,
+                    fatorAtrito,
+                    pressaoMaxPa: pressaoMax,
+                    kTorre,
+                    massaSolidoPrimarioKgh: massaLinha * nLinhas / Math.max(nPrimarios, 1),
+                    massaSolidoSecundarioKgh: massaLinha
+                };
+                const rede = simularRedePneumatica(parametrosRede);
+                return { volumeRolo, massaLinha, rotacaoDosador, velocidadeSecundaria: rede.velocidadeSecundaria, perdaTotal: rede.deltaPTotal, vazaoTotalReal: rede.vazaoTotalReal };
+            }
+
+            function formatarValorGrafico(valor) {
+                if (!Number.isFinite(valor)) return '—';
+                if (Math.abs(valor) >= 1000 || Math.abs(valor) < 0.01) return valor.toExponential(2);
+                return valor.toFixed(2);
+            }
+
+            function desenharGraficoDist(series, variavelX, saida) {
+                const canvas = document.getElementById('grafico_dist_canvas');
+                if (!canvas) return;
+                const ctx = canvas.getContext('2d');
+                const largura = canvas.width = Math.max(720, canvas.clientWidth * 2 || 900);
+                const altura = canvas.height = 680;
+                const margem = { esquerda: 92, direita: 30, topo: 28, baixo: 78 };
+                const todos = series.flatMap((serie) => serie.pontos).filter((ponto) => Number.isFinite(ponto.y));
+                if (!todos.length) return;
+                const xMin = variavelX.min;
+                const xMax = variavelX.max;
+                const yMinBruto = Math.min(...todos.map((ponto) => ponto.y));
+                const yMaxBruto = Math.max(...todos.map((ponto) => ponto.y));
+                const margemY = (yMaxBruto - yMinBruto || Math.abs(yMaxBruto) * 0.1 || 1) * 0.12;
+                const yMin = yMinBruto - margemY;
+                const yMax = yMaxBruto + margemY;
+                const px = (valor) => margem.esquerda + ((valor - xMin) / (xMax - xMin || 1)) * (largura - margem.esquerda - margem.direita);
+                const py = (valor) => altura - margem.baixo - ((valor - yMin) / (yMax - yMin || 1)) * (altura - margem.topo - margem.baixo);
+                const estilos = getComputedStyle(document.body);
+                ctx.clearRect(0, 0, largura, altura);
+                ctx.fillStyle = estilos.getPropertyValue('--bg-card').trim() || '#161b22';
+                ctx.fillRect(0, 0, largura, altura);
+                ctx.strokeStyle = estilos.getPropertyValue('--border').trim() || '#30363d';
+                ctx.fillStyle = estilos.getPropertyValue('--text-muted').trim() || '#8b949e';
+                ctx.font = '24px Segoe UI';
+                for (let i = 0; i <= 5; i++) {
+                    const y = margem.topo + i * (altura - margem.topo - margem.baixo) / 5;
+                    ctx.beginPath(); ctx.moveTo(margem.esquerda, y); ctx.lineTo(largura - margem.direita, y); ctx.stroke();
+                    const valor = yMax - i * (yMax - yMin) / 5;
+                    ctx.fillText(formatarValorGrafico(valor), 12, y + 8);
+                }
+                ctx.strokeStyle = estilos.getPropertyValue('--text-muted').trim() || '#8b949e';
+                ctx.beginPath(); ctx.moveTo(margem.esquerda, margem.topo); ctx.lineTo(margem.esquerda, altura - margem.baixo); ctx.lineTo(largura - margem.direita, altura - margem.baixo); ctx.stroke();
+                series.forEach((serie, indice) => {
+                    ctx.strokeStyle = `hsl(${(indice * 47) % 360} 78% 62%)`;
+                    ctx.lineWidth = 4;
+                    ctx.beginPath();
+                    serie.pontos.forEach((ponto, pontoIndice) => {
+                        const x = px(ponto.x); const y = py(ponto.y);
+                        if (!pontoIndice) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+                    });
+                    ctx.stroke();
+                });
+                ctx.fillStyle = estilos.getPropertyValue('--text-main').trim() || '#c9d1d9';
+                ctx.textAlign = 'center'; ctx.fillText(`${variavelX.nome} (${variavelX.unidade || ''})`, largura / 2, altura - 22);
+                ctx.save(); ctx.translate(24, altura / 2); ctx.rotate(-Math.PI / 2); ctx.fillText(`${saida.nome} (${saida.unidade})`, 0, 0); ctx.restore();
+                ctx.textAlign = 'left';
+            }
+
+            function atualizarGraficoDist() {
+                const modo = document.querySelector('input[name="modo_dist"]:checked')?.value;
+                if (!dom.painelGraficoDist) return;
+                if (modo !== '1') { dom.painelGraficoDist.classList.add('hidden'); return; }
+                dom.painelGraficoDist.classList.remove('hidden');
+                const entradas = obterVariaveisEntradaGraficoDist().filter((item) => graficoDistEstado.entradas.includes(item.chave));
+                const saida = graficoDistSaidas.find((item) => item.chave === graficoDistEstado.saida) || graficoDistSaidas[0];
+                const saidaNome = textoIdioma(saida.pt, saida.en);
+                dom.painelGraficoDist.innerHTML = `<div class="graph-panel-header"><div><h2>${textoIdioma('Gráfico de sensibilidade', 'Sensitivity graph')}</h2><p>${textoIdioma('As entradas selecionadas variam dentro dos limites atuais dos sliders; as demais variáveis permanecem nos valores atuais.', 'Selected inputs sweep across the current slider limits; all other variables remain at their current values.')}</p></div><div class="graph-output-picker"><strong>${textoIdioma('Saída do memorial', 'Memorial output')}</strong>${graficoDistSaidas.map((item) => `<button type="button" class="graph-output-btn ${item.chave === saida.chave ? 'active' : ''}" data-graph-output="${item.chave}" aria-pressed="${item.chave === saida.chave}">${textoIdioma(item.pt, item.en)} (${item.unidade})</button>`).join('')}</div></div>${entradas.length ? `<div class="graph-selection-summary"><strong>${textoIdioma('Entradas', 'Inputs')}:</strong> ${entradas.map((item) => `${item.nome} (${item.unidade || ''})`).join(' · ')}<br><strong>${textoIdioma('Saída', 'Output')}:</strong> ${saidaNome} (${saida.unidade})</div><canvas id="grafico_dist_canvas" aria-label="${textoIdioma('Gráfico de sensibilidade do distribuidor', 'Distributor sensitivity graph')}"></canvas>` : `<div class="graph-empty">${textoIdioma('Selecione pelo menos uma entrada na sidebar para gerar o gráfico.', 'Select at least one sidebar input to generate the graph.')}</div>`}`;
+                if (!entradas.length) return;
+                const x = entradas[0];
+                const pontosX = Array.from({ length: 41 }, (_, indice) => x.min + (x.max - x.min) * indice / 40);
+                const valoresSeries = entradas.slice(1).map((item) => ({ item, valores: [item.min + (item.max - item.min) * 0.25, item.min + (item.max - item.min) * 0.5, item.min + (item.max - item.min) * 0.75] }));
+                const combinacoes = valoresSeries.length ? valoresSeries.reduce((acumulado, serie) => acumulado.flatMap((base) => serie.valores.map((valor) => [...base, { item: serie.item, valor }])), [[]]) : [[]];
+                const series = combinacoes.map((combinacao, indice) => ({ label: combinacao.map((item) => `${item.item.nome}: ${formatarValorGrafico(item.valor)}`).join(' · ') || textoIdioma('Valor atual', 'Current value'), pontos: pontosX.map((valorX) => { const substituicoes = { [x.chave]: valorX }; combinacao.forEach((item) => { substituicoes[item.item.chave] = item.valor; }); return { x: valorX, y: calcularPontoGraficoDist(substituicoes)[saida.chave] }; }) }));
+                desenharGraficoDist(series, x, { ...saida, nome: saidaNome });
+            }
+
             function calcularVolumeRolo() {
                 const espessura = parseFloat(dom.distEspessura?.value) || 1;
                 const discos = parseFloat(dom.distQtdDiscos?.value) || 1;
@@ -2010,6 +2206,7 @@ console.log('ðŸ”§ Script iniciando...');
                 }
             });
 
+            configurarSeletoresGraficoDist();
             Object.keys(dashboardProfiles).forEach((dashboardKey) => {
                 const snapshotInicial = capturarEstadoDashboard(dashboardProfiles[dashboardKey].container);
                 dashboardProfileKeys.forEach((profileKey) => {
@@ -3279,6 +3476,10 @@ console.log('ðŸ”§ Script iniciando...');
                         </div>
                     `;
                 }
+                if (modoDist === '1') {
+                    const botoesSaidaMemorial = graficoDistSaidas.map((item) => `<button type="button" class="graph-output-btn ${item.chave === graficoDistEstado.saida ? 'active' : ''}" data-graph-output="${item.chave}" aria-pressed="${item.chave === graficoDistEstado.saida}">${textoIdioma(item.pt, item.en)} (${item.unidade})</button>`).join('');
+                    htmlDireito = `<div class="graph-output-picker memorial-output-picker"><strong>${textoIdioma('Clique em uma variável calculada para usá-la como saída do gráfico:', 'Click a calculated variable to use it as the graph output:')}</strong>${botoesSaidaMemorial}</div>` + htmlDireito;
+                }
                 dom.painelEsqDist.innerHTML = htmlEsquerdo;
 
                 if (mathJaxTimerDist) clearTimeout(mathJaxTimerDist);
@@ -3297,6 +3498,7 @@ console.log('ðŸ”§ Script iniciando...');
                         dom.painelDirDist.innerHTML = traduzirTextosDeFormula(htmlDireito);
                     }
                 }, 80);
+                atualizarGraficoDist();
             }
 
             // --- LÓGICA DO CANVAS GEOMÉTRICO ---
