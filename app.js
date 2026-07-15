@@ -1175,7 +1175,7 @@ console.log('ðŸ”§ Script iniciando...');
                 dom.resetModalCancel.focus();
             }
 
-            const graficoDistSaidas = [
+            const graficoDistSaidasBase = [
                 { chave: 'volumeRolo', pt: 'Volume do rolo', en: 'Roller volume', unidade: 'mm³/rev' },
                 { chave: 'massaLinha', pt: 'Fluxo mássico por linha', en: 'Mass flow per row', unidade: 'kg/h' },
                 { chave: 'rotacaoDosador', pt: 'Rotação do dosador', en: 'Metering roller speed', unidade: 'RPM' },
@@ -1183,6 +1183,18 @@ console.log('ðŸ”§ Script iniciando...');
                 { chave: 'perdaTotal', pt: 'Perda de pressão total', en: 'Total pressure loss', unidade: 'Pa' },
                 { chave: 'vazaoTotal', pt: 'Vazão total real', en: 'Actual total airflow', unidade: 'm³/min' }
             ];
+            function obterSaidasGraficoDist() {
+                const saidas = new Map(graficoDistSaidasBase.map((item) => [item.chave, item]));
+                Object.entries(catalogoVariaveisFormula || {}).forEach(([chave, item]) => {
+                    if (saidas.has(chave)) return;
+                    const idioma = item.pt || chave;
+                    const unidade = idioma.match(/^\s*(\[[^\]]+\])/u)?.[1]?.slice(1, -1) || '';
+                    const nome = idioma.replace(/^\s*\[[^\]]+\]\s*/u, '').split('.')[0] || chave;
+                    const nomeIngles = (item.en || chave).replace(/^\s*\[[^\]]+\]\s*/u, '').split('.')[0] || chave;
+                    saidas.set(chave, { chave, pt: nome, en: nomeIngles, unidade });
+                });
+                return Array.from(saidas.values());
+            }
             const graficoDistEstado = {
                 entradas: ['in_dist_espessura', 'in_dist_qtd_discos', 'in_dist_area_cavidade'],
                 saida: 'rotacaoDosador',
@@ -1335,7 +1347,33 @@ console.log('ðŸ”§ Script iniciando...');
                     massaSolidoSecundarioKgh: massaLinha
                 };
                 const rede = simularRedePneumatica(parametrosRede);
-                return { volumeRolo, massaLinha, rotacaoDosador, velocidadeSecundaria: rede.velocidadeSecundaria, perdaTotal: rede.deltaPTotal, vazaoTotal: rede.vazaoTotalReal };
+                return {
+                    volumeRolo,
+                    massaLinha,
+                    rotacaoDosador,
+                    velocidadeSecundaria: rede.velocidadeSecundaria,
+                    perdaTotal: rede.deltaPTotal,
+                    vazaoTotal: rede.vazaoTotalReal,
+                    espessuraDisco: espessura,
+                    discosAtivos: discos,
+                    cavidadesDisco: cavidades,
+                    areaCavidade,
+                    densidadeSolido,
+                    taxaHectare: taxa,
+                    velocidadeTrator,
+                    larguraLinha: largura,
+                    numeroLinhas: nLinhas,
+                    numeroPrimarios: nPrimarios,
+                    comprimentoPrimario,
+                    diametroPrimario,
+                    densidadeAr,
+                    fatorAtrito,
+                    comprimentoSecundario,
+                    diametroSecundario,
+                    kTorre,
+                    vazaoTurbina,
+                    pressaoMaxima: pressaoMax
+                };
             }
 
             function formatarValorGrafico(valor) {
@@ -1399,7 +1437,8 @@ console.log('ðŸ”§ Script iniciando...');
                 if (modo !== '1') { dom.painelGraficoDist.classList.add('hidden'); return; }
                 dom.painelGraficoDist.classList.remove('hidden');
                 const entradas = obterVariaveisEntradaGraficoDist().filter((item) => graficoDistEstado.entradas.includes(item.chave));
-                const saida = graficoDistSaidas.find((item) => item.chave === graficoDistEstado.saida);
+                const saidasDisponiveis = obterSaidasGraficoDist();
+                const saida = saidasDisponiveis.find((item) => item.chave === graficoDistEstado.saida);
                 const saidaNome = saida ? textoIdioma(saida.pt, saida.en) : textoIdioma('Nenhuma saída selecionada', 'No output selected');
                 dom.painelGraficoDist.innerHTML = `<div class="graph-panel-header"><div class="graph-drag-handle"><h2>${textoIdioma('Gráfico de sensibilidade', 'Sensitivity graph')}</h2><p>${textoIdioma('As entradas selecionadas variam dentro dos limites atuais dos sliders; as demais variáveis permanecem nos valores atuais.', 'Selected inputs sweep across the current slider limits; all other variables remain at their current values.')}</p></div><button type="button" class="graph-float-btn" data-graph-float aria-pressed="${graficoDistEstado.flutuante}">${graficoDistEstado.flutuante ? textoIdioma('Fixar no fluxo', 'Return to flow') : textoIdioma('Tornar flutuante', 'Make floating')}</button></div>${entradas.length ? `<div class="graph-selection-summary"><strong>${textoIdioma('Entradas', 'Inputs')}:</strong> ${entradas.map((item) => `${item.nome} (${item.unidade || ''})`).join(' · ')}<br><strong>${textoIdioma('Saída', 'Output')}:</strong> ${saidaNome} (${saida?.unidade || ''})</div><canvas id="grafico_dist_canvas" aria-label="${textoIdioma('Gráfico de sensibilidade do distribuidor', 'Distributor sensitivity graph')}"></canvas>` : `<div class="graph-empty">${textoIdioma('Selecione pelo menos uma entrada na sidebar para gerar o gráfico.', 'Select at least one sidebar input to generate the graph.')}</div>`}`;
                 dom.painelGraficoDist.classList.toggle('graph-floating', graficoDistEstado.flutuante);
@@ -1430,6 +1469,16 @@ console.log('ðŸ”§ Script iniciando...');
                 const valoresSeries = entradas.slice(1).map((item) => ({ item, valores: [item.min + (item.max - item.min) * 0.25, item.min + (item.max - item.min) * 0.5, item.min + (item.max - item.min) * 0.75] }));
                 const combinacoes = valoresSeries.length ? valoresSeries.reduce((acumulado, serie) => acumulado.flatMap((base) => serie.valores.map((valor) => [...base, { item: serie.item, valor }])), [[]]) : [[]];
                 const series = combinacoes.map((combinacao, indice) => ({ label: combinacao.map((item) => `${item.item.nome}: ${formatarValorGrafico(item.valor)}`).join(' · ') || textoIdioma('Valor atual', 'Current value'), pontos: pontosX.map((valorX) => { const substituicoes = { [x.chave]: valorX }; combinacao.forEach((item) => { substituicoes[item.item.chave] = item.valor; }); return { x: valorX, y: calcularPontoGraficoDist(substituicoes)[saida.chave] }; }) }));
+                if (!series.some((serie) => serie.pontos.some((ponto) => Number.isFinite(ponto.y)))) {
+                    const canvas = document.getElementById('grafico_dist_canvas');
+                    if (canvas) {
+                        const aviso = document.createElement('div');
+                        aviso.className = 'graph-empty';
+                        aviso.textContent = textoIdioma('Esta variável é elegível, mas ainda não possui resultado numérico calculável neste modo.', 'This variable is eligible, but it does not yet have a numeric result calculable in this mode.');
+                        canvas.replaceWith(aviso);
+                    }
+                    return;
+                }
                 desenharGraficoDist(series, x, { ...saida, nome: saidaNome });
             }
 
@@ -1437,7 +1486,7 @@ console.log('ðŸ”§ Script iniciando...');
                 dom.painelDirDist?.querySelectorAll('[class*="graph-output-"]').forEach((elemento) => {
                     const classe = Array.from(elemento.classList).find((item) => item.startsWith('graph-output-'));
                     const chave = classe?.replace('graph-output-', '');
-                    if (!graficoDistSaidas.some((item) => item.chave === chave)) return;
+                    if (!catalogoVariaveisFormula[chave]) return;
                     elemento.dataset.graphOutput = chave;
                     const descricao = catalogoVariaveisFormula[chave];
                     if (descricao) elemento.dataset.tooltip = textoIdioma(descricao.pt, descricao.en);
@@ -1781,8 +1830,7 @@ console.log('ðŸ”§ Script iniciando...');
                     return latex;
                 }
                 const formula = `\\texttip{${latex}}{${document.body.dataset.language === 'en' ? item.en : item.pt}}`;
-                const saidasGrafico = ['volumeRolo', 'massaLinha', 'rotacaoDosador', 'velocidadeSecundaria', 'perdaTotal', 'vazaoTotal'];
-                return saidasGrafico.includes(chave) ? `\\class{graph-output-${chave}}{${formula}}` : formula;
+                return `\\class{graph-output-${chave}}{${formula}}`;
             }
 
             function configurarTooltipsInstantaneos() {
