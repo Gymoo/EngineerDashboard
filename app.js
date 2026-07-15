@@ -1476,6 +1476,97 @@ console.log('ðŸ”§ Script iniciando...');
                 ctx.textAlign = 'left';
             }
 
+            function desenharSuperficieGraficoDist(superficie, variavelX, variavelY, saida) {
+                const canvas = document.getElementById('grafico_dist_canvas');
+                if (!canvas) return;
+                const ctx = canvas.getContext('2d');
+                const largura = canvas.width = Math.max(720, canvas.clientWidth * 2 || 900);
+                const altura = canvas.height = 680;
+                const estilos = getComputedStyle(document.body);
+                const fundo = estilos.getPropertyValue('--bg-card').trim() || '#161b22';
+                const texto = estilos.getPropertyValue('--text-main').trim() || '#c9d1d9';
+                const apagado = estilos.getPropertyValue('--text-muted').trim() || '#8b949e';
+                const grade = estilos.getPropertyValue('--border').trim() || '#30363d';
+                const todos = superficie.flatMap((linha) => linha).filter((ponto) => Number.isFinite(ponto.z));
+                if (!todos.length) return;
+                const zMin = Math.min(...todos.map((ponto) => ponto.z));
+                const zMax = Math.max(...todos.map((ponto) => ponto.z));
+                const escalaZ = zMax - zMin || Math.abs(zMax) * 0.1 || 1;
+                const origem = { x: 210, y: 535 };
+                const vetorX = { x: 450, y: 0 };
+                const vetorY = { x: -170, y: -150 };
+                const vetorZ = { x: 0, y: -280 };
+                const projetar = (ponto) => {
+                    const x = (ponto.x - variavelX.min) / (variavelX.max - variavelX.min || 1);
+                    const y = (ponto.y - variavelY.min) / (variavelY.max - variavelY.min || 1);
+                    const z = (ponto.z - zMin) / escalaZ;
+                    return {
+                        x: origem.x + x * vetorX.x + y * vetorY.x + z * vetorZ.x,
+                        y: origem.y + x * vetorX.y + y * vetorY.y + z * vetorZ.y
+                    };
+                };
+                const corSuperficie = (valor) => {
+                    const proporcao = Math.max(0, Math.min(1, (valor - zMin) / escalaZ));
+                    return `hsl(${220 - proporcao * 185} 78% ${38 + proporcao * 20}%)`;
+                };
+
+                ctx.clearRect(0, 0, largura, altura);
+                ctx.fillStyle = fundo;
+                ctx.fillRect(0, 0, largura, altura);
+                ctx.lineJoin = 'round';
+                for (let linha = superficie.length - 2; linha >= 0; linha -= 1) {
+                    for (let coluna = 0; coluna < superficie[linha].length - 1; coluna += 1) {
+                        const pontos = [
+                            superficie[linha][coluna],
+                            superficie[linha][coluna + 1],
+                            superficie[linha + 1][coluna + 1],
+                            superficie[linha + 1][coluna]
+                        ];
+                        if (pontos.some((ponto) => !Number.isFinite(ponto.z))) continue;
+                        const projetados = pontos.map(projetar);
+                        ctx.beginPath();
+                        ctx.moveTo(projetados[0].x, projetados[0].y);
+                        projetados.slice(1).forEach((ponto) => ctx.lineTo(ponto.x, ponto.y));
+                        ctx.closePath();
+                        ctx.fillStyle = corSuperficie(pontos.reduce((soma, ponto) => soma + ponto.z, 0) / pontos.length);
+                        ctx.fill();
+                        ctx.strokeStyle = 'rgba(255,255,255,0.20)';
+                        ctx.lineWidth = 1.5;
+                        ctx.stroke();
+                    }
+                }
+
+                const fimX = { x: origem.x + vetorX.x, y: origem.y + vetorX.y };
+                const fimY = { x: origem.x + vetorY.x, y: origem.y + vetorY.y };
+                const fimZ = { x: origem.x + vetorZ.x, y: origem.y + vetorZ.y };
+                ctx.strokeStyle = texto;
+                ctx.fillStyle = texto;
+                ctx.lineWidth = 3;
+                [[origem, fimX], [origem, fimY], [origem, fimZ]].forEach(([inicio, fim]) => {
+                    ctx.beginPath(); ctx.moveTo(inicio.x, inicio.y); ctx.lineTo(fim.x, fim.y); ctx.stroke();
+                });
+                ctx.font = '22px Segoe UI';
+                ctx.textAlign = 'center';
+                ctx.fillText(`${variavelX.nome} (${variavelX.unidade || ''})`, fimX.x - 20, fimX.y + 34);
+                ctx.fillText(`${variavelY.nome} (${variavelY.unidade || ''})`, fimY.x - 45, fimY.y - 14);
+                ctx.save();
+                ctx.translate(fimZ.x - 24, fimZ.y);
+                ctx.rotate(-Math.PI / 2);
+                ctx.fillText(`${saida.nome} (${saida.unidade || ''})`, 0, 0);
+                ctx.restore();
+                ctx.textAlign = 'left';
+                ctx.font = '20px Segoe UI';
+                ctx.fillStyle = apagado;
+                ctx.fillText(formatarValorGrafico(variavelX.min), origem.x - 12, origem.y + 28);
+                ctx.fillText(formatarValorGrafico(variavelY.min), origem.x - 46, origem.y + 8);
+                ctx.fillText(formatarValorGrafico(zMin), fimZ.x - 54, fimZ.y + 8);
+                ctx.textAlign = 'right';
+                ctx.fillText(formatarValorGrafico(variavelX.max), fimX.x + 8, fimX.y + 28);
+                ctx.fillText(formatarValorGrafico(variavelY.max), fimY.x - 8, fimY.y - 8);
+                ctx.fillText(formatarValorGrafico(zMax), fimZ.x - 54, fimZ.y - 8);
+                ctx.textAlign = 'left';
+            }
+
             function atualizarGraficoDist() {
                 const modo = document.querySelector('input[name="modo_dist"]:checked')?.value;
                 if (!dom.painelGraficoDist) return;
@@ -1510,6 +1601,34 @@ console.log('ðŸ”§ Script iniciando...');
                     return;
                 }
                 const x = entradas[0];
+                if (entradas.length === 2) {
+                    const y = entradas[1];
+                    const linhas = 21;
+                    const colunas = 21;
+                    const superficie = Array.from({ length: linhas }, (_, indiceY) => {
+                        const valorY = y.min + (y.max - y.min) * indiceY / (linhas - 1);
+                        return Array.from({ length: colunas }, (_, indiceX) => {
+                            const valorX = x.min + (x.max - x.min) * indiceX / (colunas - 1);
+                            const ponto = calcularPontoGraficoDist({ [x.chave]: valorX, [y.chave]: valorY });
+                            return { x: valorX, y: valorY, z: ponto[saida.chave] };
+                        });
+                    });
+                    const todosPontos = superficie.flatMap((linha) => linha);
+                    if (!todosPontos.some((ponto) => Number.isFinite(ponto.z))) {
+                        const canvas = document.getElementById('grafico_dist_canvas');
+                        if (canvas) {
+                            const aviso = document.createElement('div');
+                            aviso.className = 'graph-empty';
+                            aviso.textContent = textoIdioma('Esta variável é elegível, mas ainda não possui resultado numérico calculável neste modo.', 'This variable is eligible, but it does not yet have a numeric result calculable in this mode.');
+                            canvas.replaceWith(aviso);
+                        }
+                        return;
+                    }
+                    const legenda = document.getElementById('grafico_dist_legenda');
+                    if (legenda) legenda.innerHTML = `<span class="graph-legend-item"><i class="graph-surface-gradient"></i>${textoIdioma('Superfície: cor representa a magnitude da saída', 'Surface: color represents output magnitude')}</span>`;
+                    desenharSuperficieGraficoDist(superficie, x, y, { ...saida, nome: saidaNome });
+                    return;
+                }
                 const pontosX = Array.from({ length: 41 }, (_, indice) => x.min + (x.max - x.min) * indice / 40);
                 const valoresSeries = entradas.slice(1).map((item) => ({ item, valores: [item.min + (item.max - item.min) * 0.25, item.min + (item.max - item.min) * 0.5, item.min + (item.max - item.min) * 0.75] }));
                 const combinacoes = valoresSeries.length ? valoresSeries.reduce((acumulado, serie) => acumulado.flatMap((base) => serie.valores.map((valor) => [...base, { item: serie.item, valor }])), [[]]) : [[]];

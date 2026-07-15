@@ -530,6 +530,7 @@
         .graph-legend { display: flex; flex-wrap: wrap; gap: 8px 14px; margin-top: 10px; color: var(--text-muted); font-size: 0.8rem; }
         .graph-legend-item { display: inline-flex; align-items: center; gap: 5px; }
         .graph-legend-item i { width: 18px; height: 3px; display: inline-block; border-radius: 2px; }
+        .graph-legend-item .graph-surface-gradient { width: 42px; height: 10px; background: linear-gradient(90deg, hsl(220 78% 38%), hsl(160 78% 48%), hsl(35 78% 58%)); }
         .graph-empty { padding: 22px 0 6px; color: var(--text-muted); }
 
         /* Metric Cards */
