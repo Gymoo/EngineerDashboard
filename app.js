@@ -1494,7 +1494,7 @@ console.log('ðŸ”§ Script iniciando...');
                 const escalaZ = zMax - zMin || Math.abs(zMax) * 0.1 || 1;
                 const origem = { x: 210, y: 535 };
                 const vetorX = { x: 450, y: 0 };
-                const vetorY = { x: -170, y: -150 };
+                const vetorY = { x: 150, y: -125 };
                 const vetorZ = { x: 0, y: -280 };
                 const projetar = (ponto) => {
                     const x = (ponto.x - variavelX.min) / (variavelX.max - variavelX.min || 1);
@@ -1639,7 +1639,7 @@ console.log('ðŸ”§ Script iniciando...');
                 const origem = { x: 205, y: 545 };
                 const vetores = [
                     { x: 430, y: 0 },
-                    { x: -165, y: -125 },
+                    { x: 150, y: -125 },
                     { x: 0, y: -300 }
                 ];
                 const projetar = (ponto) => ({
