@@ -588,8 +588,27 @@
 
         @media (max-width: 900px) {
             body { overflow: auto; height: auto; display: block; }
-            #sidebar-ph, #main-ph { width: 100%; box-sizing: border-box; overflow: visible; }
-            #sidebar-ph { border-right: 0; border-bottom: 1px solid var(--border); }
+            #sidebar, #sidebar-distribuidor, #sidebar-ph {
+                position: fixed;
+                inset: 0 auto 0 0;
+                width: min(380px, calc(100vw - 24px));
+                max-width: 100vw;
+                z-index: 30;
+                border-right: 1px solid var(--border);
+                border-bottom: 0;
+                box-shadow: 10px 0 28px rgba(0, 0, 0, 0.22);
+            }
+            #main-content, #main-distribuidor, #main-ph {
+                width: 100%;
+                min-height: 100vh;
+                box-sizing: border-box;
+            }
+            #sidebar.sidebar-collapsed ~ #main-content,
+            #sidebar-distribuidor.sidebar-collapsed ~ #main-distribuidor,
+            #sidebar-ph.sidebar-collapsed ~ #main-ph {
+                width: calc(100% - 60px);
+                margin-left: 60px;
+            }
             #main-ph { padding: 20px 14px 76px; }
             #main-ph .dashboard-grid { grid-template-columns: 1fr; gap: 16px; }
             .ph-stepper { position: sticky; top: 0; z-index: 12; }
