@@ -1779,14 +1779,14 @@ console.log('ðŸ”§ Script iniciando...');
                 const z = pontos.map((ponto) => variaveis[2].min + ponto.coordenadas[2] * (variaveis[2].max - variaveis[2].min));
                 const dados = [{
                     type: 'scatter3d', mode: 'markers', x, y, z,
-                    marker: { size: 4, color: valores, ...escalaCores, opacity: 0.88, colorbar: { title: `${textoIdioma('Saída', 'Output')}: ${saida.nome}` } },
+                    marker: { size: 4, color: valores, ...escalaCores, opacity: 0.88, colorbar: { x: 1.03, len: 0.72, title: { text: `${textoIdioma('Saída', 'Output')}: ${saida.nome}`, side: 'right' } } },
                     hovertemplate: `${variaveis[0].nome}: %{x}<br>${variaveis[1].nome}: %{y}<br>${variaveis[2].nome}: %{z}<br>${saida.nome}: %{marker.color}<extra></extra>`
                 }];
                 if (pontoAtual && Number.isFinite(pontoAtual.saida)) {
                     dados.push({
                         type: 'scatter3d', mode: 'markers', name: textoIdioma('Ponto atual', 'Current point'),
                         x: [variaveis[0].valor], y: [variaveis[1].valor], z: [variaveis[2].valor],
-                        marker: { size: 7, color: '#ffffff', line: { color: '#111827', width: 3 } },
+                        marker: { size: 7, color: '#ffffff', line: { color: '#111827', width: 3 } }, showlegend: false,
                         hovertemplate: `${textoIdioma('Ponto atual', 'Current point')}<br>${saida.nome}: ${formatarValorGrafico(pontoAtual.saida)}<extra></extra>`
                     });
                 }
@@ -1794,7 +1794,7 @@ console.log('ðŸ”§ Script iniciando...');
                 const fundo = estilos.getPropertyValue('--bg-card').trim() || '#161b22';
                 const texto = estilos.getPropertyValue('--text-main').trim() || '#c9d1d9';
                 configurarPlotly3D(elemento, dados, {
-                    paper_bgcolor: fundo, plot_bgcolor: fundo, font: { color: texto }, margin: { l: 0, r: 0, t: 10, b: 0 },
+                    paper_bgcolor: fundo, plot_bgcolor: fundo, font: { color: texto }, showlegend: false, margin: { l: 18, r: 86, t: 24, b: 18 },
                     scene: {
                         aspectmode: 'cube', dragmode: 'orbit',
                         xaxis: { title: `${variaveis[0].nome} (${variaveis[0].unidade || ''})` },
@@ -1818,10 +1818,10 @@ console.log('ðŸ”§ Script iniciando...');
                 const texto = estilos.getPropertyValue('--text-main').trim() || '#c9d1d9';
                 configurarPlotly3D(elemento, [{
                     type: 'surface', x, y, z, ...escalaCores, showscale: true,
-                    colorbar: { title: `${textoIdioma('Saída', 'Output')}: ${saida.nome}` }, contours: { z: { show: true, usecolormap: true, project: { z: true } } },
+                    colorbar: { x: 1.03, len: 0.72, title: { text: `${textoIdioma('Saída', 'Output')}: ${saida.nome}`, side: 'right' } }, contours: { z: { show: true, usecolormap: true, project: { z: true } } },
                     hovertemplate: `${variavelX.nome}: %{x}<br>${variavelY.nome}: %{y}<br>${saida.nome}: %{z}<extra></extra>`
                 }], {
-                    paper_bgcolor: fundo, plot_bgcolor: fundo, font: { color: texto }, margin: { l: 0, r: 0, t: 10, b: 0 },
+                    paper_bgcolor: fundo, plot_bgcolor: fundo, font: { color: texto }, showlegend: false, margin: { l: 18, r: 86, t: 24, b: 18 },
                     scene: {
                         aspectmode: 'cube', dragmode: 'orbit',
                         xaxis: { title: `${variavelX.nome} (${variavelX.unidade || ''})` },
