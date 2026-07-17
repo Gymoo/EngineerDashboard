@@ -1753,12 +1753,11 @@ console.log('ðŸ”§ Script iniciando...');
             function obterEscalaCromaticaPlotly(valores) {
                 const ordenados = valores.filter(Number.isFinite).sort((a, b) => a - b);
                 if (!ordenados.length) return { cmin: 0, cmax: 1, colorscale: 'Jet' };
-                const percentil = (fracao) => ordenados[Math.round((ordenados.length - 1) * fracao)];
-                const minimo = percentil(0.05);
-                const maximo = percentil(0.95);
+                const minimo = ordenados[0];
+                const maximo = ordenados[ordenados.length - 1];
                 return {
                     cmin: minimo,
-                    cmax: maximo > minimo ? maximo : Math.max(...ordenados),
+                    cmax: maximo,
                     colorscale: [
                         [0, '#1236b5'],
                         [0.25, '#00a8e8'],
@@ -1902,7 +1901,7 @@ console.log('ðŸ”§ Script iniciando...');
                         saida: pontoAtualResultado[saida.chave]
                     };
                     const legenda = document.getElementById('grafico_dist_legenda');
-                    if (legenda) legenda.innerHTML = `<span class="graph-legend-item"><i class="graph-surface-gradient"></i>${textoIdioma('Cor: ordem relativa do valor da saída (menor para maior)', 'Color: relative output value rank (low to high)')}</span><span class="graph-legend-item"><i class="graph-current-point"></i>${textoIdioma('Ponto atual do simulador', 'Current simulator point')}</span>`;
+                    if (legenda) legenda.innerHTML = `<span class="graph-legend-item"><i class="graph-surface-gradient"></i>${textoIdioma('Cor: magnitude da saída (mínimo para máximo)', 'Color: output magnitude (minimum to maximum)')}</span><span class="graph-legend-item"><i class="graph-current-point"></i>${textoIdioma('Ponto atual do simulador', 'Current simulator point')}</span>`;
                     desenharPlotlyMapa3DDist(pontos, entradas, { ...saida, nome: saidaNome }, pontoAtual);
                     return;
                 }
