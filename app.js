@@ -1753,11 +1753,16 @@ console.log('ðŸ”§ Script iniciando...');
             function obterEscalaCromaticaPlotly(valores) {
                 const ordenados = valores.filter(Number.isFinite).sort((a, b) => a - b);
                 if (!ordenados.length) return { cmin: 0, cmax: 1, colorscale: 'Jet' };
-                const minimo = ordenados[0];
-                const maximo = ordenados[ordenados.length - 1];
+                const obterQuantil = (fracao) => ordenados[Math.round((ordenados.length - 1) * fracao)];
                 return {
-                    cmin: minimo,
-                    cmax: maximo,
+                    cmin: 0,
+                    cmax: 1,
+                    normalizar: (valor) => {
+                        const abaixo = ordenados.filter((item) => item <= valor).length - 1;
+                        return ordenados.length > 1 ? abaixo / (ordenados.length - 1) : 0.5;
+                    },
+                    tickvals: [0, 0.25, 0.5, 0.75, 1],
+                    ticktext: [0, 0.25, 0.5, 0.75, 1].map(obterQuantil).map(formatarValorGrafico),
                     colorscale: [
                         [0, '#1236b5'],
                         [0.25, '#00a8e8'],
@@ -1773,12 +1778,13 @@ console.log('ðŸ”§ Script iniciando...');
                 if (!elemento) return;
                 const valores = pontos.map((ponto) => ponto.saida);
                 const escalaCores = obterEscalaCromaticaPlotly(valores);
+                const valoresCromaticos = valores.map(escalaCores.normalizar);
                 const x = pontos.map((ponto) => variaveis[0].min + ponto.coordenadas[0] * (variaveis[0].max - variaveis[0].min));
                 const y = pontos.map((ponto) => variaveis[1].min + ponto.coordenadas[1] * (variaveis[1].max - variaveis[1].min));
                 const z = pontos.map((ponto) => variaveis[2].min + ponto.coordenadas[2] * (variaveis[2].max - variaveis[2].min));
                 const dados = [{
                     type: 'scatter3d', mode: 'markers', x, y, z,
-                    marker: { size: 4, color: valores, ...escalaCores, opacity: 0.88, colorbar: { x: 1.03, len: 0.72, title: { text: `${textoIdioma('Saída', 'Output')}: ${saida.nome}`, side: 'right' } } },
+                    marker: { size: 4, color: valoresCromaticos, cmin: escalaCores.cmin, cmax: escalaCores.cmax, colorscale: escalaCores.colorscale, opacity: 0.88, colorbar: { x: 1.03, len: 0.72, tickvals: escalaCores.tickvals, ticktext: escalaCores.ticktext, title: { text: `${textoIdioma('Saída', 'Output')}: ${saida.nome}`, side: 'right' } } },
                     hovertemplate: `${variaveis[0].nome}: %{x}<br>${variaveis[1].nome}: %{y}<br>${variaveis[2].nome}: %{z}<br>${saida.nome}: %{marker.color}<extra></extra>`
                 }];
                 if (pontoAtual && Number.isFinite(pontoAtual.saida)) {
@@ -1812,12 +1818,13 @@ console.log('ðŸ”§ Script iniciando...');
                 const z = superficie.map((linha) => linha.map((ponto) => ponto.z));
                 const valores = z.flat();
                 const escalaCores = obterEscalaCromaticaPlotly(valores);
+                const surfacecolor = z.map((linha) => linha.map(escalaCores.normalizar));
                 const estilos = getComputedStyle(document.body);
                 const fundo = estilos.getPropertyValue('--bg-card').trim() || '#161b22';
                 const texto = estilos.getPropertyValue('--text-main').trim() || '#c9d1d9';
                 configurarPlotly3D(elemento, [{
-                    type: 'surface', x, y, z, ...escalaCores, showscale: true,
-                    colorbar: { x: 1.03, len: 0.72, title: { text: `${textoIdioma('Saída', 'Output')}: ${saida.nome}`, side: 'right' } }, contours: { z: { show: true, usecolormap: true, project: { z: true } } },
+                    type: 'surface', x, y, z, surfacecolor, cmin: escalaCores.cmin, cmax: escalaCores.cmax, colorscale: escalaCores.colorscale, showscale: true,
+                    colorbar: { x: 1.03, len: 0.72, tickvals: escalaCores.tickvals, ticktext: escalaCores.ticktext, title: { text: `${textoIdioma('Saída', 'Output')}: ${saida.nome}`, side: 'right' } }, contours: { z: { show: true, usecolormap: true, project: { z: true } } },
                     hovertemplate: `${variavelX.nome}: %{x}<br>${variavelY.nome}: %{y}<br>${saida.nome}: %{z}<extra></extra>`
                 }], {
                     paper_bgcolor: fundo, plot_bgcolor: fundo, font: { color: texto }, showlegend: false, margin: { l: 18, r: 86, t: 24, b: 18 },
@@ -1901,7 +1908,7 @@ console.log('ðŸ”§ Script iniciando...');
                         saida: pontoAtualResultado[saida.chave]
                     };
                     const legenda = document.getElementById('grafico_dist_legenda');
-                    if (legenda) legenda.innerHTML = `<span class="graph-legend-item"><i class="graph-surface-gradient"></i>${textoIdioma('Cor: magnitude da saída (mínimo para máximo)', 'Color: output magnitude (minimum to maximum)')}</span><span class="graph-legend-item"><i class="graph-current-point"></i>${textoIdioma('Ponto atual do simulador', 'Current simulator point')}</span>`;
+                    if (legenda) legenda.innerHTML = `<span class="graph-legend-item"><i class="graph-surface-gradient"></i>${textoIdioma('Cor: distribuição dos pontos da saída (menor para maior)', 'Color: output point distribution (low to high)')}</span><span class="graph-legend-item"><i class="graph-current-point"></i>${textoIdioma('Ponto atual do simulador', 'Current simulator point')}</span>`;
                     desenharPlotlyMapa3DDist(pontos, entradas, { ...saida, nome: saidaNome }, pontoAtual);
                     return;
                 }
