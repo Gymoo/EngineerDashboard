@@ -1783,9 +1783,9 @@ console.log('ðŸ”§ Script iniciando...');
                 const y = pontos.map((ponto) => variaveis[1].min + ponto.coordenadas[1] * (variaveis[1].max - variaveis[1].min));
                 const z = pontos.map((ponto) => variaveis[2].min + ponto.coordenadas[2] * (variaveis[2].max - variaveis[2].min));
                 const dados = [{
-                    type: 'scatter3d', mode: 'markers', x, y, z,
+                    type: 'scatter3d', mode: 'markers', x, y, z, customdata: valores,
                     marker: { size: 4, color: valoresCromaticos, cmin: escalaCores.cmin, cmax: escalaCores.cmax, colorscale: escalaCores.colorscale, opacity: 0.88, colorbar: { x: 1.03, len: 0.72, tickvals: escalaCores.tickvals, ticktext: escalaCores.ticktext, title: { text: `${textoIdioma('Saída', 'Output')}: ${saida.nome}`, side: 'right' } } },
-                    hovertemplate: `${variaveis[0].nome}: %{x}<br>${variaveis[1].nome}: %{y}<br>${variaveis[2].nome}: %{z}<br>${saida.nome}: %{marker.color}<extra></extra>`
+                    hovertemplate: `${variaveis[0].nome}: %{x}<br>${variaveis[1].nome}: %{y}<br>${variaveis[2].nome}: %{z}<br>${saida.nome}: %{customdata}<extra></extra>`
                 }];
                 if (pontoAtual && Number.isFinite(pontoAtual.saida)) {
                     dados.push({
