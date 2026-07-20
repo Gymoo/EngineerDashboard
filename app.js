@@ -171,6 +171,7 @@ console.log('ðŸ”§ Script iniciando...');
                 sidebarPinButtons: document.querySelectorAll('[data-sidebar-pin]'),
                 themeToggleButtons: document.querySelectorAll('[data-theme-toggle]'),
                 languageToggleButtons: document.querySelectorAll('[data-language-toggle]'),
+                pdfExportButtons: document.querySelectorAll('[data-pdf-export]'),
                 
                 // Variáveis Destorroador
                 energia: document.getElementById('in_energia'),
@@ -727,6 +728,7 @@ console.log('ðŸ”§ Script iniciando...');
                     button.setAttribute('aria-label', acaoTema);
                     button.title = acaoTema;
                 });
+                atualizarBotoesPdf();
                 if (dom?.mainContent && !dom.mainContent.classList.contains('hidden')) {
                     atualizarDashboard();
                 }
@@ -1207,6 +1209,24 @@ console.log('ðŸ”§ Script iniciando...');
                 posicao: null
             };
             const graficoDescricoesAuto = {};
+            const registrosVariaveisMemorial = {
+                destorroador: new Map(),
+                distribuidor: new Map(),
+                ph: new Map()
+            };
+
+            function limparRegistroVariaveisMemorial(dashboard) {
+                registrosVariaveisMemorial[dashboard]?.clear();
+            }
+
+            function registrarVariavelMemorial(dashboard, id, latex, descricao = '') {
+                const catalogo = catalogoVariaveisFormula[id];
+                const texto = catalogo
+                    ? catalogo[document.body.dataset.language === 'en' ? 'en' : 'pt']
+                    : descricao;
+                if (!id || !latex || !texto) return;
+                registrosVariaveisMemorial[dashboard]?.set(id, { id, latex, descricao: texto });
+            }
 
             function obterVariaveisEntradaGraficoDist() {
                 const chavesCatalogo = {
@@ -1979,7 +1999,7 @@ console.log('ðŸ”§ Script iniciando...');
                 });
             }
 
-            function envolverSimbolosCalculadosMemorialDist(html) {
+            function envolverSimbolosCalculadosMemorialDist(html, dashboard = 'distribuidor') {
                 const simbolos = {
                     'V_r': 'volumeRolo',
                     '\\dot{m}_{linha}': 'massaLinha',
@@ -2026,6 +2046,7 @@ console.log('ðŸ”§ Script iniciando...');
                         if (fim >= html.length) break;
 
                         const token = html.slice(inicio, fim + 1);
+                        registrarVariavelMemorial(dashboard, chave, simbolo);
                         const marcado = `\\class{graph-output-${chave}}{${token}}`;
                         html = html.slice(0, inicio) + marcado + html.slice(fim + 1);
                         cursor = inicio + marcado.length;
@@ -2054,6 +2075,7 @@ console.log('ðŸ”§ Script iniciando...');
                     if (!catalogoVariaveisFormula[chave] && !graficoDescricoesAuto[chave]) {
                         graficoDescricoesAuto[chave] = { descricao };
                     }
+                    registrarVariavelMemorial(dashboard, chave, simbolo, descricao);
                     const token = html.slice(inicio, descricaoFim + 1);
                     const marcado = `\\class{graph-output-${chave}}{${token}}`;
                     html = html.slice(0, inicio) + marcado + html.slice(descricaoFim + 1);
@@ -2209,6 +2231,309 @@ console.log('ðŸ”§ Script iniciando...');
                     console.warn(`[i18n] Tradução ausente para: ${portugues}`);
                 }
                 return portugues;
+            }
+
+            // Dicionário próprio do relatório, para que a exportação respeite o idioma ativo.
+            const textosRelatorioPdf = {
+                gerar: { pt: 'Gerar PDF', en: 'Generate PDF' },
+                titulo: { pt: 'Relatório técnico de cálculo', en: 'Technical calculation report' },
+                objetivo: { pt: 'Objetivo do relatório', en: 'Report purpose' },
+                rastreabilidade: { pt: 'Rastreabilidade e autoria', en: 'Traceability and authorship' },
+                parametros: { pt: 'Parâmetros de entrada', en: 'Input parameters' },
+                resultados: { pt: 'Resultados calculados', en: 'Calculated results' },
+                figuras: { pt: 'Ilustrações e gráficos', en: 'Illustrations and charts' },
+                complementar: { pt: 'Conteúdo complementar', en: 'Supplementary content' },
+                memorial: { pt: 'Memorial de cálculo', en: 'Calculation memorial' },
+                glossario: { pt: 'Glossário', en: 'Glossary' },
+                bibliografia: { pt: 'Referências bibliográficas', en: 'Bibliographic references' },
+                limitacoes: { pt: 'Limitações e responsabilidade técnica', en: 'Limitations and technical responsibility' },
+                origem: { pt: 'Origem da geração', en: 'Generation origin' },
+                data: { pt: 'Data e hora', en: 'Date and time' },
+                idioma: { pt: 'Idioma', en: 'Language' },
+                versao: { pt: 'Versão da aplicação', en: 'Application version' },
+                autor: { pt: 'Autor da ferramenta', en: 'Tool author' },
+                contato: { pt: 'Canais de contato', en: 'Contact channels' },
+                ambiente: { pt: 'Ambiente local', en: 'Local environment' },
+                naoIdentificado: { pt: 'Não identificado', en: 'Not identified' },
+                valor: { pt: 'Valor atual', en: 'Current value' },
+                parametro: { pt: 'Parâmetro', en: 'Parameter' },
+                unidade: { pt: 'Unidade / seleção', en: 'Unit / selection' },
+                figura: { pt: 'Figura', en: 'Figure' },
+                fluxoDestorroador: { pt: 'Fluxo mecânico do destorroador', en: 'Lump breaker mechanical flow' },
+                vistaDistribuidor: { pt: 'Vista superior da distribuição pneumática', en: 'Pneumatic distribution top view' },
+                regulacaoPh: { pt: 'Esquema de regulação de pH do tanque', en: 'Tank pH regulation schematic' },
+                graficoSensibilidade: { pt: 'Mapa de sensibilidade das variáveis selecionadas', en: 'Sensitivity map for selected variables' },
+                acesso: { pt: 'Acesso em', en: 'Accessed on' },
+                secoes: { pt: 'Seções relacionadas', en: 'Related sections' },
+                semDados: { pt: 'Nenhum conteúdo aplicável estava visível no estado atual.', en: 'No applicable content was visible in the current state.' },
+                objetivoTexto: { pt: 'Documentar o estado atual do simulador, suas premissas de entrada, resultados calculados, ilustrações e memorial técnico para apoiar a análise de engenharia.', en: 'Document the current simulator state, its input assumptions, calculated results, illustrations, and technical memorial to support engineering analysis.' },
+                autoriaTexto: { pt: 'Este relatório foi gerado a partir do Dashboard de Engenharia no ambiente identificado neste documento. A ferramenta e seus modelos de cálculo foram desenvolvidos por Guilherme Silva de Oliveira, cujos canais de contato estão indicados nesta seção.', en: 'This report was generated from the Engineering Dashboard in the environment identified in this document. The tool and its calculation models were developed by Guilherme Silva de Oliveira, whose contact channels are listed in this section.' },
+                limitacaoUm: { pt: 'Os resultados apresentados constituem estimativas e simulações técnicas destinadas a apoiar a definição da configuração inicial e aproximar o primeiro resultado do alvo de projeto. Os valores dependem das premissas, parâmetros de entrada, modelos matemáticos e condições consideradas durante a geração deste relatório.', en: 'The presented results are technical estimates and simulations intended to support the initial configuration and bring the first result closer to the design target. Values depend on the assumptions, input parameters, mathematical models, and conditions considered when this report was generated.' },
+                limitacaoDois: { pt: 'Este documento não constitui garantia de funcionamento prático, desempenho, segurança, conformidade ou adequação da solução em operação real. A aplicação em equipamento, processo ou campo deve ser verificada, calibrada, ajustada e validada por engenheiro responsável, considerando propriedades dos materiais, tolerâncias construtivas, instrumentação, condições operacionais e demais variáveis físicas previsíveis, imprevisíveis ou não controláveis.', en: 'This document does not constitute a guarantee of practical operation, performance, safety, compliance, or suitability of the solution in real operation. Application to equipment, process, or field must be checked, calibrated, adjusted, and validated by the responsible engineer, considering material properties, manufacturing tolerances, instrumentation, operating conditions, and other predictable, unpredictable, or uncontrolled physical variables.' },
+                limitacaoTres: { pt: 'Não se espera aderência integral ao alvo final na primeira configuração. O objetivo do relatório é elevar a assertividade da aproximação inicial e reduzir o ciclo necessário de calibração e ajustes até a condição final validada.', en: 'Full adherence to the final target is not expected in the first configuration. The report aims to improve the accuracy of the initial approximation and reduce the calibration and adjustment cycle required to reach the validated final condition.' }
+            };
+
+            function textoPdf(chave) {
+                const texto = textosRelatorioPdf[chave];
+                return texto?.[document.body.dataset.language === 'en' ? 'en' : 'pt'] || chave;
+            }
+
+            function atualizarBotoesPdf() {
+                dom?.pdfExportButtons?.forEach((button) => {
+                    button.textContent = textoPdf('gerar');
+                    button.setAttribute('aria-label', textoPdf('gerar'));
+                    button.title = textoPdf('gerar');
+                });
+            }
+
+            function escaparRelatorio(valor) {
+                return String(valor ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
+            }
+
+            function contextoPdf(chave) {
+                const itens = {
+                    destorroador: { main: dom.mainContent, sidebar: dom.sidebar },
+                    distribuidor: { main: dom.mainDist, sidebar: dom.sidebarDist },
+                    ph: { main: dom.mainPh, sidebar: dom.sidebarPh }
+                };
+                return itens[chave] || itens.destorroador;
+            }
+
+            function textoLimpo(elemento) {
+                return (elemento?.textContent || '').replace(/\s+/g, ' ').trim();
+            }
+
+            function valorControlePdf(grupo) {
+                const numerico = grupo.querySelector('input[type="number"]');
+                if (numerico) return numerico.value;
+                const texto = grupo.querySelector('input[type="text"]');
+                if (texto) return texto.value || texto.placeholder || '—';
+                const select = grupo.querySelector('select');
+                if (select) return select.selectedOptions[0]?.textContent.trim() || '—';
+                const radios = [...grupo.querySelectorAll('input[type="radio"]:checked')];
+                if (radios.length) return radios.map((radio) => textoLimpo(radio.closest('label'))).join(', ');
+                const checkbox = [...grupo.querySelectorAll('input[type="checkbox"]')].find((input) => !input.closest('.graph-input-toggle'));
+                if (checkbox) return checkbox.checked ? textoIdioma('Sim', 'Yes') : textoIdioma('Não', 'No');
+                return '—';
+            }
+
+            function coletarParametrosPdf(sidebar) {
+                const linhas = [];
+                let secao = '';
+                sidebar.querySelectorAll('h2, h3, .state-group-label, .control-group, .radio-group').forEach((elemento) => {
+                    if (elemento.matches('h2, h3, .state-group-label')) {
+                        secao = textoLimpo(elemento);
+                        return;
+                    }
+                    const rotulo = elemento.querySelector('label');
+                    if (!rotulo) return;
+                    const rotuloClone = rotulo.cloneNode(true);
+                    rotuloClone.querySelectorAll('.graph-input-toggle, input').forEach((node) => node.remove());
+                    const nome = textoLimpo(rotuloClone);
+                    if (!nome) return;
+                    linhas.push({ secao, nome, valor: valorControlePdf(elemento) });
+                });
+                return linhas;
+            }
+
+            function clonarConteudoPdf(elemento) {
+                const clone = elemento.cloneNode(true);
+                clone.querySelectorAll('button, input, select, textarea, .tooltip-floating, .graph-float-btn, .pdf-export-btn').forEach((node) => node.remove());
+                clone.querySelectorAll('[id]').forEach((node) => node.removeAttribute('id'));
+                clone.querySelectorAll('.graph-output-selected, .graph-output-eligible').forEach((node) => {
+                    node.classList.remove('graph-output-selected', 'graph-output-eligible');
+                });
+                return clone;
+            }
+
+            function legendaFiguraPdf(elemento) {
+                const legendas = {
+                    moinhoCanvas: 'fluxoDestorroador',
+                    distribuidorCanvas: 'vistaDistribuidor',
+                    phCanvas: 'regulacaoPh',
+                    grafico_dist_canvas: 'graficoSensibilidade'
+                };
+                return legendas[elemento.id] ? textoPdf(legendas[elemento.id]) : textoPdf('figura');
+            }
+
+            function canvasPossuiDesenho(canvasAtual) {
+                try {
+                    const contexto = canvasAtual.getContext('2d', { willReadFrequently: true });
+                    const pixels = contexto?.getImageData(0, 0, canvasAtual.width, canvasAtual.height).data;
+                    if (!pixels) return false;
+                    for (let indice = 3; indice < pixels.length; indice += 4) {
+                        if (pixels[indice] > 8) return true;
+                    }
+                } catch (erro) {
+                    console.warn('Não foi possível avaliar o conteúdo do canvas:', erro);
+                }
+                return false;
+            }
+
+            async function coletarFigurasPdf(main) {
+                const figuras = [];
+                const visivel = (elemento) => {
+                    const estilo = window.getComputedStyle(elemento);
+                    return estilo.display !== 'none' && estilo.visibility !== 'hidden' && elemento.clientWidth > 0 && elemento.clientHeight > 0;
+                };
+                for (const canvasAtual of main.querySelectorAll('canvas')) {
+                    if (!visivel(canvasAtual) || !canvasPossuiDesenho(canvasAtual)) continue;
+                    try {
+                        figuras.push({ src: canvasAtual.toDataURL('image/png'), legenda: legendaFiguraPdf(canvasAtual) });
+                    } catch (erro) {
+                        console.warn('Não foi possível capturar canvas para o relatório:', erro);
+                    }
+                }
+                const plotly = main.querySelectorAll('.js-plotly-plot');
+                for (const grafico of plotly) {
+                    if (!visivel(grafico) || !window.Plotly?.toImage) continue;
+                    try {
+                        const largura = Math.max(1000, Math.round(grafico.clientWidth * 2));
+                        const altura = Math.max(700, Math.round(grafico.clientHeight * 2));
+                        figuras.push({ src: await window.Plotly.toImage(grafico, { format: 'png', width: largura, height: altura }), legenda: textoLimpo(grafico.closest('.graph-panel')?.querySelector('h2')) || textoPdf('figura') });
+                    } catch (erro) {
+                        console.warn('Não foi possível capturar gráfico Plotly para o relatório:', erro);
+                    }
+                }
+                for (const svg of main.querySelectorAll('svg')) {
+                    if (!visivel(svg) || !svg.querySelector('path, rect, circle, line, polygon, polyline, text') || svg.closest('.js-plotly-plot, mjx-container')) continue;
+                    try {
+                        const serializado = new XMLSerializer().serializeToString(svg);
+                        figuras.push({ src: `data:image/svg+xml;charset=utf-8,${encodeURIComponent(serializado)}`, legenda: svg.getAttribute('aria-label') || svg.id || textoPdf('figura') });
+                    } catch (erro) {
+                        console.warn('Não foi possível capturar SVG para o relatório:', erro);
+                    }
+                }
+                return figuras;
+            }
+
+            function coletarConteudoComplementarPdf(main) {
+                const vistos = new Set();
+                const seletores = ['[data-pdf-section]', '#painel_esquerdo', '#painel_esq_dist', '#painel_esq_ph', '.ph-operation-card', '.ph-history-card', '.ph-stage-summary'];
+                const itens = [];
+                main.querySelectorAll(seletores.join(',')).forEach((elemento) => {
+                    if (vistos.has(elemento) || elemento.closest('.memorial-box')) return;
+                    vistos.add(elemento);
+                    const clone = clonarConteudoPdf(elemento);
+                    clone.querySelectorAll('.metric-card, .alert, canvas, .js-plotly-plot').forEach((node) => node.remove());
+                    if (textoLimpo(clone)) itens.push(clone);
+                });
+                return itens;
+            }
+
+            function coletarGlossarioPdf(dashboard) {
+                return [...(registrosVariaveisMemorial[dashboard]?.values() || [])]
+                    .sort((a, b) => a.latex.localeCompare(b.latex))
+                    .map((variavel) => ({
+                        termo: variavel.latex,
+                        latex: variavel.latex,
+                        descricao: variavel.descricao
+                    }));
+            }
+
+            function coletarReferenciasPdf(main) {
+                const referencias = new Map();
+                main.querySelectorAll('.memorial-item a[href^="http"], .memorial-box a[href^="http"]').forEach((link) => {
+                    const href = link.href;
+                    const item = link.closest('.memorial-item');
+                    const secao = textoLimpo(item?.querySelector('strong, h3, h4')) || textoLimpo(link);
+                    if (!referencias.has(href)) referencias.set(href, { href, titulo: textoLimpo(link) || href, secoes: new Set() });
+                    referencias.get(href).secoes.add(secao);
+                });
+                return [...referencias.values()];
+            }
+
+            function montarRelatorioPdf(chave, figuras) {
+                const { main, sidebar } = contextoPdf(chave);
+                const relatorio = document.createElement('article');
+                relatorio.className = 'pdf-report';
+                const tituloDashboard = textoLimpo(main.querySelector('.header-title')) || textoPdf('naoIdentificado');
+                const descricaoDashboard = textoLimpo(main.querySelector('.header-title + p'));
+                const agora = new Date().toLocaleString(document.body.dataset.language === 'en' ? 'en-GB' : 'pt-BR');
+                const origem = window.location.protocol === 'file:' ? `${textoPdf('ambiente')}: ${window.location.pathname}` : window.location.href;
+                const idioma = document.body.dataset.language === 'en' ? 'English' : 'Português';
+                const versao = document.querySelector('meta[name="app-version"]')?.content || textoPdf('naoIdentificado');
+                const parametros = coletarParametrosPdf(sidebar);
+                const glossario = coletarGlossarioPdf(chave);
+                const referencias = coletarReferenciasPdf(main);
+                const resultados = [...main.querySelectorAll('.metric-card, .alert')];
+                const memorial = [...main.querySelectorAll('.memorial-box')];
+                const complementar = coletarConteudoComplementarPdf(main);
+                relatorio.innerHTML = `
+                    <header>
+                        <div class="pdf-kicker">${escaparRelatorio(textoPdf('titulo'))}</div>
+                        <h1>${escaparRelatorio(tituloDashboard)}</h1>
+                        <p>${escaparRelatorio(descricaoDashboard)}</p>
+                        <dl class="pdf-meta">
+                            <div><dt>${escaparRelatorio(textoPdf('data'))}</dt><dd>${escaparRelatorio(agora)}</dd></div>
+                            <div><dt>${escaparRelatorio(textoPdf('origem'))}</dt><dd>${escaparRelatorio(origem)}</dd></div>
+                            <div><dt>${escaparRelatorio(textoPdf('autor'))}</dt><dd>Guilherme Silva de Oliveira</dd></div>
+                            <div><dt>${escaparRelatorio(textoPdf('contato'))}</dt><dd><a href="https://oliveiraengineer.vercel.app">Portfólio</a> · <a href="https://www.linkedin.com/in/guilhermeasdo/">LinkedIn</a></dd></div>
+                            <div><dt>${escaparRelatorio(textoPdf('idioma'))}</dt><dd>${escaparRelatorio(idioma)}</dd></div>
+                            <div><dt>${escaparRelatorio(textoPdf('versao'))}</dt><dd>${escaparRelatorio(versao)}</dd></div>
+                        </dl>
+                    </header>
+                    <section><h2>${escaparRelatorio(textoPdf('objetivo'))}</h2><p>${escaparRelatorio(textoPdf('objetivoTexto'))}</p></section>
+                    <section><h2>${escaparRelatorio(textoPdf('rastreabilidade'))}</h2><div class="pdf-note"><p>${escaparRelatorio(textoPdf('autoriaTexto'))}</p></div></section>
+                    <section><h2>${escaparRelatorio(textoPdf('parametros'))}</h2><table class="pdf-table"><thead><tr><th>${escaparRelatorio(textoPdf('parametro'))}</th><th>${escaparRelatorio(textoPdf('valor'))}</th></tr></thead><tbody>${parametros.map((linha) => `<tr><td>${escaparRelatorio(linha.secao ? `${linha.secao} — ${linha.nome}` : linha.nome)}</td><td>${escaparRelatorio(linha.valor)}</td></tr>`).join('') || `<tr><td colspan="2">${escaparRelatorio(textoPdf('semDados'))}</td></tr>`}</tbody></table></section>
+                    <section class="pdf-results-section"><h2>${escaparRelatorio(textoPdf('resultados'))}</h2><div class="pdf-results"></div></section>
+                    <section class="pdf-complementary-section"><h2>${escaparRelatorio(textoPdf('complementar'))}</h2></section>
+                    <section class="pdf-figures-section"><h2>${escaparRelatorio(textoPdf('figuras'))}</h2></section>
+                    <section class="pdf-memorial-section"><h2>${escaparRelatorio(textoPdf('memorial'))}</h2></section>
+                    <section><h2>${escaparRelatorio(textoPdf('glossario'))}</h2><dl class="pdf-glossary"></dl></section>
+                    <section><h2>${escaparRelatorio(textoPdf('bibliografia'))}</h2><ol class="pdf-bibliography"></ol></section>
+                    <section class="pdf-disclaimer"><h2>${escaparRelatorio(textoPdf('limitacoes'))}</h2><p>${escaparRelatorio(textoPdf('limitacaoUm'))}</p><p>${escaparRelatorio(textoPdf('limitacaoDois'))}</p><p>${escaparRelatorio(textoPdf('limitacaoTres'))}</p></section>
+                    <footer class="pdf-footer">© 2026 Guilherme Silva de Oliveira · ${escaparRelatorio(textoPdf('titulo'))}</footer>`;
+                const resultadosDestino = relatorio.querySelector('.pdf-results');
+                resultados.forEach((resultado) => resultadosDestino.appendChild(clonarConteudoPdf(resultado)));
+                if (!resultados.length) resultadosDestino.textContent = textoPdf('semDados');
+                const complementarDestino = relatorio.querySelector('.pdf-complementary-section');
+                complementar.forEach((item) => complementarDestino.appendChild(item));
+                if (!complementar.length) complementarDestino.remove();
+                const figurasDestino = relatorio.querySelector('.pdf-figures-section');
+                figuras.forEach((figura, indice) => {
+                    const bloco = document.createElement('figure');
+                    bloco.className = 'pdf-figure';
+                    bloco.innerHTML = `<img src="${figura.src}" alt="${escaparRelatorio(figura.legenda)}"><figcaption>${escaparRelatorio(`${textoPdf('figura')} ${indice + 1}: ${figura.legenda}`)}</figcaption>`;
+                    figurasDestino.appendChild(bloco);
+                });
+                if (!figuras.length) figurasDestino.insertAdjacentHTML('beforeend', `<p>${escaparRelatorio(textoPdf('semDados'))}</p>`);
+                const memorialDestino = relatorio.querySelector('.pdf-memorial-section');
+                memorial.forEach((item) => memorialDestino.appendChild(clonarConteudoPdf(item)));
+                if (!memorial.length) memorialDestino.insertAdjacentHTML('beforeend', `<p>${escaparRelatorio(textoPdf('semDados'))}</p>`);
+                const glossarioDestino = relatorio.querySelector('.pdf-glossary');
+                glossario.forEach((item) => {
+                    const termo = document.createElement('dt');
+                    termo.innerHTML = `\\(${item.latex}\\)`;
+                    const descricao = document.createElement('dd');
+                    descricao.textContent = item.descricao;
+                    glossarioDestino.append(termo, descricao);
+                });
+                if (!glossario.length) glossarioDestino.insertAdjacentHTML('beforeend', `<dd>${escaparRelatorio(textoPdf('semDados'))}</dd>`);
+                const bibliografiaDestino = relatorio.querySelector('.pdf-bibliography');
+                const acesso = new Date().toLocaleDateString(document.body.dataset.language === 'en' ? 'en-GB' : 'pt-BR');
+                referencias.forEach((referencia) => bibliografiaDestino.insertAdjacentHTML('beforeend', `<li><a href="${escaparRelatorio(referencia.href)}">${escaparRelatorio(referencia.titulo)}</a>. ${escaparRelatorio(new URL(referencia.href).hostname)}. ${escaparRelatorio(textoPdf('secoes'))}: ${escaparRelatorio([...referencia.secoes].join('; '))}. ${escaparRelatorio(textoPdf('acesso'))} ${escaparRelatorio(acesso)}.</li>`));
+                if (!referencias.length) bibliografiaDestino.insertAdjacentHTML('beforeend', `<li>${escaparRelatorio(textoPdf('semDados'))}</li>`);
+                return relatorio;
+            }
+
+            async function gerarRelatorioPdf(chave) {
+                document.querySelector('.pdf-report-host')?.remove();
+                const { main } = contextoPdf(chave);
+                const figuras = await coletarFigurasPdf(main);
+                const host = document.createElement('main');
+                host.className = 'pdf-report-host';
+                host.appendChild(montarRelatorioPdf(chave, figuras));
+                document.body.appendChild(host);
+                document.body.classList.add('pdf-printing');
+                const limpar = () => {
+                    document.body.classList.remove('pdf-printing');
+                    host.remove();
+                };
+                window.addEventListener('afterprint', limpar, { once: true });
+                if (window.MathJax?.typesetPromise) await window.MathJax.typesetPromise([host]);
+                await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+                window.print();
             }
 
             const catalogoVariaveisFormula = {
@@ -2406,12 +2731,13 @@ console.log('ðŸ”§ Script iniciando...');
                 }
             };
 
-            function variavelFormula(latex, chave) {
+            function variavelFormula(latex, chave, dashboard = 'distribuidor') {
                 const item = catalogoVariaveisFormula[chave];
                 if (!item) {
                     console.warn(`[formula] Variável sem descrição: ${chave}`);
                     return latex;
                 }
+                registrarVariavelMemorial(dashboard, chave, latex);
                 const formula = `\\texttip{${latex}}{${document.body.dataset.language === 'en' ? item.en : item.pt}}`;
                 return `\\class{graph-output-${chave}}{${formula}}`;
             }
@@ -2960,6 +3286,10 @@ console.log('ðŸ”§ Script iniciando...');
             configurarIdioma();
             configurarSidebars();
             configurarTooltipsInstantaneos();
+            dom.pdfExportButtons.forEach((button) => {
+                button.addEventListener('click', () => gerarRelatorioPdf(button.dataset.pdfExport));
+            });
+            atualizarBotoesPdf();
 
             // --- NAVEGAÇÃO ENTRE TELAS ---
             function irParaHome() {
@@ -3472,6 +3802,7 @@ console.log('ðŸ”§ Script iniciando...');
             }
 
             function atualizarPh() {
+                limparRegistroVariaveisMemorial('ph');
                 const r = calcularRegulacaoPh();
                 atualizarEtapaVisualPh();
                 const etapa = limitar(controlePh.etapa || 1, 1, 4);
@@ -3574,6 +3905,7 @@ console.log('ðŸ”§ Script iniciando...');
                 desenharRegulacaoPh(r);
             }
             function atualizarDashboard() {
+                limparRegistroVariaveisMemorial('destorroador');
                 // Captura valores numéricos limpos
                 const E_e = parseFloat(dom.energia.value);
                 const V = parseFloat(dom.tensao.value);
@@ -3768,7 +4100,7 @@ console.log('ðŸ”§ Script iniciando...');
                 mathJaxTimer = setTimeout(function() {
                     // Cria uma "tela fantasma" na memória
                     const bufferInvisivel = document.createElement('div');
-                    bufferInvisivel.innerHTML = traduzirTextosDeFormula(envolverSimbolosCalculadosMemorialDist(htmlDireito));
+                    bufferInvisivel.innerHTML = traduzirTextosDeFormula(envolverSimbolosCalculadosMemorialDist(htmlDireito, 'destorroador'));
                     
                     if (window.MathJax && MathJax.typesetPromise) {
                         // Cria uma fila para garantir que o MathJax não se atropele no arrasto rápido
@@ -3786,7 +4118,7 @@ console.log('ðŸ”§ Script iniciando...');
                             });
                         }).catch(function(err){ console.log(err); });
                     } else {
-                        dom.painelDireito.innerHTML = traduzirTextosDeFormula(envolverSimbolosCalculadosMemorialDist(htmlDireito));
+                        dom.painelDireito.innerHTML = traduzirTextosDeFormula(envolverSimbolosCalculadosMemorialDist(htmlDireito, 'destorroador'));
                     }
                 }, 80); // 80ms: o equilíbrio perfeito entre responsividade visual e alívio da GPU
             }
@@ -3794,6 +4126,7 @@ console.log('ðŸ”§ Script iniciando...');
             // --- LÓGICA DO DISTRIBUIDOR DE SÓLIDOS ---
             let mathJaxTimerDist = null;
             function atualizarDistribuidor() {
+                limparRegistroVariaveisMemorial('distribuidor');
                 const modoDistElement = document.querySelector('input[name="modo_dist"]:checked');
                 const modoDist = modoDistElement ? modoDistElement.value : "1";
                 
@@ -4214,7 +4547,7 @@ console.log('ðŸ”§ Script iniciando...');
                 if (mathJaxTimerDist) clearTimeout(mathJaxTimerDist);
                 mathJaxTimerDist = setTimeout(function() {
                     const buffer = document.createElement('div');
-                    buffer.innerHTML = traduzirTextosDeFormula(envolverSimbolosCalculadosMemorialDist(htmlDireito));
+                    buffer.innerHTML = traduzirTextosDeFormula(envolverSimbolosCalculadosMemorialDist(htmlDireito, 'distribuidor'));
                     if (window.MathJax && MathJax.typesetPromise) {
                         if (!window.mjPromiseDist) window.mjPromiseDist = Promise.resolve();
                         window.mjPromiseDist = window.mjPromiseDist.then(function() {
@@ -4225,7 +4558,7 @@ console.log('ðŸ”§ Script iniciando...');
                             });
                         }).catch(err => console.log(err));
                     } else {
-                        dom.painelDirDist.innerHTML = traduzirTextosDeFormula(envolverSimbolosCalculadosMemorialDist(htmlDireito));
+                        dom.painelDirDist.innerHTML = traduzirTextosDeFormula(envolverSimbolosCalculadosMemorialDist(htmlDireito, 'distribuidor'));
                         marcarVariaveisSaidaMemorialDist();
                     }
                 }, 80);
