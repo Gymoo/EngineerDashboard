@@ -1,4 +1,4 @@
 window.MathJax = {
-            loader: { load: ['[tex]/action'] },
-            tex: { packages: {'[+]': ['action']} }
+            loader: { load: ['[tex]/action', '[tex]/html'] },
+            tex: { packages: {'[+]': ['action', 'html']} }
         };

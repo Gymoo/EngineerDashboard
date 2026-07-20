@@ -485,6 +485,56 @@
             gap: 30px;
         }
 
+        .graph-input-toggle {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            margin-left: 10px;
+            color: var(--accent);
+            font-size: 0.72rem;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+        .graph-input-toggle input { accent-color: var(--accent); }
+        .graph-input-label { cursor: help; }
+        .graph-panel {
+            padding: 18px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            background: var(--bg-panel);
+        }
+        .graph-panel.graph-floating {
+            position: fixed;
+            right: 18px;
+            bottom: 70px;
+            width: min(760px, calc(100vw - 36px));
+            max-height: calc(100vh - 96px);
+            overflow: auto;
+            z-index: 40;
+            box-shadow: 0 16px 42px rgba(0, 0, 0, 0.35);
+        }
+        .graph-panel-header { display: flex; gap: 16px; align-items: flex-start; justify-content: space-between; }
+        .graph-drag-handle { flex: 1; cursor: move; user-select: none; }
+        .graph-panel h2 { margin: 0 0 6px; color: var(--text-strong); }
+        .graph-panel p { margin: 0; color: var(--text-muted); }
+        .graph-float-btn { flex: 0 0 auto; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg-card); color: var(--text-main); cursor: pointer; }
+        .graph-floating .graph-float-btn { border-color: var(--accent); color: var(--text-strong); }
+        [class^="graph-output-"],
+        [class*=" graph-output-"] { cursor: pointer; outline: 1px dashed transparent; }
+        [class^="graph-output-"]:hover,
+        [class*=" graph-output-"]:hover,
+        .graph-output-selected,
+        [data-graph-output][aria-pressed="true"] { outline-color: var(--accent); color: var(--accent); }
+        .graph-selection-summary { margin: 16px 0 10px; padding: 10px 12px; border-left: 3px solid var(--accent); color: var(--text-muted); line-height: 1.6; }
+        #grafico_dist_canvas { width: 100%; min-height: 340px; display: block; border: 1px solid var(--border); border-radius: 8px; }
+        #grafico_dist_plotly { width: 100%; height: 560px; min-height: 420px; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+        .graph-legend { display: flex; flex-wrap: wrap; gap: 8px 14px; margin-top: 10px; color: var(--text-muted); font-size: 0.8rem; }
+        .graph-legend-item { display: inline-flex; align-items: center; gap: 5px; }
+        .graph-legend-item i { width: 18px; height: 3px; display: inline-block; border-radius: 2px; }
+        .graph-legend-item .graph-surface-gradient { width: 42px; height: 10px; background: linear-gradient(90deg, hsl(220 78% 38%), hsl(160 78% 48%), hsl(35 78% 58%)); }
+        .graph-legend-item .graph-current-point { width: 12px; height: 12px; border: 2px solid var(--text-strong); background: var(--accent); border-radius: 50%; }
+        .graph-empty { padding: 22px 0 6px; color: var(--text-muted); }
+
         /* Metric Cards */
         .metrics-row { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 25px; }
         .metric-card { background: var(--bg-panel); padding: 15px; border-radius: 8px; border: 1px solid var(--border); }
@@ -618,9 +668,37 @@
             .ph-operation-card { position: relative; }
             .process-btn { min-height: 46px; width: 100%; }
             .ph-stage-actions .process-btn:last-child { margin-left: 0; }
+            .graph-panel-header { flex-direction: column; }
+            .graph-float-btn { width: 100%; }
+            .graph-input-toggle { display: flex; margin: 5px 0 0; }
+        }
+
+        .dashboard-report-heading {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 16px;
+        }
+        .pdf-export-btn {
+            flex: 0 0 auto;
+            padding: 9px 13px;
+            border: 1px solid var(--border);
+            border-radius: 7px;
+            background: var(--bg-card);
+            color: var(--text-main);
+            font: 600 0.9rem inherit;
+            cursor: pointer;
+        }
+        .pdf-export-btn:hover { border-color: var(--accent); color: var(--accent); }
+        .pdf-report-host { display: none; }
+
+        @media (max-width: 620px) {
+            .dashboard-report-heading { align-items: stretch; flex-direction: column; }
+            .pdf-export-btn { width: 100%; }
         }
 
         @media print {
+            @page { size: A4 portrait; margin: 15mm 14mm 18mm; }
             :root,
             body[data-theme] {
                 --bg-main: #ffffff;
@@ -665,4 +743,45 @@
                 background: #ffffff !important;
                 box-shadow: none !important;
             }
+
+            body.pdf-printing > *:not(.pdf-report-host) { display: none !important; }
+            body.pdf-printing .pdf-report-host { display: block !important; }
+            .pdf-report {
+                color: #172033;
+                background: #fff;
+                font-family: Georgia, 'Times New Roman', serif;
+                font-size: 10.3pt;
+                line-height: 1.45;
+            }
+            .pdf-report h1, .pdf-report h2, .pdf-report h3 { color: #14213d; font-family: Arial, sans-serif; }
+            .pdf-report h1 { font-size: 21pt; line-height: 1.15; margin: 0 0 5mm; }
+            .pdf-report h2 { font-size: 13.5pt; border-bottom: 1px solid #9aa8ba; padding-bottom: 2mm; margin: 9mm 0 4mm; break-after: avoid; }
+            .pdf-report h3 { font-size: 11.5pt; margin: 5mm 0 2mm; break-after: avoid; }
+            .pdf-report p { margin: 0 0 3mm; }
+            .pdf-report a { color: #124b92; text-decoration: underline; overflow-wrap: anywhere; }
+            .pdf-report .pdf-kicker { color: #52647c; font: 700 8.5pt Arial, sans-serif; letter-spacing: .08em; text-transform: uppercase; }
+            .pdf-report .pdf-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 2mm 6mm; padding: 4mm 0; border-top: 2px solid #1c5e9d; border-bottom: 1px solid #c4cfdb; font-size: 8.8pt; }
+            .pdf-report .pdf-meta dt { color: #52647c; font: 700 8pt Arial, sans-serif; text-transform: uppercase; }
+            .pdf-report .pdf-meta dd { margin: 0; overflow-wrap: anywhere; }
+            .pdf-report .pdf-note { border-left: 3px solid #1c5e9d; background: #f2f6fa; padding: 4mm; margin: 4mm 0; }
+            .pdf-report .pdf-table { width: 100%; border-collapse: collapse; font-size: 9pt; margin: 3mm 0; }
+            .pdf-report .pdf-table th, .pdf-report .pdf-table td { text-align: left; vertical-align: top; padding: 2.2mm; border-bottom: 1px solid #cdd6e0; }
+            .pdf-report .pdf-table th { background: #eaf0f6; font-family: Arial, sans-serif; }
+            .pdf-report .pdf-results { display: grid; grid-template-columns: repeat(2, 1fr); gap: 3mm; }
+            .pdf-report .metric-card, .pdf-report .alert { border: 1px solid #cbd5e1 !important; border-radius: 2mm; padding: 3mm !important; break-inside: avoid; }
+            .pdf-report .memorial-box, .pdf-report .memorial-item { border: 0 !important; padding: 0 !important; margin: 0 0 4mm !important; break-inside: avoid; }
+            .pdf-report .memorial-item { border-left: 2px solid #7d99b5 !important; padding-left: 3mm !important; }
+            .pdf-report .pdf-figure { margin: 5mm 0; break-inside: avoid; }
+            .pdf-report .pdf-figure img, .pdf-report .pdf-figure svg { display: block; max-width: 100%; height: auto; border: 1px solid #cbd5e1; }
+            .pdf-report .pdf-figure figcaption { color: #52647c; font-size: 8.5pt; margin-top: 1.5mm; }
+            .pdf-report .pdf-glossary dt { font: 700 10pt Arial, sans-serif; margin-top: 3mm; }
+            .pdf-report .pdf-glossary dd { margin: 1mm 0 0; }
+            .pdf-report .pdf-glossary dt mjx-container { display: inline-block; margin: 0 !important; }
+            .pdf-report .pdf-bibliography { padding-left: 6mm; }
+            .pdf-report .pdf-bibliography li { margin-bottom: 3mm; break-inside: avoid; }
+            .pdf-report .pdf-disclaimer { font-size: 9.2pt; text-align: justify; }
+            .pdf-report .pdf-footer { margin-top: 8mm; padding-top: 3mm; border-top: 1px solid #c4cfdb; color: #52647c; font: 8pt Arial, sans-serif; }
+            .pdf-report .graph-output-selected, .pdf-report .graph-output-eligible { color: inherit !important; background: transparent !important; outline: 0 !important; }
+            .pdf-report button, .pdf-report input, .pdf-report .graph-float-btn, .pdf-report .tooltip-floating { display: none !important; }
+        }
         }

@@ -7,6 +7,7 @@
     <script src="mathjax-config.js"></script>
     <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <script src="matter.min.js"></script>
+    <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
     <link rel="stylesheet" href="styles.css">
     <script src="app.js" defer></script>
 </head>
@@ -150,9 +151,12 @@
     </div>
 
     <div id="main-content" class="hidden">
-        <div>
+        <div class="dashboard-report-heading">
+            <div>
             <h1 class="header-title">⚙️ Dashboard: Destorroador NPK</h1>
             <p style="color: var(--text-muted); margin: 0;">Simulador dinâmico de dimensionamento mecânico e proteção elétrica a 60 FPS.</p>
+            </div>
+            <button type="button" class="pdf-export-btn" data-pdf-export="destorroador">Gerar PDF</button>
         </div>
 
         <div style="margin-top: 10px; margin-bottom: -6px; padding-left: 2px;">
@@ -444,9 +448,12 @@
     </div>
 
     <div id="main-distribuidor" class="hidden">
-        <div>
+        <div class="dashboard-report-heading">
+            <div>
             <h1 class="header-title">🚜 Dashboard: Distribuidor de Sólidos</h1>
             <p style="color: var(--text-muted); margin: 0;">Simulador pneumático para projeto de semeadoras (Fase Diluída).</p>
+            </div>
+            <button type="button" class="pdf-export-btn" data-pdf-export="distribuidor">Gerar PDF</button>
         </div>
 
         <canvas id="distribuidorCanvas" width="1000" height="300" style="min-height: 300px; flex-shrink: 0; display: none;"></canvas>
@@ -455,7 +462,9 @@
             <div id="painel_esq_dist"></div>
             <div id="painel_dir_dist" class="memorial-box"></div>
         </div>
-        
+
+        <div id="painel_grafico_dist" class="graph-panel hidden"></div>
+
         <div style="border-top: 1px solid var(--border); padding-top: 15px; margin-top: 10px; color: var(--text-muted); font-size: 0.85em;">
             Física aplicada: Escoamento de fluidos compressíveis, vazão volumétrica e razão de carregamento bifásico.
         </div>
@@ -569,7 +578,7 @@
         </section>
     </div>
     <div id="main-ph" class="hidden">
-        <div><h1 class="header-title">⚗️ Dashboard: Regulação de pH</h1><p style="color: var(--text-muted); margin: 0;">Controle incremental por realimentação de pH e dimensionamento hidráulico.</p></div>
+        <div class="dashboard-report-heading"><div><h1 class="header-title">⚗️ Dashboard: Regulação de pH</h1><p style="color: var(--text-muted); margin: 0;">Controle incremental por realimentação de pH e dimensionamento hidráulico.</p></div><button type="button" class="pdf-export-btn" data-pdf-export="ph">Gerar PDF</button></div>
         <nav class="ph-stepper" aria-label="Etapas da regulação de pH">
             <div class="ph-step active" data-ph-step-indicator="1"><span>1</span><strong>Tanque</strong></div>
             <div class="ph-step" data-ph-step-indicator="2"><span>2</span><strong>Aplicação</strong></div>

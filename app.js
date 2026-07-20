@@ -171,6 +171,7 @@ console.log('ðŸ”§ Script iniciando...');
                 sidebarPinButtons: document.querySelectorAll('[data-sidebar-pin]'),
                 themeToggleButtons: document.querySelectorAll('[data-theme-toggle]'),
                 languageToggleButtons: document.querySelectorAll('[data-language-toggle]'),
+                pdfExportButtons: document.querySelectorAll('[data-pdf-export]'),
                 
                 // Variáveis Destorroador
                 energia: document.getElementById('in_energia'),
@@ -221,6 +222,7 @@ console.log('ðŸ”§ Script iniciando...');
                 distCr: document.getElementById('in_dist_cr'),
                 painelEsqDist: document.getElementById('painel_esq_dist'),
                 painelDirDist: document.getElementById('painel_dir_dist'),
+                painelGraficoDist: document.getElementById('painel_grafico_dist'),
 
                 painelEsqPh: document.getElementById('painel_esq_ph'),
                 painelDirPh: document.getElementById('painel_dir_ph')
@@ -726,6 +728,7 @@ console.log('ðŸ”§ Script iniciando...');
                     button.setAttribute('aria-label', acaoTema);
                     button.title = acaoTema;
                 });
+                atualizarBotoesPdf();
                 if (dom?.mainContent && !dom.mainContent.classList.contains('hidden')) {
                     atualizarDashboard();
                 }
@@ -1174,6 +1177,923 @@ console.log('ðŸ”§ Script iniciando...');
                 dom.resetModalCancel.focus();
             }
 
+            const graficoDistSaidasBase = [
+                { chave: 'volumeRolo', pt: 'Volume do rolo', en: 'Roller volume', unidade: 'mm³/rev' },
+                { chave: 'massaLinha', pt: 'Fluxo mássico por linha', en: 'Mass flow per row', unidade: 'kg/h' },
+                { chave: 'rotacaoDosador', pt: 'Rotação do dosador', en: 'Metering roller speed', unidade: 'RPM' },
+                { chave: 'velocidadeSecundaria', pt: 'Velocidade secundária', en: 'Secondary velocity', unidade: 'm/s' },
+                { chave: 'perdaTotal', pt: 'Perda de pressão total', en: 'Total pressure loss', unidade: 'Pa' },
+                { chave: 'vazaoTotal', pt: 'Vazão total real', en: 'Actual total airflow', unidade: 'm³/min' }
+            ];
+            function obterSaidasGraficoDist() {
+                const saidas = new Map(graficoDistSaidasBase.map((item) => [item.chave, item]));
+                Object.entries(catalogoVariaveisFormula || {}).forEach(([chave, item]) => {
+                    if (saidas.has(chave)) return;
+                    const idioma = item.pt || chave;
+                    const unidade = idioma.match(/^\s*(\[[^\]]+\])/u)?.[1]?.slice(1, -1) || '';
+                    const nome = idioma.replace(/^\s*\[[^\]]+\]\s*/u, '').split('.')[0] || chave;
+                    const nomeIngles = (item.en || chave).replace(/^\s*\[[^\]]+\]\s*/u, '').split('.')[0] || chave;
+                    saidas.set(chave, { chave, pt: nome, en: nomeIngles, unidade });
+                });
+                Object.entries(graficoDescricoesAuto).forEach(([chave, item]) => {
+                    if (saidas.has(chave)) return;
+                    const unidade = item.descricao.match(/^\s*(\[[^\]]+\])/u)?.[1]?.slice(1, -1) || '';
+                    saidas.set(chave, { chave, pt: item.simbolo, en: item.simbolo, unidade });
+                });
+                return Array.from(saidas.values());
+            }
+            const graficoDistEstado = {
+                entradas: ['in_dist_espessura', 'in_dist_qtd_discos', 'in_dist_area_cavidade'],
+                saida: 'rotacaoDosador',
+                flutuante: false,
+                posicao: null
+            };
+            const graficoDescricoesAuto = {};
+            const registrosVariaveisMemorial = {
+                destorroador: new Map(),
+                distribuidor: new Map(),
+                ph: new Map()
+            };
+
+            function limparRegistroVariaveisMemorial(dashboard) {
+                registrosVariaveisMemorial[dashboard]?.clear();
+            }
+
+            function registrarVariavelMemorial(dashboard, id, latex, descricao = '') {
+                const catalogo = catalogoVariaveisFormula[id];
+                const texto = catalogo
+                    ? catalogo[document.body.dataset.language === 'en' ? 'en' : 'pt']
+                    : descricao;
+                if (!id || !latex || !texto) return;
+                registrosVariaveisMemorial[dashboard]?.set(id, { id, latex, descricao: texto });
+            }
+
+            function obterVariaveisEntradaGraficoDist() {
+                const chavesCatalogo = {
+                    in_dist_taxa: 'taxaHectare',
+                    in_dist_veltrator: 'velocidadeTrator',
+                    in_dist_largura: 'larguraLinha',
+                    in_dist_espessura: 'espessuraDisco',
+                    in_dist_qtd_discos: 'discosAtivos',
+                    in_dist_cavidades: 'cavidadesDisco',
+                    in_dist_area_cavidade: 'areaCavidade',
+                    in_dist_densidade: 'densidadeSolido',
+                    in_dist_qtd_primarios: 'numeroPrimarios',
+                    in_dist_comprimento_primario: 'comprimentoPrimario',
+                    in_dist_densidade_ar: 'densidadeAr',
+                    in_dist_fator_atrito: 'fatorAtrito'
+                };
+                return Array.from(dom.distGrpModo1?.querySelectorAll('input[type="range"]') || []).map((range) => {
+                    const grupo = range.closest('.control-group');
+                    const label = grupo?.querySelector('label span');
+                    const itemCatalogo = catalogoVariaveisFormula[chavesCatalogo[range.id]];
+                    const unidade = itemCatalogo?.pt.match(/^\s*(\[[^\]]+\])/u)?.[1]?.slice(1, -1) || '';
+                    const nomeBruto = label?.textContent?.trim() || range.id;
+                    return {
+                        chave: range.id,
+                        nome: nomeBruto.replace(/\s*\([^)]*\)\s*$/u, ''),
+                        unidade,
+                        min: parseFloat(range.min),
+                        max: parseFloat(range.max),
+                        step: parseFloat(range.step) || 1,
+                        valor: parseFloat(range.value)
+                    };
+                });
+            }
+
+            function configurarSeletoresGraficoDist() {
+                dom.distGrpModo1?.querySelectorAll('.control-group').forEach((grupo) => {
+                    const range = grupo.querySelector('input[type="range"]');
+                    const label = grupo.querySelector('label');
+                    if (!range || !label || label.querySelector('.graph-input-toggle')) return;
+
+                    const toggle = document.createElement('input');
+                    toggle.type = 'checkbox';
+                    toggle.id = `graph_input_${range.id}`;
+                    toggle.className = 'graph-input-toggle';
+                    toggle.dataset.graphInput = range.id;
+                    toggle.checked = graficoDistEstado.entradas.includes(range.id);
+                    toggle.setAttribute('aria-label', textoIdioma('Usar como entrada do gráfico', 'Use as graph input'));
+
+                    const texto = document.createElement('span');
+                    texto.className = 'graph-input-label';
+                    texto.textContent = textoIdioma('Entrada do gráfico', 'Graph input');
+                    texto.dataset.tooltip = textoIdioma('Seleciona esta variável como uma das entradas da varredura do gráfico.', 'Selects this variable as one of the graph sweep inputs.');
+                    const grupoEntrada = document.createElement('span');
+                    grupoEntrada.className = 'graph-input-toggle';
+                    grupoEntrada.append(toggle, texto);
+                    label.appendChild(grupoEntrada);
+                });
+
+                dom.sidebarDist?.addEventListener('change', (event) => {
+                    if (!event.target.matches('.graph-input-toggle')) return;
+                    const entradas = Array.from(dom.sidebarDist.querySelectorAll('.graph-input-toggle:checked')).map((input) => input.dataset.graphInput);
+                    if (entradas.length > 3) {
+                        event.target.checked = false;
+                        return;
+                    }
+                    graficoDistEstado.entradas = entradas;
+                    atualizarGraficoDist();
+                });
+                dom.mainDist?.addEventListener('click', (event) => {
+                    const botao = event.target.closest('[data-graph-output]');
+                    if (botao) {
+                        graficoDistEstado.saida = graficoDistEstado.saida === botao.dataset.graphOutput ? null : botao.dataset.graphOutput;
+                        atualizarDistribuidor();
+                        return;
+                    }
+                    const flutuante = event.target.closest('[data-graph-float]');
+                    if (flutuante) {
+                        graficoDistEstado.flutuante = !graficoDistEstado.flutuante;
+                        if (!graficoDistEstado.flutuante) graficoDistEstado.posicao = null;
+                        atualizarGraficoDist();
+                    }
+                });
+                dom.mainDist?.addEventListener('keydown', (event) => {
+                    if ((event.key !== 'Enter' && event.key !== ' ') || !event.target.closest('[data-graph-output]')) return;
+                    event.preventDefault();
+                    event.target.click();
+                });
+                let arrasteGrafico = null;
+                document.addEventListener('pointerdown', (event) => {
+                    if (!graficoDistEstado.flutuante || !event.target.closest('.graph-drag-handle')) return;
+                    const painel = dom.painelGraficoDist;
+                    const rect = painel.getBoundingClientRect();
+                    arrasteGrafico = { offsetX: event.clientX - rect.left, offsetY: event.clientY - rect.top };
+                    painel.classList.add('graph-dragging');
+                });
+                document.addEventListener('pointermove', (event) => {
+                    if (!arrasteGrafico || !graficoDistEstado.flutuante) return;
+                    const painel = dom.painelGraficoDist;
+                    const largura = painel.offsetWidth;
+                    const altura = painel.offsetHeight;
+                    const left = Math.max(8, Math.min(window.innerWidth - largura - 8, event.clientX - arrasteGrafico.offsetX));
+                    const top = Math.max(8, Math.min(window.innerHeight - altura - 8, event.clientY - arrasteGrafico.offsetY));
+                    painel.style.left = `${left}px`;
+                    painel.style.top = `${top}px`;
+                    painel.style.right = 'auto';
+                    painel.style.bottom = 'auto';
+                    graficoDistEstado.posicao = { left, top };
+                });
+                document.addEventListener('pointerup', () => {
+                    if (!arrasteGrafico) return;
+                    arrasteGrafico = null;
+                    dom.painelGraficoDist.classList.remove('graph-dragging');
+                });
+            }
+
+            function lerValorDistGrafico(id, substituicoes) {
+                const entrada = document.getElementById(id);
+                const valor = substituicoes?.[id] ?? entrada?.value;
+                return parseFloat(valor);
+            }
+
+            function calcularPontoGraficoDist(substituicoes = {}) {
+                const nLinhas = parseInt(lerValorDistGrafico('in_dist_linhas', substituicoes)) || 1;
+                const nPrimarios = parseInt(lerValorDistGrafico('in_dist_qtd_primarios', substituicoes)) || 1;
+                const comprimentoSecundario = lerValorDistGrafico('in_dist_comprimento', substituicoes) || 0;
+                const comprimentoPrimario = lerValorDistGrafico('in_dist_comprimento_primario', substituicoes) || 0;
+                const taxa = lerValorDistGrafico('in_dist_taxa', substituicoes) || 0;
+                const velocidadeTrator = lerValorDistGrafico('in_dist_veltrator', substituicoes) || 0;
+                const largura = lerValorDistGrafico('in_dist_largura', substituicoes) || 0;
+                const espessura = lerValorDistGrafico('in_dist_espessura', substituicoes) || 1;
+                const discos = lerValorDistGrafico('in_dist_qtd_discos', substituicoes) || 1;
+                const cavidades = lerValorDistGrafico('in_dist_cavidades', substituicoes) || 1;
+                const areaCavidade = lerValorDistGrafico('in_dist_area_cavidade', substituicoes) || 1;
+                const densidadeSolido = lerValorDistGrafico('in_dist_densidade', substituicoes) || 1;
+                const vazaoTurbina = lerValorDistGrafico('in_dist_vazaoturbina', substituicoes) || 0;
+                const diametroSecundario = (lerValorDistGrafico('in_dist_diametro', substituicoes) || 1) / 1000;
+                const diametroPrimario = (lerValorDistGrafico('in_dist_diametro_primario_pol', substituicoes) || 1) * 0.0254;
+                const densidadeAr = lerValorDistGrafico('in_dist_densidade_ar', substituicoes) || 1;
+                const fatorAtrito = lerValorDistGrafico('in_dist_fator_atrito', substituicoes) || 0;
+                const pressaoMax = lerValorDistGrafico('in_dist_pressao_turbina', substituicoes) || 1;
+                const kTorre = lerValorDistGrafico('in_dist_k_torre', substituicoes) || 0;
+                const volumeRolo = espessura * discos * cavidades * areaCavidade;
+                const massaLinha = (taxa * velocidadeTrator * largura) / 10;
+                const rotacaoDosador = (massaLinha * 1000) / (volumeRolo * densidadeSolido * 60);
+                const areaSecundaria = Math.PI * Math.pow(diametroSecundario, 2) / 4;
+                const areaPrimaria = Math.PI * Math.pow(diametroPrimario, 2) / 4;
+                const parametrosRede = {
+                    vazaoTotalNominalM3Min: vazaoTurbina,
+                    quantidadePrimarios: Math.max(nPrimarios, 1),
+                    quantidadeLinhas: Math.max(nLinhas, 1),
+                    comprimentoPrimarioM: comprimentoPrimario,
+                    comprimentoSecundarioM: comprimentoSecundario,
+                    diametroPrimarioM: diametroPrimario,
+                    diametroSecundarioM: diametroSecundario,
+                    areaPrimaria,
+                    areaSecundaria,
+                    densidadeAr,
+                    fatorAtrito,
+                    pressaoMaxPa: pressaoMax,
+                    kTorre,
+                    massaSolidoPrimarioKgh: massaLinha * nLinhas / Math.max(nPrimarios, 1),
+                    massaSolidoSecundarioKgh: massaLinha
+                };
+                const rede = simularRedePneumatica(parametrosRede);
+                return {
+                    volumeRolo,
+                    massaLinha,
+                    massaTotal: massaLinha * nLinhas,
+                    rotacaoDosador,
+                    potenciaUtilMax: (lerValorDistGrafico('in_dist_tensao', substituicoes) || 0) * (lerValorDistGrafico('in_dist_corrente', substituicoes) || 0) * ((lerValorDistGrafico('in_dist_eficiencia_motor', substituicoes) || 0) / 100),
+                    potenciaRequerida: ((massaLinha * (1000 / 3600)) * (lerValorDistGrafico('in_dist_energia_dosador', substituicoes) || 0)) / EFICIENCIA_REDUTOR,
+                    velocidadeSecundaria: rede.velocidadeSecundaria,
+                    perdaTotal: rede.deltaPTotal,
+                    vazaoTotal: rede.vazaoTotalReal,
+                    espessuraDisco: espessura,
+                    discosAtivos: discos,
+                    cavidadesDisco: cavidades,
+                    areaCavidade,
+                    densidadeSolido,
+                    taxaHectare: taxa,
+                    velocidadeTrator,
+                    larguraLinha: largura,
+                    numeroLinhas: nLinhas,
+                    numeroPrimarios: nPrimarios,
+                    comprimentoPrimario,
+                    diametroPrimario,
+                    densidadeAr,
+                    fatorAtrito,
+                    comprimentoSecundario,
+                    diametroSecundario,
+                    kTorre,
+                    vazaoPrimaria: rede.vazaoPrimariaReal,
+                    areaPrimaria,
+                    velocidadePrimaria: rede.velocidadePrimaria,
+                    slrPrimario: rede.slrPrimario,
+                    massaSolidoPrimario: massaLinha * nLinhas / Math.max(nPrimarios, 1),
+                    massaArPrimario: rede.massaArPrimariaKgh,
+                    perdaPrimaria: rede.deltaPPrimario,
+                    perdaTorre: rede.deltaPTorre,
+                    areaSecundaria,
+                    vazaoSecundaria: rede.vazaoSecundariaReal,
+                    slrSecundario: rede.slrSecundario,
+                    massaArSecundario: rede.massaArSecundariaKgh,
+                    perdaSecundaria: rede.deltaPSecundario,
+                    fatorAcoplamento: rede.fatorVazao,
+                    vazaoTurbina,
+                    pressaoMaxima: pressaoMax
+                };
+            }
+
+            function formatarValorGrafico(valor) {
+                if (!Number.isFinite(valor)) return '—';
+                if (Math.abs(valor) >= 1000 || Math.abs(valor) < 0.01) return valor.toExponential(2);
+                return valor.toFixed(2);
+            }
+
+            function corSerieGraficoDist(indice) {
+                return `hsl(${(indice * 47) % 360} 78% 62%)`;
+            }
+
+            function desenharGraficoDist(series, variavelX, saida) {
+                const canvas = document.getElementById('grafico_dist_canvas');
+                if (!canvas) return;
+                const ctx = canvas.getContext('2d');
+                const largura = canvas.width = Math.max(720, canvas.clientWidth * 2 || 900);
+                const altura = canvas.height = 680;
+                const margem = { esquerda: 92, direita: 30, topo: 28, baixo: 78 };
+                const todos = series.flatMap((serie) => serie.pontos).filter((ponto) => Number.isFinite(ponto.y));
+                if (!todos.length) return;
+                const xMin = variavelX.min;
+                const xMax = variavelX.max;
+                const yMinBruto = Math.min(...todos.map((ponto) => ponto.y));
+                const yMaxBruto = Math.max(...todos.map((ponto) => ponto.y));
+                const margemY = (yMaxBruto - yMinBruto || Math.abs(yMaxBruto) * 0.1 || 1) * 0.12;
+                const yMin = yMinBruto - margemY;
+                const yMax = yMaxBruto + margemY;
+                const px = (valor) => margem.esquerda + ((valor - xMin) / (xMax - xMin || 1)) * (largura - margem.esquerda - margem.direita);
+                const py = (valor) => altura - margem.baixo - ((valor - yMin) / (yMax - yMin || 1)) * (altura - margem.topo - margem.baixo);
+                const estilos = getComputedStyle(document.body);
+                ctx.clearRect(0, 0, largura, altura);
+                ctx.fillStyle = estilos.getPropertyValue('--bg-card').trim() || '#161b22';
+                ctx.fillRect(0, 0, largura, altura);
+                ctx.strokeStyle = estilos.getPropertyValue('--border').trim() || '#30363d';
+                ctx.fillStyle = estilos.getPropertyValue('--text-muted').trim() || '#8b949e';
+                ctx.font = '24px Segoe UI';
+                for (let i = 0; i <= 5; i++) {
+                    const y = margem.topo + i * (altura - margem.topo - margem.baixo) / 5;
+                    ctx.beginPath(); ctx.moveTo(margem.esquerda, y); ctx.lineTo(largura - margem.direita, y); ctx.stroke();
+                    const valor = yMax - i * (yMax - yMin) / 5;
+                    ctx.fillText(formatarValorGrafico(valor), 12, y + 8);
+                }
+                ctx.strokeStyle = estilos.getPropertyValue('--text-muted').trim() || '#8b949e';
+                ctx.beginPath(); ctx.moveTo(margem.esquerda, margem.topo); ctx.lineTo(margem.esquerda, altura - margem.baixo); ctx.lineTo(largura - margem.direita, altura - margem.baixo); ctx.stroke();
+                series.forEach((serie, indice) => {
+                    ctx.strokeStyle = corSerieGraficoDist(indice);
+                    ctx.lineWidth = 4;
+                    ctx.beginPath();
+                    serie.pontos.forEach((ponto, pontoIndice) => {
+                        const x = px(ponto.x); const y = py(ponto.y);
+                        if (!pontoIndice) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+                    });
+                    ctx.stroke();
+                });
+                ctx.fillStyle = estilos.getPropertyValue('--text-main').trim() || '#c9d1d9';
+                ctx.textAlign = 'center'; ctx.fillText(`${variavelX.nome} (${variavelX.unidade || ''})`, largura / 2, altura - 22);
+                ctx.save(); ctx.translate(24, altura / 2); ctx.rotate(-Math.PI / 2); ctx.fillText(`${saida.nome} (${saida.unidade})`, 0, 0); ctx.restore();
+                ctx.textAlign = 'left';
+            }
+
+            function desenharSuperficieGraficoDist(superficie, variavelX, variavelY, saida) {
+                const canvas = document.getElementById('grafico_dist_canvas');
+                if (!canvas) return;
+                const ctx = canvas.getContext('2d');
+                const largura = canvas.width = Math.max(720, canvas.clientWidth * 2 || 900);
+                const altura = canvas.height = 680;
+                const estilos = getComputedStyle(document.body);
+                const fundo = estilos.getPropertyValue('--bg-card').trim() || '#161b22';
+                const texto = estilos.getPropertyValue('--text-main').trim() || '#c9d1d9';
+                const apagado = estilos.getPropertyValue('--text-muted').trim() || '#8b949e';
+                const grade = estilos.getPropertyValue('--border').trim() || '#30363d';
+                const todos = superficie.flatMap((linha) => linha).filter((ponto) => Number.isFinite(ponto.z));
+                if (!todos.length) return;
+                const zMin = Math.min(...todos.map((ponto) => ponto.z));
+                const zMax = Math.max(...todos.map((ponto) => ponto.z));
+                const escalaZ = zMax - zMin || Math.abs(zMax) * 0.1 || 1;
+                const origem = { x: 210, y: 535 };
+                const vetorX = { x: 450, y: 0 };
+                const vetorY = { x: 150, y: -125 };
+                const vetorZ = { x: 0, y: -280 };
+                const projetar = (ponto) => {
+                    const x = (ponto.x - variavelX.min) / (variavelX.max - variavelX.min || 1);
+                    const y = (ponto.y - variavelY.min) / (variavelY.max - variavelY.min || 1);
+                    const z = (ponto.z - zMin) / escalaZ;
+                    return {
+                        x: origem.x + x * vetorX.x + y * vetorY.x + z * vetorZ.x,
+                        y: origem.y + x * vetorX.y + y * vetorY.y + z * vetorZ.y
+                    };
+                };
+                const corSuperficie = (valor) => {
+                    const proporcao = Math.max(0, Math.min(1, (valor - zMin) / escalaZ));
+                    return `hsl(${220 - proporcao * 185} 78% ${38 + proporcao * 20}%)`;
+                };
+                const desenharEixo = (inicio, fim) => {
+                    const angulo = Math.atan2(fim.y - inicio.y, fim.x - inicio.x);
+                    const tamanho = 14;
+                    ctx.beginPath();
+                    ctx.moveTo(fim.x, fim.y);
+                    ctx.lineTo(fim.x - tamanho * Math.cos(angulo - Math.PI / 6), fim.y - tamanho * Math.sin(angulo - Math.PI / 6));
+                    ctx.moveTo(fim.x, fim.y);
+                    ctx.lineTo(fim.x - tamanho * Math.cos(angulo + Math.PI / 6), fim.y - tamanho * Math.sin(angulo + Math.PI / 6));
+                    ctx.stroke();
+                };
+
+                ctx.clearRect(0, 0, largura, altura);
+                ctx.fillStyle = fundo;
+                ctx.fillRect(0, 0, largura, altura);
+                ctx.lineJoin = 'round';
+                for (let linha = superficie.length - 2; linha >= 0; linha -= 1) {
+                    for (let coluna = 0; coluna < superficie[linha].length - 1; coluna += 1) {
+                        const pontos = [
+                            superficie[linha][coluna],
+                            superficie[linha][coluna + 1],
+                            superficie[linha + 1][coluna + 1],
+                            superficie[linha + 1][coluna]
+                        ];
+                        if (pontos.some((ponto) => !Number.isFinite(ponto.z))) continue;
+                        const projetados = pontos.map(projetar);
+                        ctx.beginPath();
+                        ctx.moveTo(projetados[0].x, projetados[0].y);
+                        projetados.slice(1).forEach((ponto) => ctx.lineTo(ponto.x, ponto.y));
+                        ctx.closePath();
+                        ctx.fillStyle = corSuperficie(pontos.reduce((soma, ponto) => soma + ponto.z, 0) / pontos.length);
+                        ctx.fill();
+                        ctx.strokeStyle = 'rgba(255,255,255,0.20)';
+                        ctx.lineWidth = 1.5;
+                        ctx.stroke();
+                    }
+                }
+
+                const fimX = { x: origem.x + vetorX.x, y: origem.y + vetorX.y };
+                const fimY = { x: origem.x + vetorY.x, y: origem.y + vetorY.y };
+                const fimZ = { x: origem.x + vetorZ.x, y: origem.y + vetorZ.y };
+                ctx.save();
+                ctx.strokeStyle = grade;
+                ctx.lineWidth = 1.5;
+                ctx.setLineDash([5, 7]);
+                for (let indice = 1; indice < 6; indice += 1) {
+                    const fracao = indice / 6;
+                    const inicioX = { x: origem.x + vetorX.x * fracao, y: origem.y + vetorX.y * fracao };
+                    const inicioY = { x: origem.x + vetorY.x * fracao, y: origem.y + vetorY.y * fracao };
+                    ctx.beginPath(); ctx.moveTo(inicioX.x, inicioX.y); ctx.lineTo(inicioX.x + vetorY.x, inicioX.y + vetorY.y); ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(inicioY.x, inicioY.y); ctx.lineTo(inicioY.x + vetorX.x, inicioY.y + vetorX.y); ctx.stroke();
+                }
+                ctx.restore();
+                ctx.strokeStyle = texto;
+                ctx.fillStyle = texto;
+                ctx.lineWidth = 4;
+                [[origem, fimX], [origem, fimY], [origem, fimZ]].forEach(([inicio, fim]) => {
+                    ctx.beginPath(); ctx.moveTo(inicio.x, inicio.y); ctx.lineTo(fim.x, fim.y); ctx.stroke();
+                    desenharEixo(inicio, fim);
+                });
+                ctx.save();
+                ctx.setLineDash([8, 8]);
+                ctx.strokeStyle = 'rgba(255,255,255,0.28)';
+                ctx.lineWidth = 2;
+                for (let indice = 1; indice < 5; indice += 1) {
+                    const fracao = indice / 5;
+                    const inicioGrade = { x: origem.x + vetorY.x * fracao, y: origem.y + vetorY.y * fracao };
+                    const fimGrade = { x: fimX.x + vetorY.x * fracao, y: fimX.y + vetorY.y * fracao };
+                    ctx.beginPath(); ctx.moveTo(inicioGrade.x, inicioGrade.y); ctx.lineTo(fimGrade.x, fimGrade.y); ctx.stroke();
+                }
+                ctx.restore();
+                ctx.font = '22px Segoe UI';
+                ctx.textAlign = 'center';
+                ctx.fillText(`${variavelX.nome} (${variavelX.unidade || ''})`, fimX.x - 20, fimX.y + 34);
+                ctx.fillText(`${textoIdioma('Profundidade', 'Depth')}: ${variavelY.nome} (${variavelY.unidade || ''})`, fimY.x - 62, fimY.y - 18);
+                ctx.save();
+                ctx.translate(fimZ.x - 24, fimZ.y);
+                ctx.rotate(-Math.PI / 2);
+                ctx.fillText(`${saida.nome} (${saida.unidade || ''})`, 0, 0);
+                ctx.restore();
+                ctx.textAlign = 'left';
+                ctx.font = '20px Segoe UI';
+                ctx.fillStyle = apagado;
+                ctx.fillText(formatarValorGrafico(variavelX.min), origem.x - 12, origem.y + 28);
+                ctx.fillText(formatarValorGrafico(variavelY.min), origem.x - 46, origem.y + 8);
+                ctx.fillText(formatarValorGrafico(zMin), fimZ.x - 54, fimZ.y + 8);
+                ctx.textAlign = 'right';
+                ctx.fillText(formatarValorGrafico(variavelX.max), fimX.x + 8, fimX.y + 28);
+                ctx.fillText(formatarValorGrafico(variavelY.max), fimY.x - 8, fimY.y - 8);
+                ctx.fillText(formatarValorGrafico(zMax), fimZ.x - 54, fimZ.y - 8);
+                const barraX = largura - 74;
+                const barraTopo = 92;
+                const barraAltura = 300;
+                const gradiente = ctx.createLinearGradient(0, barraTopo + barraAltura, 0, barraTopo);
+                gradiente.addColorStop(0, 'hsl(220 78% 38%)');
+                gradiente.addColorStop(0.5, 'hsl(125 78% 48%)');
+                gradiente.addColorStop(1, 'hsl(35 78% 58%)');
+                ctx.fillStyle = gradiente;
+                ctx.fillRect(barraX, barraTopo, 22, barraAltura);
+                ctx.strokeStyle = grade;
+                ctx.strokeRect(barraX, barraTopo, 22, barraAltura);
+                ctx.fillStyle = apagado;
+                ctx.textAlign = 'left';
+                ctx.fillText(formatarValorGrafico(zMax), barraX + 30, barraTopo + 8);
+                ctx.fillText(formatarValorGrafico(zMin), barraX + 30, barraTopo + barraAltura);
+                ctx.save();
+                ctx.translate(barraX + 62, barraTopo + barraAltura / 2);
+                ctx.rotate(-Math.PI / 2);
+                ctx.textAlign = 'center';
+                ctx.fillText(textoIdioma('Magnitude da saída', 'Output magnitude'), 0, 0);
+                ctx.restore();
+                ctx.textAlign = 'left';
+            }
+
+            function desenharMapa3DGraficoDist(pontos, variaveis, saida, pontoAtual) {
+                const canvas = document.getElementById('grafico_dist_canvas');
+                if (!canvas || !pontos.length) return;
+                const ctx = canvas.getContext('2d');
+                const largura = canvas.width = Math.max(860, canvas.clientWidth * 2 || 1000);
+                const altura = canvas.height = 700;
+                const estilos = getComputedStyle(document.body);
+                const fundo = estilos.getPropertyValue('--bg-card').trim() || '#161b22';
+                const texto = estilos.getPropertyValue('--text-main').trim() || '#c9d1d9';
+                const apagado = estilos.getPropertyValue('--text-muted').trim() || '#8b949e';
+                const grade = estilos.getPropertyValue('--border').trim() || '#30363d';
+                const zSaidaMin = Math.min(...pontos.map((ponto) => ponto.saida));
+                const zSaidaMax = Math.max(...pontos.map((ponto) => ponto.saida));
+                const escalaSaida = zSaidaMax - zSaidaMin || Math.abs(zSaidaMax) * 0.1 || 1;
+                const valoresSaidaOrdenados = pontos.map((ponto) => ponto.saida).sort((a, b) => a - b);
+                const origem = { x: 205, y: 545 };
+                const vetores = [
+                    { x: 430, y: 0 },
+                    { x: 150, y: -125 },
+                    { x: 0, y: -300 }
+                ];
+                const projetar = (ponto) => ({
+                    x: origem.x + ponto.coordenadas[0] * vetores[0].x + ponto.coordenadas[1] * vetores[1].x + ponto.coordenadas[2] * vetores[2].x,
+                    y: origem.y + ponto.coordenadas[0] * vetores[0].y + ponto.coordenadas[1] * vetores[1].y + ponto.coordenadas[2] * vetores[2].y
+                });
+                const corSaida = (valor) => {
+                    const quantidadeAbaixo = valoresSaidaOrdenados.filter((item) => item <= valor).length - 1;
+                    const proporcao = valoresSaidaOrdenados.length > 1
+                        ? quantidadeAbaixo / (valoresSaidaOrdenados.length - 1)
+                        : 0.5;
+                    const cores = ['#1746d1', '#00a9d9', '#19c957', '#f2cf25', '#e6332a'];
+                    return cores[Math.min(cores.length - 1, Math.floor(proporcao * cores.length))];
+                };
+                const desenharEixo = (fim) => {
+                    const angulo = Math.atan2(fim.y - origem.y, fim.x - origem.x);
+                    const tamanho = 16;
+                    ctx.beginPath();
+                    ctx.moveTo(fim.x, fim.y);
+                    ctx.lineTo(fim.x - tamanho * Math.cos(angulo - Math.PI / 6), fim.y - tamanho * Math.sin(angulo - Math.PI / 6));
+                    ctx.moveTo(fim.x, fim.y);
+                    ctx.lineTo(fim.x - tamanho * Math.cos(angulo + Math.PI / 6), fim.y - tamanho * Math.sin(angulo + Math.PI / 6));
+                    ctx.stroke();
+                };
+                ctx.clearRect(0, 0, largura, altura);
+                ctx.fillStyle = fundo;
+                ctx.fillRect(0, 0, largura, altura);
+                ctx.save();
+                ctx.strokeStyle = grade;
+                ctx.lineWidth = 1.5;
+                ctx.setLineDash([6, 8]);
+                for (let indice = 1; indice < 6; indice += 1) {
+                    const fracao = indice / 6;
+                    const baseX = { x: origem.x + vetores[0].x * fracao, y: origem.y };
+                    const baseY = { x: origem.x + vetores[1].x * fracao, y: origem.y + vetores[1].y * fracao };
+                    ctx.beginPath(); ctx.moveTo(baseX.x, baseX.y); ctx.lineTo(baseX.x + vetores[1].x, baseX.y + vetores[1].y); ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(baseY.x, baseY.y); ctx.lineTo(baseY.x + vetores[0].x, baseY.y + vetores[0].y); ctx.stroke();
+                }
+                ctx.restore();
+                pontos.slice().sort((a, b) => (a.coordenadas[1] + a.coordenadas[2]) - (b.coordenadas[1] + b.coordenadas[2])).forEach((ponto) => {
+                    const posicao = projetar(ponto);
+                    const raio = 4 + 3 * ponto.coordenadas[2];
+                    ctx.beginPath();
+                    ctx.arc(posicao.x, posicao.y, raio, 0, Math.PI * 2);
+                    ctx.fillStyle = corSaida(ponto.saida);
+                    ctx.globalAlpha = 0.86;
+                    ctx.fill();
+                    ctx.globalAlpha = 1;
+                });
+                if (pontoAtual && Number.isFinite(pontoAtual.saida)) {
+                    const posicaoAtual = projetar(pontoAtual);
+                    ctx.beginPath();
+                    ctx.arc(posicaoAtual.x, posicaoAtual.y, 11, 0, Math.PI * 2);
+                    ctx.strokeStyle = '#ffffff';
+                    ctx.lineWidth = 4;
+                    ctx.stroke();
+                    ctx.beginPath();
+                    ctx.arc(posicaoAtual.x, posicaoAtual.y, 5, 0, Math.PI * 2);
+                    ctx.fillStyle = corSaida(pontoAtual.saida);
+                    ctx.fill();
+                }
+                const fins = vetores.map((vetor) => ({ x: origem.x + vetor.x, y: origem.y + vetor.y }));
+                ctx.strokeStyle = texto;
+                ctx.lineWidth = 4;
+                fins.forEach((fim) => {
+                    ctx.beginPath(); ctx.moveTo(origem.x, origem.y); ctx.lineTo(fim.x, fim.y); ctx.stroke();
+                    desenharEixo(fim);
+                });
+                ctx.fillStyle = texto;
+                ctx.font = '22px Segoe UI';
+                ctx.textAlign = 'center';
+                ctx.fillText(`${variaveis[0].nome} (${variaveis[0].unidade || ''})`, fins[0].x - 8, fins[0].y + 38);
+                ctx.fillText(`${variaveis[1].nome} (${variaveis[1].unidade || ''})`, fins[1].x - 70, fins[1].y - 18);
+                ctx.save();
+                ctx.translate(fins[2].x - 28, fins[2].y - 12);
+                ctx.rotate(-Math.PI / 2);
+                ctx.fillText(`${variaveis[2].nome} (${variaveis[2].unidade || ''})`, 0, 0);
+                ctx.restore();
+                const barraX = largura - 82;
+                const barraTopo = 92;
+                const barraAltura = 330;
+                const gradiente = ctx.createLinearGradient(0, barraTopo + barraAltura, 0, barraTopo);
+                gradiente.addColorStop(0, 'hsl(220 82% 40%)');
+                gradiente.addColorStop(0.5, 'hsl(125 82% 48%)');
+                gradiente.addColorStop(1, 'hsl(35 82% 58%)');
+                ctx.fillStyle = gradiente;
+                ctx.fillRect(barraX, barraTopo, 24, barraAltura);
+                ctx.strokeStyle = grade;
+                ctx.strokeRect(barraX, barraTopo, 24, barraAltura);
+                ctx.fillStyle = apagado;
+                ctx.textAlign = 'left';
+                ctx.font = '20px Segoe UI';
+                ctx.fillText(formatarValorGrafico(zSaidaMax), barraX + 32, barraTopo + 8);
+                ctx.fillText(formatarValorGrafico(zSaidaMin), barraX + 32, barraTopo + barraAltura);
+                ctx.save();
+                ctx.translate(barraX + 68, barraTopo + barraAltura / 2);
+                ctx.rotate(-Math.PI / 2);
+                ctx.textAlign = 'center';
+                ctx.fillText(textoIdioma('Saída: ', 'Output: ') + saida.nome, 0, 0);
+                ctx.restore();
+                ctx.textAlign = 'left';
+            }
+
+            function configurarPlotly3D(elemento, dados, layout) {
+                if (!window.Plotly || !elemento) return false;
+                window.Plotly.react(elemento, dados, layout, { responsive: true, displaylogo: false, modeBarButtonsToRemove: ['toImage'] });
+                return true;
+            }
+
+            function obterEscalaCromaticaPlotly(valores) {
+                const ordenados = valores.filter(Number.isFinite).sort((a, b) => a - b);
+                if (!ordenados.length) return { cmin: 0, cmax: 1, colorscale: 'Jet' };
+                const obterQuantil = (fracao) => ordenados[Math.round((ordenados.length - 1) * fracao)];
+                return {
+                    cmin: 0,
+                    cmax: 1,
+                    normalizar: (valor) => {
+                        const abaixo = ordenados.filter((item) => item <= valor).length - 1;
+                        return ordenados.length > 1 ? abaixo / (ordenados.length - 1) : 0.5;
+                    },
+                    tickvals: [0, 0.25, 0.5, 0.75, 1],
+                    ticktext: [0, 0.25, 0.5, 0.75, 1].map(obterQuantil).map(formatarValorGrafico),
+                    colorscale: [
+                        [0, '#1236b5'],
+                        [0.25, '#00a8e8'],
+                        [0.5, '#18c95b'],
+                        [0.75, '#f4d225'],
+                        [1, '#e3312b']
+                    ]
+                };
+            }
+
+            function desenharPlotlyMapa3DDist(pontos, variaveis, saida, pontoAtual) {
+                const elemento = document.getElementById('grafico_dist_plotly');
+                if (!elemento) return;
+                const valores = pontos.map((ponto) => ponto.saida);
+                const escalaCores = obterEscalaCromaticaPlotly(valores);
+                const valoresCromaticos = valores.map(escalaCores.normalizar);
+                const x = pontos.map((ponto) => variaveis[0].min + ponto.coordenadas[0] * (variaveis[0].max - variaveis[0].min));
+                const y = pontos.map((ponto) => variaveis[1].min + ponto.coordenadas[1] * (variaveis[1].max - variaveis[1].min));
+                const z = pontos.map((ponto) => variaveis[2].min + ponto.coordenadas[2] * (variaveis[2].max - variaveis[2].min));
+                const dados = [{
+                    type: 'scatter3d', mode: 'markers', x, y, z, customdata: valores,
+                    marker: { size: 4, color: valoresCromaticos, cmin: escalaCores.cmin, cmax: escalaCores.cmax, colorscale: escalaCores.colorscale, opacity: 0.88, colorbar: { x: 1.03, len: 0.72, tickvals: escalaCores.tickvals, ticktext: escalaCores.ticktext, title: { text: `${textoIdioma('Saída', 'Output')}: ${saida.nome}`, side: 'right' } } },
+                    hovertemplate: `${variaveis[0].nome}: %{x}<br>${variaveis[1].nome}: %{y}<br>${variaveis[2].nome}: %{z}<br>${saida.nome}: %{customdata}<extra></extra>`
+                }];
+                if (pontoAtual && Number.isFinite(pontoAtual.saida)) {
+                    dados.push({
+                        type: 'scatter3d', mode: 'markers', name: textoIdioma('Ponto atual', 'Current point'),
+                        x: [variaveis[0].valor], y: [variaveis[1].valor], z: [variaveis[2].valor],
+                        marker: { size: 7, color: '#ffffff', line: { color: '#111827', width: 3 } }, showlegend: false,
+                        hovertemplate: `${textoIdioma('Ponto atual', 'Current point')}<br>${saida.nome}: ${formatarValorGrafico(pontoAtual.saida)}<extra></extra>`
+                    });
+                }
+                const estilos = getComputedStyle(document.body);
+                const fundo = estilos.getPropertyValue('--bg-card').trim() || '#161b22';
+                const texto = estilos.getPropertyValue('--text-main').trim() || '#c9d1d9';
+                configurarPlotly3D(elemento, dados, {
+                    paper_bgcolor: fundo, plot_bgcolor: fundo, font: { color: texto }, showlegend: false, margin: { l: 18, r: 86, t: 24, b: 18 },
+                    scene: {
+                        aspectmode: 'cube', dragmode: 'orbit',
+                        xaxis: { title: `${variaveis[0].nome} (${variaveis[0].unidade || ''})` },
+                        yaxis: { title: `${variaveis[1].nome} (${variaveis[1].unidade || ''})` },
+                        zaxis: { title: `${variaveis[2].nome} (${variaveis[2].unidade || ''})` },
+                        camera: { eye: { x: 1.5, y: 1.5, z: 1.25 } }
+                    }
+                });
+            }
+
+            function desenharPlotlySuperficieDist(superficie, variavelX, variavelY, saida) {
+                const elemento = document.getElementById('grafico_dist_plotly');
+                if (!elemento) return;
+                const x = superficie[0].map((ponto) => ponto.x);
+                const y = superficie.map((linha) => linha[0].y);
+                const z = superficie.map((linha) => linha.map((ponto) => ponto.z));
+                const valores = z.flat();
+                const escalaCores = obterEscalaCromaticaPlotly(valores);
+                const surfacecolor = z.map((linha) => linha.map(escalaCores.normalizar));
+                const estilos = getComputedStyle(document.body);
+                const fundo = estilos.getPropertyValue('--bg-card').trim() || '#161b22';
+                const texto = estilos.getPropertyValue('--text-main').trim() || '#c9d1d9';
+                configurarPlotly3D(elemento, [{
+                    type: 'surface', x, y, z, surfacecolor, cmin: escalaCores.cmin, cmax: escalaCores.cmax, colorscale: escalaCores.colorscale, showscale: true,
+                    colorbar: { x: 1.03, len: 0.72, tickvals: escalaCores.tickvals, ticktext: escalaCores.ticktext, title: { text: `${textoIdioma('Saída', 'Output')}: ${saida.nome}`, side: 'right' } }, contours: { z: { show: true, usecolormap: true, project: { z: true } } },
+                    hovertemplate: `${variavelX.nome}: %{x}<br>${variavelY.nome}: %{y}<br>${saida.nome}: %{z}<extra></extra>`
+                }], {
+                    paper_bgcolor: fundo, plot_bgcolor: fundo, font: { color: texto }, showlegend: false, margin: { l: 18, r: 86, t: 24, b: 18 },
+                    scene: {
+                        aspectmode: 'cube', dragmode: 'orbit',
+                        xaxis: { title: `${variavelX.nome} (${variavelX.unidade || ''})` },
+                        yaxis: { title: `${variavelY.nome} (${variavelY.unidade || ''})` },
+                        zaxis: { title: `${saida.nome} (${saida.unidade || ''})` },
+                        camera: { eye: { x: 1.5, y: 1.5, z: 1.25 } }
+                    }
+                });
+            }
+
+            function atualizarGraficoDist() {
+                const modo = document.querySelector('input[name="modo_dist"]:checked')?.value;
+                if (!dom.painelGraficoDist) return;
+                if (modo !== '1') { dom.painelGraficoDist.classList.add('hidden'); return; }
+                dom.painelGraficoDist.classList.remove('hidden');
+                const entradas = obterVariaveisEntradaGraficoDist().filter((item) => graficoDistEstado.entradas.includes(item.chave));
+                const saidasDisponiveis = obterSaidasGraficoDist();
+                const saida = saidasDisponiveis.find((item) => item.chave === graficoDistEstado.saida);
+                const saidaNome = saida ? textoIdioma(saida.pt, saida.en) : textoIdioma('Nenhuma saída selecionada', 'No output selected');
+                dom.painelGraficoDist.innerHTML = `<div class="graph-panel-header"><div class="graph-drag-handle"><h2>${entradas.length >= 2 ? textoIdioma('Mapa 3D de sensibilidade', '3D sensitivity map') : textoIdioma('Gráfico de sensibilidade', 'Sensitivity graph')}</h2><p>${textoIdioma('As entradas selecionadas variam dentro dos limites atuais dos sliders; as demais variáveis permanecem nos valores atuais.', 'Selected inputs sweep across the current slider limits; all other variables remain at their current values.')}</p></div><button type="button" class="graph-float-btn" data-graph-float aria-pressed="${graficoDistEstado.flutuante}">${graficoDistEstado.flutuante ? textoIdioma('Fixar no fluxo', 'Return to flow') : textoIdioma('Tornar flutuante', 'Make floating')}</button></div>${entradas.length ? `<div class="graph-selection-summary"><strong>${textoIdioma('Entradas', 'Inputs')}:</strong> ${entradas.map((item) => `${item.nome} (${item.unidade}) = ${formatarValorGrafico(item.valor)}`).join(' · ')}<br><strong>${textoIdioma('Saída', 'Output')}:</strong> ${saidaNome} (${saida?.unidade || ''})</div>${entradas.length >= 2 ? `<div id="grafico_dist_plotly" aria-label="${textoIdioma('Mapa tridimensional de sensibilidade do distribuidor', 'Distributor three-dimensional sensitivity map')}"></div>` : `<canvas id="grafico_dist_canvas" aria-label="${textoIdioma('Gráfico de sensibilidade do distribuidor', 'Distributor sensitivity graph')}"></canvas>`}<div id="grafico_dist_legenda" class="graph-legend" aria-label="${textoIdioma('Legenda da magnitude da saída', 'Output magnitude legend')}"></div>` : `<div class="graph-empty">${textoIdioma('Selecione pelo menos uma entrada na sidebar para gerar o gráfico.', 'Select at least one sidebar input to generate the graph.')}</div>`}`;
+                dom.painelGraficoDist.classList.toggle('graph-floating', graficoDistEstado.flutuante);
+                if (graficoDistEstado.flutuante && graficoDistEstado.posicao) {
+                    dom.painelGraficoDist.style.left = `${graficoDistEstado.posicao.left}px`;
+                    dom.painelGraficoDist.style.top = `${graficoDistEstado.posicao.top}px`;
+                    dom.painelGraficoDist.style.right = 'auto';
+                    dom.painelGraficoDist.style.bottom = 'auto';
+                } else {
+                    dom.painelGraficoDist.style.left = '';
+                    dom.painelGraficoDist.style.top = '';
+                    dom.painelGraficoDist.style.right = '';
+                    dom.painelGraficoDist.style.bottom = '';
+                }
+                if (!entradas.length) return;
+                if (!saida) {
+                    const canvas = document.getElementById('grafico_dist_canvas');
+                    if (canvas) {
+                        const aviso = document.createElement('div');
+                        aviso.className = 'graph-empty';
+                        aviso.textContent = textoIdioma('Clique em uma variável calculada dentro do memorial para definir a saída do gráfico.', 'Click a calculated variable inside the memorial to define the graph output.');
+                        canvas.replaceWith(aviso);
+                    }
+                    return;
+                }
+                const x = entradas[0];
+                if (entradas.length === 3) {
+                    const pontos = [];
+                    const amostras = 9;
+                    for (let indiceX = 0; indiceX < amostras; indiceX += 1) {
+                        const valorX = x.min + (x.max - x.min) * indiceX / (amostras - 1);
+                        for (let indiceY = 0; indiceY < amostras; indiceY += 1) {
+                            const valorY = entradas[1].min + (entradas[1].max - entradas[1].min) * indiceY / (amostras - 1);
+                            for (let indiceZ = 0; indiceZ < amostras; indiceZ += 1) {
+                                const valorZ = entradas[2].min + (entradas[2].max - entradas[2].min) * indiceZ / (amostras - 1);
+                                const resultado = calcularPontoGraficoDist({ [x.chave]: valorX, [entradas[1].chave]: valorY, [entradas[2].chave]: valorZ });
+                                if (Number.isFinite(resultado[saida.chave])) {
+                                    pontos.push({ coordenadas: [indiceX / (amostras - 1), indiceY / (amostras - 1), indiceZ / (amostras - 1)], saida: resultado[saida.chave] });
+                                }
+                            }
+                        }
+                    }
+                    if (!pontos.length) {
+                        const canvas = document.getElementById('grafico_dist_canvas');
+                        if (canvas) {
+                            const aviso = document.createElement('div');
+                            aviso.className = 'graph-empty';
+                            aviso.textContent = textoIdioma('Esta variável é elegível, mas ainda não possui resultado numérico calculável neste modo.', 'This variable is eligible, but it does not yet have a numeric result calculable in this mode.');
+                            canvas.replaceWith(aviso);
+                        }
+                        return;
+                    }
+                    const valoresAtuais = entradas.map((item) => parseFloat(item.valor));
+                    const pontoAtualResultado = calcularPontoGraficoDist({});
+                    const pontoAtual = {
+                        coordenadas: entradas.map((item, indice) => {
+                            const valor = valoresAtuais[indice];
+                            return (valor - item.min) / (item.max - item.min || 1);
+                        }),
+                        saida: pontoAtualResultado[saida.chave]
+                    };
+                    const legenda = document.getElementById('grafico_dist_legenda');
+                    if (legenda) legenda.innerHTML = `<span class="graph-legend-item"><i class="graph-surface-gradient"></i>${textoIdioma('Cor: distribuição dos pontos da saída (menor para maior)', 'Color: output point distribution (low to high)')}</span><span class="graph-legend-item"><i class="graph-current-point"></i>${textoIdioma('Ponto atual do simulador', 'Current simulator point')}</span>`;
+                    desenharPlotlyMapa3DDist(pontos, entradas, { ...saida, nome: saidaNome }, pontoAtual);
+                    return;
+                }
+                if (entradas.length === 2) {
+                    const y = entradas[1];
+                    const linhas = 21;
+                    const colunas = 21;
+                    const superficie = Array.from({ length: linhas }, (_, indiceY) => {
+                        const valorY = y.min + (y.max - y.min) * indiceY / (linhas - 1);
+                        return Array.from({ length: colunas }, (_, indiceX) => {
+                            const valorX = x.min + (x.max - x.min) * indiceX / (colunas - 1);
+                            const ponto = calcularPontoGraficoDist({ [x.chave]: valorX, [y.chave]: valorY });
+                            return { x: valorX, y: valorY, z: ponto[saida.chave] };
+                        });
+                    });
+                    const todosPontos = superficie.flatMap((linha) => linha);
+                    if (!todosPontos.some((ponto) => Number.isFinite(ponto.z))) {
+                        const canvas = document.getElementById('grafico_dist_canvas');
+                        if (canvas) {
+                            const aviso = document.createElement('div');
+                            aviso.className = 'graph-empty';
+                            aviso.textContent = textoIdioma('Esta variável é elegível, mas ainda não possui resultado numérico calculável neste modo.', 'This variable is eligible, but it does not yet have a numeric result calculable in this mode.');
+                            canvas.replaceWith(aviso);
+                        }
+                        return;
+                    }
+                    const legenda = document.getElementById('grafico_dist_legenda');
+                    if (legenda) legenda.innerHTML = `<span class="graph-legend-item"><i class="graph-surface-gradient"></i>${textoIdioma('Superfície: cor representa a magnitude da saída', 'Surface: color represents output magnitude')}</span>`;
+                    desenharPlotlySuperficieDist(superficie, x, y, { ...saida, nome: saidaNome });
+                    return;
+                }
+                const pontosX = Array.from({ length: 41 }, (_, indice) => x.min + (x.max - x.min) * indice / 40);
+                const valoresSeries = entradas.slice(1).map((item) => ({ item, valores: [item.min + (item.max - item.min) * 0.25, item.min + (item.max - item.min) * 0.5, item.min + (item.max - item.min) * 0.75] }));
+                const combinacoes = valoresSeries.length ? valoresSeries.reduce((acumulado, serie) => acumulado.flatMap((base) => serie.valores.map((valor) => [...base, { item: serie.item, valor }])), [[]]) : [[]];
+                const series = combinacoes.map((combinacao, indice) => ({ label: combinacao.map((item) => `${item.item.nome}: ${formatarValorGrafico(item.valor)}`).join(' · ') || textoIdioma('Valor atual', 'Current value'), pontos: pontosX.map((valorX) => { const substituicoes = { [x.chave]: valorX }; combinacao.forEach((item) => { substituicoes[item.item.chave] = item.valor; }); return { x: valorX, y: calcularPontoGraficoDist(substituicoes)[saida.chave] }; }) }));
+                if (!series.some((serie) => serie.pontos.some((ponto) => Number.isFinite(ponto.y)))) {
+                    const canvas = document.getElementById('grafico_dist_canvas');
+                    if (canvas) {
+                        const aviso = document.createElement('div');
+                        aviso.className = 'graph-empty';
+                        aviso.textContent = textoIdioma('Esta variável é elegível, mas ainda não possui resultado numérico calculável neste modo.', 'This variable is eligible, but it does not yet have a numeric result calculable in this mode.');
+                        canvas.replaceWith(aviso);
+                    }
+                    return;
+                }
+                const legenda = document.getElementById('grafico_dist_legenda');
+                if (legenda) {
+                    legenda.innerHTML = series.map((serie, indice) => `<span class="graph-legend-item"><i style="background:${corSerieGraficoDist(indice)}"></i>${serie.label}</span>`).join('');
+                }
+                desenharGraficoDist(series, x, { ...saida, nome: saidaNome });
+            }
+
+            function marcarVariaveisSaidaMemorialDist() {
+                dom.painelDirDist?.querySelectorAll('[class*="graph-output-"]').forEach((elemento) => {
+                    const classe = Array.from(elemento.classList).find((item) => item.startsWith('graph-output-'));
+                    const chave = classe?.replace('graph-output-', '');
+                    const descricaoAuto = graficoDescricoesAuto[chave];
+                    if (!catalogoVariaveisFormula[chave] && !descricaoAuto) return;
+                    elemento.dataset.graphOutput = chave;
+                    const descricao = catalogoVariaveisFormula[chave];
+                    elemento.dataset.tooltip = descricao
+                        ? textoIdioma(descricao.pt, descricao.en)
+                        : descricaoAuto.descricao;
+                    elemento.classList.toggle('graph-output-selected', chave === graficoDistEstado.saida);
+                    elemento.setAttribute('role', 'button');
+                    elemento.setAttribute('tabindex', '0');
+                    elemento.setAttribute('aria-label', textoIdioma('Clique para usar esta variável como saída do gráfico.', 'Click to use this variable as the graph output.'));
+                });
+            }
+
+            function envolverSimbolosCalculadosMemorialDist(html, dashboard = 'distribuidor') {
+                const simbolos = {
+                    'V_r': 'volumeRolo',
+                    '\\dot{m}_{linha}': 'massaLinha',
+                    '\\dot{m}_{total}': 'massaTotal',
+                    'N_r': 'rotacaoDosador',
+                    'P_{util,max}': 'potenciaUtilMax',
+                    'P_{req}': 'potenciaRequerida',
+                    'D_{prim}': 'diametroPrimario',
+                    'A_{prim}': 'areaPrimaria',
+                    'Q_{prim}': 'vazaoPrimaria',
+                    'v_{prim}': 'velocidadePrimaria',
+                    'SLR_{prim}': 'slrPrimario',
+                    '\\Delta P_{prim}': 'perdaPrimaria',
+                    '\\Delta P_{torre}': 'perdaTorre',
+                    'A_{sec}': 'areaSecundaria',
+                    'Q_{sec}': 'vazaoSecundaria',
+                    'v_{sec}': 'velocidadeSecundaria',
+                    'SLR_{sec}': 'slrSecundario',
+                    '\\Delta P_{sec}': 'perdaSecundaria',
+                    '\\Delta P_{total}': 'perdaTotal',
+                    'f': 'fatorAcoplamento',
+                    'Q_{total,real}': 'vazaoTotal'
+                };
+
+                Object.entries(simbolos).forEach(([simbolo, chave]) => {
+                    const inicioToken = `\\texttip{${simbolo}}`;
+                    let cursor = 0;
+                    let inicio = html.indexOf(inicioToken, cursor);
+                    while (inicio >= 0) {
+                        const prefixo = html.slice(Math.max(0, inicio - 80), inicio);
+                        const abertura = inicio + inicioToken.length;
+                        if (prefixo.includes('graph-output-') || html[abertura] !== '{') {
+                            cursor = abertura;
+                            inicio = html.indexOf(inicioToken, cursor);
+                            continue;
+                        }
+
+                        let profundidade = 0;
+                        let fim = abertura;
+                        for (; fim < html.length; fim += 1) {
+                            if (html[fim] === '{') profundidade += 1;
+                            if (html[fim] === '}' && --profundidade === 0) break;
+                        }
+                        if (fim >= html.length) break;
+
+                        const token = html.slice(inicio, fim + 1);
+                        registrarVariavelMemorial(dashboard, chave, simbolo);
+                        const marcado = `\\class{graph-output-${chave}}{${token}}`;
+                        html = html.slice(0, inicio) + marcado + html.slice(fim + 1);
+                        cursor = inicio + marcado.length;
+                        inicio = html.indexOf(inicioToken, cursor);
+                    }
+                });
+
+                let cursor = 0;
+                while (true) {
+                    const inicio = html.indexOf('\\texttip{', cursor);
+                    if (inicio < 0) break;
+                    const prefixo = html.slice(Math.max(0, inicio - 80), inicio);
+                    const simboloInicio = inicio + '\\texttip{'.length;
+                    const simboloFim = encontrarFechamentoGrupoFormula(html, simboloInicio - 1);
+                    if (simboloFim < 0) break;
+                    const simbolo = html.slice(simboloInicio, simboloFim);
+                    const descricaoInicio = simboloFim + 2;
+                    const descricaoFim = encontrarFechamentoGrupoFormula(html, descricaoInicio - 1);
+                    if (prefixo.includes('graph-output-') || descricaoFim < 0 || !/[A-Za-z\\]/u.test(simbolo)) {
+                        cursor = Math.max(simboloFim + 1, inicio + 9);
+                        continue;
+                    }
+
+                    const descricao = html.slice(descricaoInicio, descricaoFim);
+                    const chave = simbolos[simbolo] || `memorial_${Array.from(simbolo).reduce((total, caractere) => total + caractere.charCodeAt(0), 0)}`;
+                    if (!catalogoVariaveisFormula[chave] && !graficoDescricoesAuto[chave]) {
+                        graficoDescricoesAuto[chave] = { descricao };
+                    }
+                    registrarVariavelMemorial(dashboard, chave, simbolo, descricao);
+                    const token = html.slice(inicio, descricaoFim + 1);
+                    const marcado = `\\class{graph-output-${chave}}{${token}}`;
+                    html = html.slice(0, inicio) + marcado + html.slice(descricaoFim + 1);
+                    cursor = inicio + marcado.length;
+                }
+                return html;
+            }
+
+            function encontrarFechamentoGrupoFormula(texto, abertura) {
+                if (texto[abertura] !== '{') return -1;
+                let profundidade = 0;
+                for (let indice = abertura; indice < texto.length; indice += 1) {
+                    if (texto[indice] === '{') profundidade += 1;
+                    if (texto[indice] === '}' && --profundidade === 0) return indice;
+                }
+                return -1;
+            }
+
             function calcularVolumeRolo() {
                 const espessura = parseFloat(dom.distEspessura?.value) || 1;
                 const discos = parseFloat(dom.distQtdDiscos?.value) || 1;
@@ -1313,6 +2233,309 @@ console.log('ðŸ”§ Script iniciando...');
                 return portugues;
             }
 
+            // Dicionário próprio do relatório, para que a exportação respeite o idioma ativo.
+            const textosRelatorioPdf = {
+                gerar: { pt: 'Gerar PDF', en: 'Generate PDF' },
+                titulo: { pt: 'Relatório técnico de cálculo', en: 'Technical calculation report' },
+                objetivo: { pt: 'Objetivo do relatório', en: 'Report purpose' },
+                rastreabilidade: { pt: 'Rastreabilidade e autoria', en: 'Traceability and authorship' },
+                parametros: { pt: 'Parâmetros de entrada', en: 'Input parameters' },
+                resultados: { pt: 'Resultados calculados', en: 'Calculated results' },
+                figuras: { pt: 'Ilustrações e gráficos', en: 'Illustrations and charts' },
+                complementar: { pt: 'Conteúdo complementar', en: 'Supplementary content' },
+                memorial: { pt: 'Memorial de cálculo', en: 'Calculation memorial' },
+                glossario: { pt: 'Glossário', en: 'Glossary' },
+                bibliografia: { pt: 'Referências bibliográficas', en: 'Bibliographic references' },
+                limitacoes: { pt: 'Limitações e responsabilidade técnica', en: 'Limitations and technical responsibility' },
+                origem: { pt: 'Origem da geração', en: 'Generation origin' },
+                data: { pt: 'Data e hora', en: 'Date and time' },
+                idioma: { pt: 'Idioma', en: 'Language' },
+                versao: { pt: 'Versão da aplicação', en: 'Application version' },
+                autor: { pt: 'Autor da ferramenta', en: 'Tool author' },
+                contato: { pt: 'Canais de contato', en: 'Contact channels' },
+                ambiente: { pt: 'Ambiente local', en: 'Local environment' },
+                naoIdentificado: { pt: 'Não identificado', en: 'Not identified' },
+                valor: { pt: 'Valor atual', en: 'Current value' },
+                parametro: { pt: 'Parâmetro', en: 'Parameter' },
+                unidade: { pt: 'Unidade / seleção', en: 'Unit / selection' },
+                figura: { pt: 'Figura', en: 'Figure' },
+                fluxoDestorroador: { pt: 'Fluxo mecânico do destorroador', en: 'Lump breaker mechanical flow' },
+                vistaDistribuidor: { pt: 'Vista superior da distribuição pneumática', en: 'Pneumatic distribution top view' },
+                regulacaoPh: { pt: 'Esquema de regulação de pH do tanque', en: 'Tank pH regulation schematic' },
+                graficoSensibilidade: { pt: 'Mapa de sensibilidade das variáveis selecionadas', en: 'Sensitivity map for selected variables' },
+                acesso: { pt: 'Acesso em', en: 'Accessed on' },
+                secoes: { pt: 'Seções relacionadas', en: 'Related sections' },
+                semDados: { pt: 'Nenhum conteúdo aplicável estava visível no estado atual.', en: 'No applicable content was visible in the current state.' },
+                objetivoTexto: { pt: 'Documentar o estado atual do simulador, suas premissas de entrada, resultados calculados, ilustrações e memorial técnico para apoiar a análise de engenharia.', en: 'Document the current simulator state, its input assumptions, calculated results, illustrations, and technical memorial to support engineering analysis.' },
+                autoriaTexto: { pt: 'Este relatório foi gerado a partir do Dashboard de Engenharia no ambiente identificado neste documento. A ferramenta e seus modelos de cálculo foram desenvolvidos por Guilherme Silva de Oliveira, cujos canais de contato estão indicados nesta seção.', en: 'This report was generated from the Engineering Dashboard in the environment identified in this document. The tool and its calculation models were developed by Guilherme Silva de Oliveira, whose contact channels are listed in this section.' },
+                limitacaoUm: { pt: 'Os resultados apresentados constituem estimativas e simulações técnicas destinadas a apoiar a definição da configuração inicial e aproximar o primeiro resultado do alvo de projeto. Os valores dependem das premissas, parâmetros de entrada, modelos matemáticos e condições consideradas durante a geração deste relatório.', en: 'The presented results are technical estimates and simulations intended to support the initial configuration and bring the first result closer to the design target. Values depend on the assumptions, input parameters, mathematical models, and conditions considered when this report was generated.' },
+                limitacaoDois: { pt: 'Este documento não constitui garantia de funcionamento prático, desempenho, segurança, conformidade ou adequação da solução em operação real. A aplicação em equipamento, processo ou campo deve ser verificada, calibrada, ajustada e validada por engenheiro responsável, considerando propriedades dos materiais, tolerâncias construtivas, instrumentação, condições operacionais e demais variáveis físicas previsíveis, imprevisíveis ou não controláveis.', en: 'This document does not constitute a guarantee of practical operation, performance, safety, compliance, or suitability of the solution in real operation. Application to equipment, process, or field must be checked, calibrated, adjusted, and validated by the responsible engineer, considering material properties, manufacturing tolerances, instrumentation, operating conditions, and other predictable, unpredictable, or uncontrolled physical variables.' },
+                limitacaoTres: { pt: 'Não se espera aderência integral ao alvo final na primeira configuração. O objetivo do relatório é elevar a assertividade da aproximação inicial e reduzir o ciclo necessário de calibração e ajustes até a condição final validada.', en: 'Full adherence to the final target is not expected in the first configuration. The report aims to improve the accuracy of the initial approximation and reduce the calibration and adjustment cycle required to reach the validated final condition.' }
+            };
+
+            function textoPdf(chave) {
+                const texto = textosRelatorioPdf[chave];
+                return texto?.[document.body.dataset.language === 'en' ? 'en' : 'pt'] || chave;
+            }
+
+            function atualizarBotoesPdf() {
+                dom?.pdfExportButtons?.forEach((button) => {
+                    button.textContent = textoPdf('gerar');
+                    button.setAttribute('aria-label', textoPdf('gerar'));
+                    button.title = textoPdf('gerar');
+                });
+            }
+
+            function escaparRelatorio(valor) {
+                return String(valor ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
+            }
+
+            function contextoPdf(chave) {
+                const itens = {
+                    destorroador: { main: dom.mainContent, sidebar: dom.sidebar },
+                    distribuidor: { main: dom.mainDist, sidebar: dom.sidebarDist },
+                    ph: { main: dom.mainPh, sidebar: dom.sidebarPh }
+                };
+                return itens[chave] || itens.destorroador;
+            }
+
+            function textoLimpo(elemento) {
+                return (elemento?.textContent || '').replace(/\s+/g, ' ').trim();
+            }
+
+            function valorControlePdf(grupo) {
+                const numerico = grupo.querySelector('input[type="number"]');
+                if (numerico) return numerico.value;
+                const texto = grupo.querySelector('input[type="text"]');
+                if (texto) return texto.value || texto.placeholder || '—';
+                const select = grupo.querySelector('select');
+                if (select) return select.selectedOptions[0]?.textContent.trim() || '—';
+                const radios = [...grupo.querySelectorAll('input[type="radio"]:checked')];
+                if (radios.length) return radios.map((radio) => textoLimpo(radio.closest('label'))).join(', ');
+                const checkbox = [...grupo.querySelectorAll('input[type="checkbox"]')].find((input) => !input.closest('.graph-input-toggle'));
+                if (checkbox) return checkbox.checked ? textoIdioma('Sim', 'Yes') : textoIdioma('Não', 'No');
+                return '—';
+            }
+
+            function coletarParametrosPdf(sidebar) {
+                const linhas = [];
+                let secao = '';
+                sidebar.querySelectorAll('h2, h3, .state-group-label, .control-group, .radio-group').forEach((elemento) => {
+                    if (elemento.matches('h2, h3, .state-group-label')) {
+                        secao = textoLimpo(elemento);
+                        return;
+                    }
+                    const rotulo = elemento.querySelector('label');
+                    if (!rotulo) return;
+                    const rotuloClone = rotulo.cloneNode(true);
+                    rotuloClone.querySelectorAll('.graph-input-toggle, input').forEach((node) => node.remove());
+                    const nome = textoLimpo(rotuloClone);
+                    if (!nome) return;
+                    linhas.push({ secao, nome, valor: valorControlePdf(elemento) });
+                });
+                return linhas;
+            }
+
+            function clonarConteudoPdf(elemento) {
+                const clone = elemento.cloneNode(true);
+                clone.querySelectorAll('button, input, select, textarea, .tooltip-floating, .graph-float-btn, .pdf-export-btn').forEach((node) => node.remove());
+                clone.querySelectorAll('[id]').forEach((node) => node.removeAttribute('id'));
+                clone.querySelectorAll('.graph-output-selected, .graph-output-eligible').forEach((node) => {
+                    node.classList.remove('graph-output-selected', 'graph-output-eligible');
+                });
+                return clone;
+            }
+
+            function legendaFiguraPdf(elemento) {
+                const legendas = {
+                    moinhoCanvas: 'fluxoDestorroador',
+                    distribuidorCanvas: 'vistaDistribuidor',
+                    phCanvas: 'regulacaoPh',
+                    grafico_dist_canvas: 'graficoSensibilidade'
+                };
+                return legendas[elemento.id] ? textoPdf(legendas[elemento.id]) : textoPdf('figura');
+            }
+
+            function canvasPossuiDesenho(canvasAtual) {
+                try {
+                    const contexto = canvasAtual.getContext('2d', { willReadFrequently: true });
+                    const pixels = contexto?.getImageData(0, 0, canvasAtual.width, canvasAtual.height).data;
+                    if (!pixels) return false;
+                    for (let indice = 3; indice < pixels.length; indice += 4) {
+                        if (pixels[indice] > 8) return true;
+                    }
+                } catch (erro) {
+                    console.warn('Não foi possível avaliar o conteúdo do canvas:', erro);
+                }
+                return false;
+            }
+
+            async function coletarFigurasPdf(main) {
+                const figuras = [];
+                const visivel = (elemento) => {
+                    const estilo = window.getComputedStyle(elemento);
+                    return estilo.display !== 'none' && estilo.visibility !== 'hidden' && elemento.clientWidth > 0 && elemento.clientHeight > 0;
+                };
+                for (const canvasAtual of main.querySelectorAll('canvas')) {
+                    if (!visivel(canvasAtual) || !canvasPossuiDesenho(canvasAtual)) continue;
+                    try {
+                        figuras.push({ src: canvasAtual.toDataURL('image/png'), legenda: legendaFiguraPdf(canvasAtual) });
+                    } catch (erro) {
+                        console.warn('Não foi possível capturar canvas para o relatório:', erro);
+                    }
+                }
+                const plotly = main.querySelectorAll('.js-plotly-plot');
+                for (const grafico of plotly) {
+                    if (!visivel(grafico) || !window.Plotly?.toImage) continue;
+                    try {
+                        const largura = Math.max(1000, Math.round(grafico.clientWidth * 2));
+                        const altura = Math.max(700, Math.round(grafico.clientHeight * 2));
+                        figuras.push({ src: await window.Plotly.toImage(grafico, { format: 'png', width: largura, height: altura }), legenda: textoLimpo(grafico.closest('.graph-panel')?.querySelector('h2')) || textoPdf('figura') });
+                    } catch (erro) {
+                        console.warn('Não foi possível capturar gráfico Plotly para o relatório:', erro);
+                    }
+                }
+                for (const svg of main.querySelectorAll('svg')) {
+                    if (!visivel(svg) || !svg.querySelector('path, rect, circle, line, polygon, polyline, text') || svg.closest('.js-plotly-plot, mjx-container')) continue;
+                    try {
+                        const serializado = new XMLSerializer().serializeToString(svg);
+                        figuras.push({ src: `data:image/svg+xml;charset=utf-8,${encodeURIComponent(serializado)}`, legenda: svg.getAttribute('aria-label') || svg.id || textoPdf('figura') });
+                    } catch (erro) {
+                        console.warn('Não foi possível capturar SVG para o relatório:', erro);
+                    }
+                }
+                return figuras;
+            }
+
+            function coletarConteudoComplementarPdf(main) {
+                const vistos = new Set();
+                const seletores = ['[data-pdf-section]', '#painel_esquerdo', '#painel_esq_dist', '#painel_esq_ph', '.ph-operation-card', '.ph-history-card', '.ph-stage-summary'];
+                const itens = [];
+                main.querySelectorAll(seletores.join(',')).forEach((elemento) => {
+                    if (vistos.has(elemento) || elemento.closest('.memorial-box')) return;
+                    vistos.add(elemento);
+                    const clone = clonarConteudoPdf(elemento);
+                    clone.querySelectorAll('.metric-card, .alert, canvas, .js-plotly-plot').forEach((node) => node.remove());
+                    if (textoLimpo(clone)) itens.push(clone);
+                });
+                return itens;
+            }
+
+            function coletarGlossarioPdf(dashboard) {
+                return [...(registrosVariaveisMemorial[dashboard]?.values() || [])]
+                    .sort((a, b) => a.latex.localeCompare(b.latex))
+                    .map((variavel) => ({
+                        termo: variavel.latex,
+                        latex: variavel.latex,
+                        descricao: variavel.descricao
+                    }));
+            }
+
+            function coletarReferenciasPdf(main) {
+                const referencias = new Map();
+                main.querySelectorAll('.memorial-item a[href^="http"], .memorial-box a[href^="http"]').forEach((link) => {
+                    const href = link.href;
+                    const item = link.closest('.memorial-item');
+                    const secao = textoLimpo(item?.querySelector('strong, h3, h4')) || textoLimpo(link);
+                    if (!referencias.has(href)) referencias.set(href, { href, titulo: textoLimpo(link) || href, secoes: new Set() });
+                    referencias.get(href).secoes.add(secao);
+                });
+                return [...referencias.values()];
+            }
+
+            function montarRelatorioPdf(chave, figuras) {
+                const { main, sidebar } = contextoPdf(chave);
+                const relatorio = document.createElement('article');
+                relatorio.className = 'pdf-report';
+                const tituloDashboard = textoLimpo(main.querySelector('.header-title')) || textoPdf('naoIdentificado');
+                const descricaoDashboard = textoLimpo(main.querySelector('.header-title + p'));
+                const agora = new Date().toLocaleString(document.body.dataset.language === 'en' ? 'en-GB' : 'pt-BR');
+                const origem = window.location.protocol === 'file:' ? `${textoPdf('ambiente')}: ${window.location.pathname}` : window.location.href;
+                const idioma = document.body.dataset.language === 'en' ? 'English' : 'Português';
+                const versao = document.querySelector('meta[name="app-version"]')?.content || textoPdf('naoIdentificado');
+                const parametros = coletarParametrosPdf(sidebar);
+                const glossario = coletarGlossarioPdf(chave);
+                const referencias = coletarReferenciasPdf(main);
+                const resultados = [...main.querySelectorAll('.metric-card, .alert')];
+                const memorial = [...main.querySelectorAll('.memorial-box')];
+                const complementar = coletarConteudoComplementarPdf(main);
+                relatorio.innerHTML = `
+                    <header>
+                        <div class="pdf-kicker">${escaparRelatorio(textoPdf('titulo'))}</div>
+                        <h1>${escaparRelatorio(tituloDashboard)}</h1>
+                        <p>${escaparRelatorio(descricaoDashboard)}</p>
+                        <dl class="pdf-meta">
+                            <div><dt>${escaparRelatorio(textoPdf('data'))}</dt><dd>${escaparRelatorio(agora)}</dd></div>
+                            <div><dt>${escaparRelatorio(textoPdf('origem'))}</dt><dd>${escaparRelatorio(origem)}</dd></div>
+                            <div><dt>${escaparRelatorio(textoPdf('autor'))}</dt><dd>Guilherme Silva de Oliveira</dd></div>
+                            <div><dt>${escaparRelatorio(textoPdf('contato'))}</dt><dd><a href="https://oliveiraengineer.vercel.app">Portfólio</a> · <a href="https://www.linkedin.com/in/guilhermeasdo/">LinkedIn</a></dd></div>
+                            <div><dt>${escaparRelatorio(textoPdf('idioma'))}</dt><dd>${escaparRelatorio(idioma)}</dd></div>
+                            <div><dt>${escaparRelatorio(textoPdf('versao'))}</dt><dd>${escaparRelatorio(versao)}</dd></div>
+                        </dl>
+                    </header>
+                    <section><h2>${escaparRelatorio(textoPdf('objetivo'))}</h2><p>${escaparRelatorio(textoPdf('objetivoTexto'))}</p></section>
+                    <section><h2>${escaparRelatorio(textoPdf('rastreabilidade'))}</h2><div class="pdf-note"><p>${escaparRelatorio(textoPdf('autoriaTexto'))}</p></div></section>
+                    <section><h2>${escaparRelatorio(textoPdf('parametros'))}</h2><table class="pdf-table"><thead><tr><th>${escaparRelatorio(textoPdf('parametro'))}</th><th>${escaparRelatorio(textoPdf('valor'))}</th></tr></thead><tbody>${parametros.map((linha) => `<tr><td>${escaparRelatorio(linha.secao ? `${linha.secao} — ${linha.nome}` : linha.nome)}</td><td>${escaparRelatorio(linha.valor)}</td></tr>`).join('') || `<tr><td colspan="2">${escaparRelatorio(textoPdf('semDados'))}</td></tr>`}</tbody></table></section>
+                    <section class="pdf-results-section"><h2>${escaparRelatorio(textoPdf('resultados'))}</h2><div class="pdf-results"></div></section>
+                    <section class="pdf-complementary-section"><h2>${escaparRelatorio(textoPdf('complementar'))}</h2></section>
+                    <section class="pdf-figures-section"><h2>${escaparRelatorio(textoPdf('figuras'))}</h2></section>
+                    <section class="pdf-memorial-section"><h2>${escaparRelatorio(textoPdf('memorial'))}</h2></section>
+                    <section><h2>${escaparRelatorio(textoPdf('glossario'))}</h2><dl class="pdf-glossary"></dl></section>
+                    <section><h2>${escaparRelatorio(textoPdf('bibliografia'))}</h2><ol class="pdf-bibliography"></ol></section>
+                    <section class="pdf-disclaimer"><h2>${escaparRelatorio(textoPdf('limitacoes'))}</h2><p>${escaparRelatorio(textoPdf('limitacaoUm'))}</p><p>${escaparRelatorio(textoPdf('limitacaoDois'))}</p><p>${escaparRelatorio(textoPdf('limitacaoTres'))}</p></section>
+                    <footer class="pdf-footer">© 2026 Guilherme Silva de Oliveira · ${escaparRelatorio(textoPdf('titulo'))}</footer>`;
+                const resultadosDestino = relatorio.querySelector('.pdf-results');
+                resultados.forEach((resultado) => resultadosDestino.appendChild(clonarConteudoPdf(resultado)));
+                if (!resultados.length) resultadosDestino.textContent = textoPdf('semDados');
+                const complementarDestino = relatorio.querySelector('.pdf-complementary-section');
+                complementar.forEach((item) => complementarDestino.appendChild(item));
+                if (!complementar.length) complementarDestino.remove();
+                const figurasDestino = relatorio.querySelector('.pdf-figures-section');
+                figuras.forEach((figura, indice) => {
+                    const bloco = document.createElement('figure');
+                    bloco.className = 'pdf-figure';
+                    bloco.innerHTML = `<img src="${figura.src}" alt="${escaparRelatorio(figura.legenda)}"><figcaption>${escaparRelatorio(`${textoPdf('figura')} ${indice + 1}: ${figura.legenda}`)}</figcaption>`;
+                    figurasDestino.appendChild(bloco);
+                });
+                if (!figuras.length) figurasDestino.insertAdjacentHTML('beforeend', `<p>${escaparRelatorio(textoPdf('semDados'))}</p>`);
+                const memorialDestino = relatorio.querySelector('.pdf-memorial-section');
+                memorial.forEach((item) => memorialDestino.appendChild(clonarConteudoPdf(item)));
+                if (!memorial.length) memorialDestino.insertAdjacentHTML('beforeend', `<p>${escaparRelatorio(textoPdf('semDados'))}</p>`);
+                const glossarioDestino = relatorio.querySelector('.pdf-glossary');
+                glossario.forEach((item) => {
+                    const termo = document.createElement('dt');
+                    termo.innerHTML = `\\(${item.latex}\\)`;
+                    const descricao = document.createElement('dd');
+                    descricao.textContent = item.descricao;
+                    glossarioDestino.append(termo, descricao);
+                });
+                if (!glossario.length) glossarioDestino.insertAdjacentHTML('beforeend', `<dd>${escaparRelatorio(textoPdf('semDados'))}</dd>`);
+                const bibliografiaDestino = relatorio.querySelector('.pdf-bibliography');
+                const acesso = new Date().toLocaleDateString(document.body.dataset.language === 'en' ? 'en-GB' : 'pt-BR');
+                referencias.forEach((referencia) => bibliografiaDestino.insertAdjacentHTML('beforeend', `<li><a href="${escaparRelatorio(referencia.href)}">${escaparRelatorio(referencia.titulo)}</a>. ${escaparRelatorio(new URL(referencia.href).hostname)}. ${escaparRelatorio(textoPdf('secoes'))}: ${escaparRelatorio([...referencia.secoes].join('; '))}. ${escaparRelatorio(textoPdf('acesso'))} ${escaparRelatorio(acesso)}.</li>`));
+                if (!referencias.length) bibliografiaDestino.insertAdjacentHTML('beforeend', `<li>${escaparRelatorio(textoPdf('semDados'))}</li>`);
+                return relatorio;
+            }
+
+            async function gerarRelatorioPdf(chave) {
+                document.querySelector('.pdf-report-host')?.remove();
+                const { main } = contextoPdf(chave);
+                const figuras = await coletarFigurasPdf(main);
+                const host = document.createElement('main');
+                host.className = 'pdf-report-host';
+                host.appendChild(montarRelatorioPdf(chave, figuras));
+                document.body.appendChild(host);
+                document.body.classList.add('pdf-printing');
+                const limpar = () => {
+                    document.body.classList.remove('pdf-printing');
+                    host.remove();
+                };
+                window.addEventListener('afterprint', limpar, { once: true });
+                if (window.MathJax?.typesetPromise) await window.MathJax.typesetPromise([host]);
+                await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+                window.print();
+            }
+
             const catalogoVariaveisFormula = {
                 espessuraDisco: {
                     pt: '[mm] Espessura do disco. Descrição: dimensão axial útil de cada disco dosador. Impacto: aumentar a espessura eleva proporcionalmente o volume deslocado por revolução e reduz a rotação necessária para a mesma dose.',
@@ -1365,6 +2588,14 @@ console.log('ðŸ”§ Script iniciando...');
                 volumeRolo: {
                     pt: '[mm³/rev] Volume útil do rolo por revolução. Descrição: volume deslocado em uma volta. Impacto: aumentar o volume reduz a rotação necessária para a mesma vazão mássica.',
                     en: '[mm³/rev] Useful roller volume per revolution. Description: volume displaced in one turn. Impact: increasing volume reduces the speed required for the same mass flow.'
+                },
+                potenciaUtilMax: {
+                    pt: '[W] Potência útil máxima. Descrição: capacidade mecânica disponível no eixo do dosador. Impacto: aumentar esta potência amplia a margem antes da sobrecarga.',
+                    en: '[W] Maximum useful power. Description: mechanical capacity available at the metering shaft. Impact: increasing it expands the margin before overload.'
+                },
+                potenciaRequerida: {
+                    pt: '[W] Potência requerida. Descrição: potência mecânica calculada para dosar o material. Impacto: aumentar a vazão ou a energia específica eleva a exigência do motor.',
+                    en: '[W] Required power. Description: mechanical power calculated for metering the material. Impact: increasing flow or specific energy raises motor demand.'
                 },
                 densidadeSolido: {
                     pt: '[g/mm³] Densidade do sólido. Descrição: massa do material por unidade de volume. Impacto: aumentar a densidade eleva a massa entregue por volta e reduz a rotação necessária para a mesma dose.',
@@ -1500,13 +2731,15 @@ console.log('ðŸ”§ Script iniciando...');
                 }
             };
 
-            function variavelFormula(latex, chave) {
+            function variavelFormula(latex, chave, dashboard = 'distribuidor') {
                 const item = catalogoVariaveisFormula[chave];
                 if (!item) {
                     console.warn(`[formula] Variável sem descrição: ${chave}`);
                     return latex;
                 }
-                return `\\texttip{${latex}}{${document.body.dataset.language === 'en' ? item.en : item.pt}}`;
+                registrarVariavelMemorial(dashboard, chave, latex);
+                const formula = `\\texttip{${latex}}{${document.body.dataset.language === 'en' ? item.en : item.pt}}`;
+                return `\\class{graph-output-${chave}}{${formula}}`;
             }
 
             function configurarTooltipsInstantaneos() {
@@ -1780,25 +3013,46 @@ console.log('ðŸ”§ Script iniciando...');
                     return `${unidade || '[unit defined by the variable]'} ${simbolo}. Definition: engineering term used in the displayed relationship. Importance and impact must be verified from the linked technical reference.`;
                 }
 
+                const chavesPorSimbolo = {
+                    'V_r': 'volumeRolo',
+                    '\\dot{m}_{linha}': 'massaLinha',
+                    '\\dot{m}_{total}': 'massaTotal',
+                    'N_r': 'rotacaoDosador',
+                    'Q_{total,real}': 'vazaoTotal',
+                    'Q_{prim}': 'vazaoPrimaria',
+                    'A_{prim}': 'areaPrimaria',
+                    'v_{prim}': 'velocidadePrimaria',
+                    'SLR_{prim}': 'slrPrimario',
+                    '\\Delta P_{prim}': 'perdaPrimaria',
+                    '\\Delta P_{torre}': 'perdaTorre',
+                    'A_{sec}': 'areaSecundaria',
+                    'Q_{sec}': 'vazaoSecundaria',
+                    'v_{sec}': 'velocidadeSecundaria',
+                    'SLR_{sec}': 'slrSecundario',
+                    '\\Delta P_{sec}': 'perdaSecundaria',
+                    '\\Delta P_{total}': 'perdaTotal',
+                    'f': 'fatorAcoplamento'
+                };
+
                 let resultado = '';
                 let cursor = 0;
-                while (cursor < html.length) {
-                    const inicioTexttip = html.indexOf(prefixo, cursor);
+                while (cursor < traduzido.length) {
+                    const inicioTexttip = traduzido.indexOf(prefixo, cursor);
                     if (inicioTexttip < 0) {
-                        resultado += html.slice(cursor);
+                        resultado += traduzido.slice(cursor);
                         break;
                     }
 
-                    resultado += html.slice(cursor, inicioTexttip);
+                    resultado += traduzido.slice(cursor, inicioTexttip);
                     const inicioSimbolo = inicioTexttip + prefixo.length - 1;
-                    const simbolo = lerGrupoBalanceado(html, inicioSimbolo);
-                    if (!simbolo || html[simbolo.fim] !== '{') {
+                    const simbolo = lerGrupoBalanceado(traduzido, inicioSimbolo);
+                    if (!simbolo || traduzido[simbolo.fim] !== '{') {
                         resultado += prefixo;
                         cursor = inicioTexttip + prefixo.length;
                         continue;
                     }
 
-                    const descricao = lerGrupoBalanceado(html, simbolo.fim);
+                    const descricao = lerGrupoBalanceado(traduzido, simbolo.fim);
                     if (!descricao) {
                         resultado += prefixo;
                         cursor = inicioTexttip + prefixo.length;
@@ -1810,7 +3064,8 @@ console.log('ðŸ”§ Script iniciando...');
                         textoTooltip = criarTooltipEspecificoEmIngles(simbolo.conteudo, textoTooltip);
                     }
 
-                    resultado += `${prefixo}${simbolo.conteudo}}{${textoTooltip}}`;
+                    const textoTip = `${prefixo}${simbolo.conteudo}}{${textoTooltip}}`;
+                    resultado += textoTip;
                     cursor = descricao.fim;
                 }
                 return resultado;
@@ -2010,6 +3265,7 @@ console.log('ðŸ”§ Script iniciando...');
                 }
             });
 
+            configurarSeletoresGraficoDist();
             Object.keys(dashboardProfiles).forEach((dashboardKey) => {
                 const snapshotInicial = capturarEstadoDashboard(dashboardProfiles[dashboardKey].container);
                 dashboardProfileKeys.forEach((profileKey) => {
@@ -2030,6 +3286,10 @@ console.log('ðŸ”§ Script iniciando...');
             configurarIdioma();
             configurarSidebars();
             configurarTooltipsInstantaneos();
+            dom.pdfExportButtons.forEach((button) => {
+                button.addEventListener('click', () => gerarRelatorioPdf(button.dataset.pdfExport));
+            });
+            atualizarBotoesPdf();
 
             // --- NAVEGAÇÃO ENTRE TELAS ---
             function irParaHome() {
@@ -2542,6 +3802,7 @@ console.log('ðŸ”§ Script iniciando...');
             }
 
             function atualizarPh() {
+                limparRegistroVariaveisMemorial('ph');
                 const r = calcularRegulacaoPh();
                 atualizarEtapaVisualPh();
                 const etapa = limitar(controlePh.etapa || 1, 1, 4);
@@ -2644,6 +3905,7 @@ console.log('ðŸ”§ Script iniciando...');
                 desenharRegulacaoPh(r);
             }
             function atualizarDashboard() {
+                limparRegistroVariaveisMemorial('destorroador');
                 // Captura valores numéricos limpos
                 const E_e = parseFloat(dom.energia.value);
                 const V = parseFloat(dom.tensao.value);
@@ -2838,7 +4100,7 @@ console.log('ðŸ”§ Script iniciando...');
                 mathJaxTimer = setTimeout(function() {
                     // Cria uma "tela fantasma" na memória
                     const bufferInvisivel = document.createElement('div');
-                    bufferInvisivel.innerHTML = traduzirTextosDeFormula(htmlDireito);
+                    bufferInvisivel.innerHTML = traduzirTextosDeFormula(envolverSimbolosCalculadosMemorialDist(htmlDireito, 'destorroador'));
                     
                     if (window.MathJax && MathJax.typesetPromise) {
                         // Cria uma fila para garantir que o MathJax não se atropele no arrasto rápido
@@ -2856,7 +4118,7 @@ console.log('ðŸ”§ Script iniciando...');
                             });
                         }).catch(function(err){ console.log(err); });
                     } else {
-                        dom.painelDireito.innerHTML = traduzirTextosDeFormula(htmlDireito);
+                        dom.painelDireito.innerHTML = traduzirTextosDeFormula(envolverSimbolosCalculadosMemorialDist(htmlDireito, 'destorroador'));
                     }
                 }, 80); // 80ms: o equilíbrio perfeito entre responsividade visual e alívio da GPU
             }
@@ -2864,6 +4126,7 @@ console.log('ðŸ”§ Script iniciando...');
             // --- LÓGICA DO DISTRIBUIDOR DE SÓLIDOS ---
             let mathJaxTimerDist = null;
             function atualizarDistribuidor() {
+                limparRegistroVariaveisMemorial('distribuidor');
                 const modoDistElement = document.querySelector('input[name="modo_dist"]:checked');
                 const modoDist = modoDistElement ? modoDistElement.value : "1";
                 
@@ -3284,19 +4547,22 @@ console.log('ðŸ”§ Script iniciando...');
                 if (mathJaxTimerDist) clearTimeout(mathJaxTimerDist);
                 mathJaxTimerDist = setTimeout(function() {
                     const buffer = document.createElement('div');
-                    buffer.innerHTML = traduzirTextosDeFormula(htmlDireito);
+                    buffer.innerHTML = traduzirTextosDeFormula(envolverSimbolosCalculadosMemorialDist(htmlDireito, 'distribuidor'));
                     if (window.MathJax && MathJax.typesetPromise) {
                         if (!window.mjPromiseDist) window.mjPromiseDist = Promise.resolve();
                         window.mjPromiseDist = window.mjPromiseDist.then(function() {
                             return MathJax.typesetPromise([buffer]).then(function() {
                                 dom.painelDirDist.innerHTML = "";
                                 while (buffer.firstChild) dom.painelDirDist.appendChild(buffer.firstChild);
+                                marcarVariaveisSaidaMemorialDist();
                             });
                         }).catch(err => console.log(err));
                     } else {
-                        dom.painelDirDist.innerHTML = traduzirTextosDeFormula(htmlDireito);
+                        dom.painelDirDist.innerHTML = traduzirTextosDeFormula(envolverSimbolosCalculadosMemorialDist(htmlDireito, 'distribuidor'));
+                        marcarVariaveisSaidaMemorialDist();
                     }
                 }, 80);
+                atualizarGraficoDist();
             }
 
             // --- LÓGICA DO CANVAS GEOMÉTRICO ---
